@@ -67,7 +67,7 @@ def on_inbound_call(opp):
     if HOT_LEADS_STAGE_ID is None:
         return []  # stage ainda não existe; runner registra pendência
     cur = STAGE_BY_ID.get(opp["pipelineStageId"])
-    if cur in PROTECTED_STAGES:
+    if cur in PROTECTED_STAGES or cur == "HOT LEADS":
         return []
     return [("update_opportunity",
              {"opp_id": opp["id"], "fields": {"pipelineStageId": HOT_LEADS_STAGE_ID}},
