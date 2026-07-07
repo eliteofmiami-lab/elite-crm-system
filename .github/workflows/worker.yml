@@ -24,6 +24,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      # memória entre ciclos (última varredura, calls já processadas) até o Supabase assumir
+      - name: restaurar estado do ciclo anterior
+        uses: actions/cache/restore@v4
+        with:
+          path: out/state.json
+          key: worker-state-${{ github.run_id }}
+          restore-keys: worker-state-
       - name: montar .env a partir dos secrets
         run: |
           {
@@ -41,6 +48,12 @@ jobs:
           } > .env
       - name: ciclo do cérebro
         run: python worker/brain/run.py
+      - name: salvar estado p/ o próximo ciclo
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: out/state.json
+          key: worker-state-${{ github.run_id }}
       - name: relatório de fim de dia (só na rodada 22:30 UTC)
         if: github.event.schedule == '30 22 * * 1-6'
         run: python worker/brain/eod_report.py || echo "eod_report ainda não implementado (M4)"
