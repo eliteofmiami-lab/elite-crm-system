@@ -90,6 +90,10 @@ def process_call(msg, st):
     if opp:
         if direction == "inbound":
             actions += rules.on_inbound_call(opp)
+            if not answered:  # regra do Rafael: inbound perdida = callback urgente
+                actions += rules.on_missed_inbound(
+                    opp, msg["contactId"], opp.get("name") or "lead",
+                    called_number=msg.get("to"))
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)

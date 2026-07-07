@@ -105,6 +105,24 @@ def on_quote_detected(opp, contact_id, link):
     return acts
 
 
+EUGENE_USER_ID = "EbVhbGHnGfuvbQurQoga"  # recon Fase 0
+
+
+def on_missed_inbound(opp, contact_id, lead_name, called_number=None):
+    """Regra do Rafael (2026-07-07): inbound NÃO atendida → retorno o mais rápido possível.
+    v1: task urgente pro Eugene (due imediato) + card camada 1 no painel (M3).
+    O runner também dispara nudge SMS/WhatsApp pro Eugene quando o canal estiver ativo."""
+    import datetime as dt
+    due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=10)).isoformat()
+    origem = " (Google Ads)" if called_number == GOOGLE_ADS_NUMBER else ""
+    return [("create_task",
+             {"contact_id": contact_id,
+              "title": f"📞 URGENTE: retornar ligação perdida — {lead_name}{origem}",
+              "body": "Lead ligou e não foi atendido. Regra: retornar o mais rápido possível.",
+              "due_iso": due, "assigned_to": EUGENE_USER_ID},
+             "inbound perdida → callback urgente")]
+
+
 def on_reheat(opp, contact_id, touchpoints, score_known, had_any_response):
     """Reaquecimento: ≥5 toques sem NENHUMA resposta (≥8 se score ≥80) → Lost + tag."""
     if had_any_response:
