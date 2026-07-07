@@ -26,16 +26,50 @@ STATE_PATH = Path(__file__).resolve().parent.parent.parent / "out" / "state.json
 LOC = ghl.LOCATION_ID
 
 
+def _supabase():
+    import os
+    url = os.environ.get("SUPABASE_URL", "").strip()
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if url and key:
+        return url, {"apikey": key, "Authorization": f"Bearer {key}",
+                     "Content-Type": "application/json"}
+    return None, None
+
+
+DEFAULT_STATE = {"last_scan_iso": None, "processed_call_ids": [], "capi_qualified_sent": []}
+
+
 def load_state():
+    import requests
+    url, h = _supabase()
+    if url:
+        try:
+            r = requests.get(f"{url}/rest/v1/worker_state?key=eq.brain&select=value",
+                             headers=h, timeout=15)
+            rows = r.json() if r.status_code == 200 else []
+            if rows:
+                return rows[0]["value"]
+        except Exception as e:
+            print(f"  [warn] estado Supabase indisponível ({e}); usando local")
     if STATE_PATH.exists():
         return json.load(open(STATE_PATH))
-    return {"last_scan_iso": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=10)).isoformat(),
-            "processed_call_ids": []}
+    st = dict(DEFAULT_STATE)
+    st["last_scan_iso"] = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(minutes=10)).isoformat()
+    return st
 
 
 def save_state(st):
+    import requests
     STATE_PATH.parent.mkdir(exist_ok=True)
-    json.dump(st, open(STATE_PATH, "w"), indent=2)
+    json.dump(st, open(STATE_PATH, "w"), indent=2)   # backup local sempre
+    url, h = _supabase()
+    if url:
+        try:
+            requests.post(f"{url}/rest/v1/worker_state",
+                          headers={**h, "Prefer": "resolution=merge-duplicates"},
+                          json={"key": "brain", "value": st}, timeout=15)
+        except Exception as e:
+            print(f"  [warn] não gravou estado no Supabase: {e}")
 
 
 def recent_conversations(limit=100):
