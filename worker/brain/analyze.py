@@ -83,9 +83,15 @@ Extraia APENAS o que está na transcrição — não invente. Campos sem evidên
 - gancho_pessoal: detalhe pessoal reutilizável no follow-up (ex.: "aniversário da filha, volta quarta").
 - precos_falados: TODOS os valores citados, com serviço e escopo exatos.
 - voicemail_left: se a call não foi atendida, o operador deixou recado?
-- coaching: 1-3 frases práticas sobre o que o operador poderia ter feito melhor NESTA call.
+- coaching: julgue PRIMEIRO pelo resultado. Se o cliente conseguiu o que queria (ex.: agendou,
+  recebeu o preço que pediu), a call foi um SUCESSO — diga isso e sugira no máximo UMA melhoria
+  proporcional ao contexto. NÃO cobre o checklist completo de qualificação (orçamento, garagem,
+  concorrência, keep-or-trade) em chamadas simples/transacionais que converteram — esses itens
+  são para conversas de venda consultiva (PPF/ceramic de alto valor) que NÃO fecharam.
+  script_coverage continua sendo registrado como fato, mas ausência de item ≠ erro.
 - resumo_3_linhas: máx 3 linhas, direto, em inglês (o Eugene lê em inglês).
-A transcrição vem diarizada (S0/S1...) e pode ser em inglês, espanhol ou português."""
+A transcrição vem diarizada (S0/S1...) e pode ser em inglês, espanhol ou português.
+O atendente pode ser o Eugene OU o Rafael (dono) — não presuma qual dos dois."""
 
 
 def get_client():
