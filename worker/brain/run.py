@@ -62,6 +62,22 @@ def apply_actions(actions):
         fn(**kwargs, gate="G2", motivo=motivo)
 
 
+def send_capi(event_name, contact_id, opportunity_id, value=None):
+    """Evento CAPI p/ Meta (QualifiedLead / AppointmentBooked / Purchase).
+    Respeita o dry-run global: só envia de verdade quando G2 estiver ativo."""
+    from brain import capi
+    if writer.DRY_RUN:
+        capi._log({"motivo": f"CAPI {event_name} opp={opportunity_id}",
+                   "status": "DRY_RUN", "url": "graph.facebook.com"})
+        return
+    cr = ghl.get(f"/contacts/{contact_id}")
+    contact = cr.json().get("contact", {}) if cr.status_code == 200 else {}
+    try:
+        capi.send_event(event_name, contact, opportunity_id, value=value)
+    except Exception as e:
+        print(f"  [warn] CAPI {event_name} falhou: {e}")
+
+
 def process_call(msg, st):
     call_id = msg["id"]
     if call_id in st["processed_call_ids"]:
