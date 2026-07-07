@@ -144,10 +144,25 @@ def main():
                         apply_actions(rules.on_quote_detected(opp, msg["contactId"], mlink.group(0)))
                         n_quotes += 1
 
+    # CAPI watcher: quem ENTROU em Great Cars desde o último ciclo → QualifiedLead
+    # (event_id determinístico no Meta impede duplicar mesmo se reprocessar)
+    sent = set(st.get("capi_qualified_sent", []))
+    n_capi = 0
+    gc = ghl.get("/opportunities/search",
+                 {"location_id": LOC, "pipeline_id": rules.NEW_PIPELINE_ID,
+                  "pipeline_stage_id": rules.STAGES["Great Cars"], "limit": 100})
+    if gc.status_code == 200:
+        for o in gc.json().get("opportunities", []):
+            if o["id"] not in sent:
+                send_capi("QualifiedLead", o["contactId"], o["id"])
+                sent.add(o["id"])
+                n_capi += 1
+    st["capi_qualified_sent"] = list(sent)[-5000:]
+
     st["last_scan_iso"] = cycle_start.isoformat()
     save_state(st)
-    print(f"ciclo OK: {n_calls} calls novas, {n_quotes} quotes detectadas "
-          f"(dry_run={writer.DRY_RUN})")
+    print(f"ciclo OK: {n_calls} calls novas, {n_quotes} quotes detectadas, "
+          f"{n_capi} QualifiedLead novos p/ Meta (dry_run GHL={writer.DRY_RUN})")
 
 
 if __name__ == "__main__":
