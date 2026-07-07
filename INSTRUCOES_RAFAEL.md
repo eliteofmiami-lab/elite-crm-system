@@ -23,19 +23,24 @@ Hoje o token só **lê**. Para o sistema trabalhar, ele precisa **escrever**.
    - Tags — **write**
 4. Salve. **O token continua o mesmo** — não precisa colar de novo. (Se o GHL gerar um token novo, aí sim me avise que atualizo o `.env`.)
 
+O Token ja te da total acesso! Desde o inicio
+
 ### 1.2 Deepgram (transcrição das chamadas) — pago por uso
 1. Crie conta em **deepgram.com** → console → **API Keys** → crie uma chave.
 2. Cole no `.env` na linha `DEEPGRAM_API_KEY=`.
 3. Custo é por minuto de áudio transcrito (barato); eu monto para transcrever só o que vale.
+✅ Chave recebida — já está no `.env` (removida daqui: este arquivo vai pro git). **Rafael: feche este arquivo no seu editor** — se salvar de novo, a chave volta.
 
 ### 1.3 Anthropic (o "cérebro" que analisa as conversas)
 1. Você já tem uma `ANTHROPIC_API_KEY` no projeto do livro. Pode usar a mesma ou criar outra em **console.anthropic.com**.
 2. Cole no `.env` na linha `ANTHROPIC_API_KEY=`.
+Devemos criar outro projeto dentro da mesma conta? Pra manter o projeto do livro separado da Elite? 
+
 
 ### 1.4 Supabase (banco de dados do painel) — de graça no início
 1. Em **supabase.com** → New Project → nome `elite-crm` (mesmo fluxo do Portal de Vagas).
 2. Em **Project Settings → API**, copie e cole no `.env`:
-   - `SUPABASE_URL=` (Project URL)
+   - `SUPABASE_URL=` https://blybofxubrusitydpfwq.supabase.co
    - `SUPABASE_ANON_KEY=` (anon public)
    - `SUPABASE_SERVICE_ROLE_KEY=` (service_role — **secreta**, nunca no painel/site)
 
@@ -70,7 +75,7 @@ Hoje o token só **lê**. Para o sistema trabalhar, ele precisa **escrever**.
 
 ### 2.5 Nedzo AI
 - Confirmado com você que o **Nedzo AI está desativado**. Vou ignorar os workflows dele; nosso sistema assume a operação. Se ainda estiver ligado, desative para não haver dois "cérebros" agindo.
-
+OTIMO
 ---
 
 ## PARTE 3 — Aprovações que vou te pedir (os "gates")
@@ -88,10 +93,10 @@ Nada é escrito no GHL/Urable sem você aprovar. Cada gate = eu te mostro um CSV
 ---
 
 ## RESUMO — sua lista de hoje (ordem sugerida)
-1. [ ] Ampliar escopos de escrita da Private Integration (1.1) ← destrava tudo
+1. [X] Ampliar escopos de escrita da Private Integration (1.1) ← destrava tudo
 2. [ ] Criar stage `HOT LEADS` no New Pipeline (2.1) ← destrava a migração
-3. [ ] Colar `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY` no `.env` (1.2, 1.3)
-4. [ ] Criar Supabase `elite-crm` e colar as 3 chaves (1.4)
+3. [X ] Colar `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY` no `.env` (1.2, 1.3)
+4. [ X] Criar Supabase `elite-crm` e colar as 3 chaves (1.4)
 5. [ ] Criar repo privado `elite-crm-system` no GitHub e me mandar a URL (1.5)
 6. [ ] `EUGENE_PHONE` no `.env` (1.6)
 7. [ ] Revisar e aprovar **G0-A** e **G0-B** (Parte 3)

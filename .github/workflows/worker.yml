@@ -1,0 +1,43 @@
+# Cérebro Elite CRM — roda a cada 5 min, seg–sáb, 8am–7pm ET.
+# ET (EDT, UTC-4): 8h–19h ET = 12h–23h UTC. Fim de dia 6:30pm ET = 22:30 UTC.
+# NOTA: no inverno (EST, UTC-5) o horário desloca 1h — ajustar em novembro ou tratar no código.
+name: elite-brain
+
+on:
+  schedule:
+    - cron: "*/5 12-22 * * 1-6"   # ciclos de 5 min (8:00am–6:55pm EDT, seg–sáb)
+    - cron: "30 22 * * 1-6"       # fim de dia 6:30pm EDT: relatórios (M4)
+  workflow_dispatch: {}            # rodada manual p/ testes
+
+concurrency:
+  group: elite-brain
+  cancel-in-progress: false        # nunca matar um ciclo no meio de escritas
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: montar .env a partir dos secrets
+        run: |
+          {
+            echo "GHL_API_TOKEN=${{ secrets.GHL_API_TOKEN }}"
+            echo "GHL_LOCATION_ID=${{ secrets.GHL_LOCATION_ID }}"
+            echo "URABLE_API_KEY=${{ secrets.URABLE_API_KEY }}"
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+            echo "DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}"
+            echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            echo "EUGENE_PHONE=${{ secrets.EUGENE_PHONE }}"
+          } > .env
+      - name: ciclo do cérebro
+        run: python worker/brain/run.py
+      - name: relatório de fim de dia (só na rodada 22:30 UTC)
+        if: github.event.schedule == '30 22 * * 1-6'
+        run: python worker/brain/eod_report.py || echo "eod_report ainda não implementado (M4)"
