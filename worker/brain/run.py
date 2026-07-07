@@ -64,12 +64,9 @@ def apply_actions(actions):
 
 def send_capi(event_name, contact_id, opportunity_id, value=None):
     """Evento CAPI p/ Meta (QualifiedLead / AppointmentBooked / Purchase).
-    Respeita o dry-run global: só envia de verdade quando G2 estiver ativo."""
+    CAPI está LIVE desde 2026-07-07 (pedido do Rafael) — independe do dry-run das
+    escritas GHL. event_id determinístico protege contra duplicidade."""
     from brain import capi
-    if writer.DRY_RUN:
-        capi._log({"motivo": f"CAPI {event_name} opp={opportunity_id}",
-                   "status": "DRY_RUN", "url": "graph.facebook.com"})
-        return
     cr = ghl.get(f"/contacts/{contact_id}")
     contact = cr.json().get("contact", {}) if cr.status_code == 200 else {}
     try:
