@@ -104,6 +104,32 @@ def create_custom_field(payload, gate, motivo):
     return _send("POST", f"{BASE}/locations/{LOC}/customFields", payload, gate, motivo)
 
 
+def upsert_contact(payload, gate, motivo):
+    """POST /contacts/upsert — cria ou atualiza por telefone/email (não duplica)."""
+    payload = {**payload, "locationId": LOC}
+    return _send("POST", f"{BASE}/contacts/upsert", payload, gate, motivo)
+
+
+_staff_contact_cache = {}
+
+
+def alert_staff(phone, name, message, gate, motivo):
+    """Alerta urgente para staff (Eugene/Rafael): garante contato interno e manda SMS."""
+    cid = _staff_contact_cache.get(phone)
+    if not cid:
+        res = upsert_contact({"phone": phone, "firstName": name,
+                              "tags": ["staff-interno"]}, gate,
+                             f"contato interno p/ alertas: {name}")
+        cid = ((res or {}).get("contact") or {}).get("id")
+        if cid:
+            _staff_contact_cache[phone] = cid
+    if cid:
+        return send_sms(cid, message, gate, motivo)
+    # dry-run: upsert não retorna id — loga a intenção do SMS mesmo assim
+    return _send("POST", f"{BASE}/conversations/messages",
+                 {"type": "SMS", "para": phone, "message": message}, gate, motivo)
+
+
 # ---------- Urable (Customer + Item apenas; sem delete) ----------
 def urable(method, path, payload, gate, motivo):
     url = f"https://app.urable.com/api{path}"

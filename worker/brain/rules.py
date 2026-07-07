@@ -108,19 +108,30 @@ def on_quote_detected(opp, contact_id, link):
 EUGENE_USER_ID = "EbVhbGHnGfuvbQurQoga"  # recon Fase 0
 
 
-def on_missed_inbound(opp, contact_id, lead_name, called_number=None):
+def on_missed_inbound(opp, contact_id, lead_name, called_number=None,
+                      lead_phone=None, eugene_phone=None, rafael_phone=None):
     """Regra do Rafael (2026-07-07): inbound NÃO atendida → retorno o mais rápido possível.
-    v1: task urgente pro Eugene (due imediato) + card camada 1 no painel (M3).
-    O runner também dispara nudge SMS/WhatsApp pro Eugene quando o canal estiver ativo."""
+    ALERTA DUPLO (Eugene + Rafael ao mesmo tempo) — quem pegar primeiro resolve.
+    Task fica no Eugene (fila); SMS urgente vai pros dois celulares; card camada 1 no painel."""
     import datetime as dt
     due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=10)).isoformat()
     origem = " (Google Ads)" if called_number == GOOGLE_ADS_NUMBER else ""
-    return [("create_task",
+    alerta = (f"🚨 MISSED CALL{origem}: {lead_name}"
+              + (f" {lead_phone}" if lead_phone else "")
+              + " — call back ASAP. First one to call handles it.")
+    acts = [("create_task",
              {"contact_id": contact_id,
               "title": f"📞 URGENTE: retornar ligação perdida — {lead_name}{origem}",
-              "body": "Lead ligou e não foi atendido. Regra: retornar o mais rápido possível.",
+              "body": "Lead ligou e não foi atendido. Regra: retornar o mais rápido possível. "
+                      "Alerta enviado para Eugene E Rafael — quem fizer primeiro resolve.",
               "due_iso": due, "assigned_to": EUGENE_USER_ID},
              "inbound perdida → callback urgente")]
+    for phone, who in ((eugene_phone, "Eugene"), (rafael_phone, "Rafael")):
+        if phone:
+            acts.append(("alert_staff",
+                         {"phone": phone, "name": who, "message": alerta},
+                         f"alerta urgente p/ {who} (inbound perdida)"))
+    return acts
 
 
 def on_reheat(opp, contact_id, touchpoints, score_known, had_any_response):
