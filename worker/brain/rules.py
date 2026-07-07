@@ -35,8 +35,8 @@ CADENCE = ["New Lead", "Contact 1 (AM)", "Contact 1 (PM)", "Contact 2 (AM)",
 PROTECTED_STAGES = {"Quote Sent", "Appointment Booked", "Win"}
 
 URABLE_LINK = re.compile(r"https?://(?:go\.|app\.)?urable\.com/\S+", re.I)
-# A2: número de tracking Google Ads (aguardando confirmação do Rafael)
-GOOGLE_ADS_NUMBER = "+17544650696"  # candidato inferido; confirmar antes do G2
+# A2: número de tracking Google Ads — CONFIRMADO pelo Rafael (2026-07-07, "Google Leads" no sistema)
+GOOGLE_ADS_NUMBER = "+17544650696"
 
 
 def next_cadence_stage(current_stage_name):
@@ -81,7 +81,8 @@ def on_great_car(opp, contact_id, score):
         return []
     if cur in PROTECTED_STAGES or cur == "Great Cars":
         return []
-    acts = [("add_tag", {"contact_id": contact_id, "tags": ["great-car"]}, "carro alvo")]
+    # tag "great cars" (com espaço) = a que o workflow 2.1 do GHL escuta (print do Rafael 2026-07-07)
+    acts = [("add_tag", {"contact_id": contact_id, "tags": ["great cars"]}, "carro alvo")]
     if score["car"] == 35:
         acts.append(("update_opportunity",
                      {"opp_id": opp["id"], "fields": {"pipelineStageId": STAGES["Great Cars"]}},
