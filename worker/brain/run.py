@@ -193,10 +193,17 @@ def main():
                 n_capi += 1
     st["capi_qualified_sent"] = list(sent)[-5000:]
 
+    # fila do painel: gerar/fechar cards
+    try:
+        from brain import cards
+        stats = cards.sync_all()
+    except Exception as e:
+        stats = {"erro": str(e)[:80]}
+
     st["last_scan_iso"] = cycle_start.isoformat()
     save_state(st)
-    print(f"ciclo OK: {n_calls} calls novas, {n_quotes} quotes detectadas, "
-          f"{n_capi} QualifiedLead novos p/ Meta (dry_run GHL={writer.DRY_RUN})")
+    print(f"ciclo OK: {n_calls} calls novas, {n_quotes} quotes, "
+          f"{n_capi} QualifiedLead p/ Meta, cards={stats} (dry_run GHL={writer.DRY_RUN})")
 
 
 if __name__ == "__main__":
