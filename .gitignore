@@ -1,0 +1,30 @@
+# Segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js (web/)
+node_modules/
+web/.next/
+web/out/
+web/.vercel/
+*.tsbuildinfo
+
+# Saídas de dados (contêm PII de leads — não versionar)
+out/
+*.csv
+recordings/
+transcripts/
+
+# OS
+.DS_Store
+
+# PII por-lead (lista com telefones) — não versionar
+docs/TOP_PRIORITIES.md
