@@ -144,6 +144,18 @@ def process_call(msg, st):
                     called_number=msg.get("to"), lead_phone=msg.get("from"),
                     eugene_phone=os.environ.get("EUGENE_PHONE"),
                     rafael_phone=os.environ.get("RAFAEL_PHONE"))
+                # card VERMELHO no painel (Supabase — imediato, sem gate)
+                from brain import cards as _cards
+                origem = " (Google Ads)" if msg.get("to") == rules.GOOGLE_ADS_NUMBER else ""
+                _cards.create_card(
+                    "callback", 1, msg["contactId"],
+                    f"📞 LIGAÇÃO PERDIDA{origem}: {opp.get('name') or 'lead'}",
+                    f"Ligou de {msg.get('from')} e ninguém atendeu. Retornar AGORA — "
+                    "quem pegar primeiro resolve.",
+                    {"passos": ["Ligar de volta imediatamente",
+                                "Se não atender: SMS 'saw your call, how can I help?'",
+                                "Registrar o resultado no GHL"]},
+                    opportunity_id=opp.get("id"))
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)
