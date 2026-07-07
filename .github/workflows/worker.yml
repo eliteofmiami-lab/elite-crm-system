@@ -35,6 +35,9 @@ jobs:
             echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}"
             echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
             echo "EUGENE_PHONE=${{ secrets.EUGENE_PHONE }}"
+            echo "RAFAEL_PHONE=${{ secrets.RAFAEL_PHONE }}"
+            echo "META_PIXEL_ID=${{ secrets.META_PIXEL_ID }}"
+            echo "META_CAPI_TOKEN=${{ secrets.META_CAPI_TOKEN }}"
           } > .env
       - name: ciclo do cérebro
         run: python worker/brain/run.py
