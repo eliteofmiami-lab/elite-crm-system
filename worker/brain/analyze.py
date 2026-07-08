@@ -18,13 +18,15 @@ _cfg = config.load()
 # Schema do JSON estruturado (spec 2.2). additionalProperties=false obrigatório.
 S = {"type": "string"}
 B = {"type": "boolean"}
-SN = {"type": ["string", "null"]}
+# nota: a API limita campos union/nullable a 16 — texto "sem evidência" usa "" (string vazia)
+SN = {"type": "string"}
 ANALYSIS_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "required": ["vehicle", "momento", "intencao", "sentimento", "motivacao_principal",
-                 "gancho_pessoal", "precos_falados", "script_coverage", "voicemail_left",
-                 "resultado", "proxima_acao", "resumo_3_linhas", "advice_en", "advice_pt"],
+                 "servico_interesse", "gancho_pessoal", "precos_falados", "script_coverage",
+                 "voicemail_left", "resultado", "proxima_acao", "resumo_3_linhas",
+                 "advice_en", "advice_pt"],
     "properties": {
         "vehicle": {"type": "object", "additionalProperties": False,
                     "required": ["make", "model", "year", "is_new_or_just_bought", "delivery_date_or_window"],
@@ -54,6 +56,7 @@ ANALYSIS_SCHEMA = {
                                                        "enum": ["achou_caro", "ok", "achou_barato", "nao_discutido"]},
                                       "comparou_concorrente": B, "detalhes": SN}},
         "motivacao_principal": SN,
+        "servico_interesse": SN,
         "gancho_pessoal": SN,
         "precos_falados": {"type": "array",
                            "items": {"type": "object", "additionalProperties": False,
@@ -83,10 +86,14 @@ ANALYSIS_SCHEMA = {
 
 SYSTEM = """Você analisa chamadas de vendas da Elite Premium Detailing (detailing automotivo premium em Davie/FL: PPF, ceramic coating, wrap). Quem liga/atende pelo negócio é o Eugene (assistente) ou o Rafael (dono). O lead é um potencial cliente.
 
-Extraia APENAS o que está na transcrição — não invente. Campos sem evidência ficam null.
+Extraia APENAS o que está na transcrição — não invente. Campos de TEXTO sem evidência
+ficam com string vazia "" (nunca invente); enums sem evidência ficam null.
 - momento.faixa: quando o lead comprou/vai receber o carro (recem_entregue|chegando|menos_3m|mais_3m|mais_6m|mais_1a|null).
 - intencao.nivel: pediu_quote|sem_recuar (discutiu preço sem recuar)|indeciso|so_pesquisando|null.
 - gancho_pessoal: detalhe pessoal reutilizável no follow-up (ex.: "aniversário da filha, volta quarta").
+- servico_interesse: o serviço que o cliente ESTÁ buscando AGORA, em inglês, nome curto
+  (ex.: "Color change PPF", "Full front PPF", "Ceramic coating", "Window tint", "Vinyl wrap").
+  null se a call não deixar claro.
 - precos_falados: TODOS os valores citados, com serviço e escopo exatos.
 - voicemail_left: se a call não foi atendida, o operador deixou recado?
 - advice_en / advice_pt: o MESMO insight de venda em dois idiomas (advice_en em inglês pro

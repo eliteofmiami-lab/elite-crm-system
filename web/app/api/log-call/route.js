@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 
 const GHL = "https://services.leadconnectorhq.com";
+const CF_INTERESSE = "D5TgphY9HlZMoS8wcWj1";
 const CF_VEH = {
   make: "CiRd678lAFn854igklGR",
   model: "LHwTnTb8TPz5BbJ0I2XV",
@@ -12,7 +13,7 @@ const CF_VEH = {
 const LABELS = [
   ["outcome", "Outcome"], ["make", "Make"], ["model", "Model"], ["year", "Year"],
   ["momento", "Car timing"], ["garaged", "Garaged or street"], ["arrival", "Car arrival"],
-  ["motivation", "Main motivation"], ["interest", "Interest"],
+  ["motivation", "Main motivation"], ["service_interest", "Service interest"], ["interest", "Interest"],
   ["keep_or_trade", "Keep or trade"], ["seen_other_quotes", "Seen other quotes"],
   ["other_quotes_detail", "Other quotes detail"], ["lost_reason", "Lost reason"],
   ["prices", "Prices discussed"],
@@ -44,6 +45,7 @@ export async function POST(req) {
   const cfs = ["make", "model", "year"]
     .filter((k) => fields[k])
     .map((k) => ({ id: CF_VEH[k], field_value: fields[k] }));
+  if (fields.service_interest) cfs.push({ id: CF_INTERESSE, field_value: fields.service_interest });
   if (cfs.length) {
     const r1 = await fetch(`${GHL}/contacts/${contact_id}`, {
       method: "PUT", headers: H, body: JSON.stringify({ customFields: cfs }),

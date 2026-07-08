@@ -66,6 +66,18 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
             how["advice"] = tip
     except Exception:
         pass
+    # A9: interesse vivo em TODO card + quote real quando o lead está em Quote Sent
+    try:
+        how = dict(how or {})
+        intr = interest_for(contact_id)
+        if intr:
+            how["interest"] = intr
+        if most_advanced_stage(contact_id) == "Quote Sent" and "quote" not in how:
+            q = quote_facts(contact_id)
+            how["quote"] = q
+            how["passos"] = build_quote_passos(q)
+    except Exception:
+        pass
     return _sb("POST", "cards", json={
         "type": type_, "layer": layer, "contact_id": contact_id,
         "opportunity_id": opportunity_id, "title": title, "why": why,
@@ -124,6 +136,67 @@ def opp_score(o):
     return None
 
 
+CF_INTERESSE = "D5TgphY9HlZMoS8wcWj1"      # contact.elite_interesse_atual (A9)
+CF_FORM_SERVICES = None  # preenchido no primeiro uso (what_services do formulário)
+
+
+def interest_for(contact_id):
+    """A9 — interesse vivo: elite_interesse_atual → fallback seed do formulário.
+    Retorna {value, source, updated} ou {}."""
+    global CF_FORM_SERVICES
+    if CF_FORM_SERVICES is None:
+        import json as _j
+        from pathlib import Path
+        p = Path(__file__).resolve().parent.parent.parent / "out" / "cf_contact.json"
+        CF_FORM_SERVICES = ""
+        if p.exists():
+            for f in _j.load(open(p))["customFields"]:
+                if "what_services" in f["fieldKey"]:
+                    CF_FORM_SERVICES = f["id"]
+    r = ghl.get(f"/contacts/{contact_id}")
+    if r.status_code != 200:
+        return {}
+    cfs = {f["id"]: f.get("value") for f in r.json().get("contact", {}).get("customFields", [])}
+    if cfs.get(CF_INTERESSE):
+        hist = _sb("GET", f"interest_history?contact_id=eq.{contact_id}"
+                          "&order=created_at.desc&limit=1&select=created_at,source") or []
+        return {"value": cfs[CF_INTERESSE], "source": (hist[0]["source"] if hist else "manual"),
+                "updated": (hist[0]["created_at"][:10] if hist else None)}
+    # trilha (call analisada / manual) — vale mesmo antes do CF ser gravado (pré-G2)
+    hist = _sb("GET", f"interest_history?contact_id=eq.{contact_id}"
+                      "&order=created_at.desc&limit=1&select=interest,source,created_at") or []
+    if hist and hist[0].get("interest") and hist[0]["interest"] != "?":
+        return {"value": hist[0]["interest"], "source": hist[0]["source"],
+                "updated": hist[0]["created_at"][:10]}
+    seed = cfs.get(CF_FORM_SERVICES)
+    if seed:
+        # registra o seed uma única vez na trilha
+        prev = _sb("GET", f"interest_history?contact_id=eq.{contact_id}&select=id&limit=1")
+        if not prev:
+            _sb("POST", "interest_history", json={"contact_id": contact_id,
+                "interest": str(seed)[:120], "source": "form_seed", "set_by": "seed"})
+        return {"value": str(seed)[:120], "source": "form_seed", "updated": None}
+    return {}
+
+
+def build_quote_passos(q):
+    """A9.4 — How to play it SEMPRE dos dados reais da quote."""
+    if not (q.get("items") or q.get("link")):
+        return ["Details pending analysis — open the conversation in GHL and read "
+                "the quote before calling. Never quote from the generic table here."]
+    passos = []
+    if q.get("items"):
+        it = q["items"][0]
+        passos.append(f"They were quoted: {it.get('servico') or it.get('service')} — "
+                      f"{it.get('valor') or it.get('value')}. Anchor the talk on THIS number.")
+    if q.get("sentiment"):
+        passos.append(f"Last call sentiment: {q['sentiment']} — open accordingly.")
+    if q.get("link"):
+        passos.append("Reference the quote you sent (link on this card) and ask what they thought.")
+    passos.append("Price pushback: smaller package or a call with Rafael — never a straight discount.")
+    return passos
+
+
 def quote_facts(contact_id):
     """spec 6.1 — a QUOTE REAL do cliente: link+data do SMS detectado,
     valores exatos + sentimento da call analisada (se existir)."""
@@ -164,14 +237,12 @@ def sync_quote_followups():
     n = 0
     if r.status_code == 200:
         for o in r.json().get("opportunities", []):
+            q = quote_facts(o["contactId"])
             made = create_card(
                 "quote_followup", 2, o["contactId"],
                 f"Quote follow-up: {o.get('name') or 'lead'}",
                 "Quote sent, no reply yet. This lead cools down every day.",
-                {"passos": ["Call and ask what they thought of the quote",
-                            "If price pushback: offer a smaller package (never a straight discount)",
-                            "Mention this week's schedule availability"],
-                 "quote": quote_facts(o["contactId"])},
+                {"passos": build_quote_passos(q), "quote": q},
                 opportunity_id=o["id"], score=opp_score(o))
             n += made is not None
     return n
@@ -359,13 +430,15 @@ def flush_manual_logs():
         try:
             cfs = [{"id": CF_VEH[k], "field_value": f[k]} for k in ("make", "model", "year")
                    if f.get(k)]
+            if f.get("service_interest"):
+                cfs.append({"id": CF_INTERESSE, "field_value": f["service_interest"]})
             if cfs:
                 rq.put(f"{config.GHL_BASE_URL}/contacts/{cid}", headers=Hw,
                        json={"customFields": cfs}, timeout=30)
             nota = ["📋 CALL LOG (manual — painel)"]
             labels = [("outcome", "Outcome"), ("make", "Make"), ("model", "Model"),
                       ("year", "Year"), ("momento", "Car timing"), ("garaged", "Garaged or street"), ("arrival", "Car arrival"),
-                      ("motivation", "Main motivation"), ("interest", "Interest"),
+                      ("motivation", "Main motivation"), ("service_interest", "Service interest"), ("interest", "Interest"),
                       ("keep_or_trade", "Keep or trade"),
                       ("seen_other_quotes", "Seen other quotes"),
                       ("other_quotes_detail", "Other quotes detail"),

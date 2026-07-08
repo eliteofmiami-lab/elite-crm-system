@@ -299,6 +299,34 @@ def process_call(msg, st):
     apply_actions(actions)
     persist_call(msg, meta, opp, analysis)
     refresh_score(msg["contactId"], opp, analysis)  # score em tempo real
+    # A9: interesse vivo — call analisada atualiza a trilha + o card
+    if analysis and analysis.get("servico_interesse"):
+        import requests
+        url, h = _supabase()
+        if url:
+            try:
+                requests.post(f"{url}/rest/v1/interest_history", headers=h, json={
+                    "contact_id": msg["contactId"],
+                    "interest": analysis["servico_interesse"],
+                    "source": "call", "set_by": "brain"}, timeout=10)
+                # espelha no(s) card(s) abertos (Supabase é livre)
+                from brain import cards as _c
+                for c in (_c._sb("GET", f"cards?status=eq.open&contact_id=eq.{msg['contactId']}&select=id,how") or []):
+                    how = dict(c.get("how") or {})
+                    how["interest"] = {"value": analysis["servico_interesse"],
+                                       "source": "call",
+                                       "updated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")}
+                    _c._sb("PATCH", f"cards?id=eq.{c['id']}", json={"how": how})
+                # CF no GHL: manual vence; cérebro escreve só pós-G2
+                if not writer.DRY_RUN:
+                    import requests as rq
+                    rq.put(f"{ghl.BASE}/contacts/{msg['contactId']}",
+                           headers={**ghl.H, "Content-Type": "application/json"},
+                           json={"customFields": [{"id": "D5TgphY9HlZMoS8wcWj1",
+                                                   "field_value": analysis["servico_interesse"]}]},
+                           timeout=30)
+            except Exception as e:
+                print(f"  [warn] interesse vivo: {e}")
 
     st["processed_call_ids"] = (st["processed_call_ids"] + [call_id])[-2000:]
     return analysis

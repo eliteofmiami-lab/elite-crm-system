@@ -1,18 +1,61 @@
 {
   "_fonte_unica": "TABELA OFICIAL Elite (valores passados pelo Rafael em 2026-07-08). Editar AQUI e só aqui; painel sincroniza em ≤5 min. PROIBIDO adicionar produto composto que não exista na tabela.",
   "_atualizado": "2026-07-08 (auditoria de preços)",
-  "_tiers": ["Compact", "Standard", "Medium", "Large"],
+  "_tiers": [
+    "Compact",
+    "Standard",
+    "Medium",
+    "Large"
+  ],
   "matrix": {
-    "ppf_partial_front": { "from": 899 },
-    "ppf_full_front": { "Compact": 1990, "Standard": 2200, "Medium": 2350, "Large": 2450 },
-    "ppf_track_pack": { "from": 2690 },
-    "ppf_full_body": { "Compact": 4990, "Standard": 5550, "Medium": 5850, "Large": 6450 },
-    "ceramic_bronze": { "Compact": 599, "Standard": 699, "Medium": 799, "Large": 899 },
-    "ceramic_silver": { "Compact": 799, "Standard": 999, "Medium": 1099, "Large": 1300 },
-    "ceramic_gold": { "Compact": 1749, "Standard": 1975, "Medium": 2199, "Large": 2349 },
-    "paint_correction_per_step": { "Compact": 500, "Standard": 500, "Medium": 550, "Large": 600 },
-    "addon_wheels_off": { "flat": 450 },
-    "addon_leather": { "flat": 499 }
+    "ppf_partial_front": {
+      "from": 899
+    },
+    "ppf_full_front": {
+      "Compact": 1990,
+      "Standard": 2200,
+      "Medium": 2350,
+      "Large": 2450
+    },
+    "ppf_track_pack": {
+      "from": 2690
+    },
+    "ppf_full_body": {
+      "Compact": 4990,
+      "Standard": 5550,
+      "Medium": 5850,
+      "Large": 6450
+    },
+    "ceramic_bronze": {
+      "Compact": 599,
+      "Standard": 699,
+      "Medium": 799,
+      "Large": 899
+    },
+    "ceramic_silver": {
+      "Compact": 799,
+      "Standard": 999,
+      "Medium": 1099,
+      "Large": 1300
+    },
+    "ceramic_gold": {
+      "Compact": 1749,
+      "Standard": 1975,
+      "Medium": 2199,
+      "Large": 2349
+    },
+    "paint_correction_per_step": {
+      "Compact": 500,
+      "Standard": 500,
+      "Medium": 550,
+      "Large": 600
+    },
+    "addon_wheels_off": {
+      "flat": 450
+    },
+    "addon_leather": {
+      "flat": 499
+    }
   },
   "_labels": {
     "ppf_partial_front": "PPF — Partial front",
@@ -26,5 +69,48 @@
     "addon_wheels_off": "Add-on — Wheels off",
     "addon_leather": "Add-on — Leather protection"
   },
-  "_politica": "No straight discounts. Price pushback → smaller package or a call with Rafael."
+  "_politica": "No straight discounts. Price pushback → smaller package or a call with Rafael.",
+  "custom_quote_services": [
+    "Color change PPF",
+    "Vinyl wrap"
+  ],
+  "_interest_map": {
+    "full front": [
+      "ppf_full_front"
+    ],
+    "partial": [
+      "ppf_partial_front"
+    ],
+    "full body": [
+      "ppf_full_body"
+    ],
+    "track": [
+      "ppf_track_pack"
+    ],
+    "ppf": [
+      "ppf_partial_front",
+      "ppf_full_front",
+      "ppf_full_body"
+    ],
+    "ceramic": [
+      "ceramic_bronze",
+      "ceramic_silver",
+      "ceramic_gold"
+    ],
+    "coating": [
+      "ceramic_bronze",
+      "ceramic_silver",
+      "ceramic_gold"
+    ],
+    "correction": [
+      "paint_correction_per_step"
+    ],
+    "leather": [
+      "addon_leather"
+    ],
+    "wheels": [
+      "addon_wheels_off"
+    ]
+  },
+  "_custom_quote_msg": "Custom-quote service — priced per project. Check the Urable quote or escalate to Rafael."
 }

@@ -54,7 +54,7 @@ function Snooze({ card, reload }) {
 function LogCall({ card, userEmail, reload }) {
   const [f, setF] = useState({ outcome: "", make: "", model: "", year: "", momento: "",
     arrival: "", garaged: "", interest: "", keep_or_trade: "", seen_other_quotes: "",
-    other_quotes_detail: "", lost_reason: "", motivation: "", prices: "", hook: "",
+    other_quotes_detail: "", lost_reason: "", motivation: "", service_interest: "", prices: "", hook: "",
     next_step: "", next_date: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
@@ -82,6 +82,11 @@ function LogCall({ card, userEmail, reload }) {
           status: "synced", synced_at: new Date().toISOString() }).eq("id", row.id);
       }
     } catch (_) { /* fallback: worker sincroniza em ≤5 min */ }
+    if (f.service_interest) {
+      await supabase.from("interest_history").insert({
+        contact_id: card.contact_id, interest: f.service_interest,
+        source: "manual", set_by: userEmail });
+    }
     // spec 8.1/A7.2: wrap-up SÓ na PRIMEIRA call atendida do lead
     const { data: prevWrap } = await supabase.from("cards").select("id")
       .eq("contact_id", card.contact_id).in("status", ["done"])
@@ -149,6 +154,15 @@ function LogCall({ card, userEmail, reload }) {
       )}
       <input style={sel} placeholder="Main motivation (why now? what do they care about?)"
         value={f.motivation} onChange={set("motivation")} />
+      {/* A9.1: interesse vivo — manual VENCE o cérebro */}
+      <select style={sel} value={f.service_interest} onChange={set("service_interest")}>
+        <option value="">Service they&apos;re looking for…</option>
+        <option>Full front PPF</option><option>Partial front PPF</option>
+        <option>Full body PPF</option><option>Track pack PPF</option>
+        <option>Color change PPF</option><option>Vinyl wrap</option>
+        <option>Ceramic coating</option><option>Paint correction</option>
+        <option>Window tint</option><option>Other</option>
+      </select>
       <select style={sel} value={f.seen_other_quotes} onChange={set("seen_other_quotes")}>
         <option value="">Seen other quotes?…</option>
         <option>No — we are the first</option><option>Yes — shopping around</option>
@@ -220,34 +234,54 @@ function priceVal(row, tier) {
 }
 
 function PriceHint({ c, prices }) {
-  // A7.3: matriz oficial × porte. NUNCA em card de quote (a quote real manda lá).
-  if (!prices || !prices.matrix || c.type === "quote_followup") return null;
-  const tier = tierFor(c);
-  const labels = prices._labels || {};
-  if (tier) {
-    const rows = Object.entries(prices.matrix)
-      .map(([k, row]) => [labels[k] || k, priceVal(row, tier)])
-      .filter(([, v]) => v);
+  // A9.2: preços PELO INTERESSE do lead, no tier do carro. Nunca em card com quote real.
+  if (!prices || !prices.matrix || (c.how && c.how.quote)) return null;
+  const interest = ((c.how && c.how.interest) || {}).value || "";
+  const il = interest.toLowerCase();
+  // A9.3: serviço de quote customizada → nunca preço de tabela
+  if ((prices.custom_quote_services || []).some((s) => il.includes(s.toLowerCase()))) {
     return (
       <div className="dsec">
-        <div className="dl">Prices for this car · tier: {tier}</div>
-        <p>{rows.slice(0, 5).map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+        <div className="dl">Pricing</div>
+        <p>{prices._custom_quote_msg || "Custom-quote service — priced per project. Check the Urable quote or escalate to Rafael."}</p>
       </div>
     );
   }
-  // porte desconhecido → linha completa rotulada como tabela geral
-  const rows = Object.entries(prices.matrix).slice(0, 4).map(([k, row]) => {
-    const tiers = (prices._tiers || []).map((t) => row[t]).filter((v) => v != null);
-    const span = row.flat != null ? `$${row.flat}` : row.from != null ? `from $${row.from}`
-      : tiers.length ? `$${Math.min(...tiers)}–$${Math.max(...tiers)}` : null;
-    return [labels[k] || k, span];
-  }).filter(([, v]) => v);
+  const tier = tierFor(c);
+  const labels = prices._labels || {};
+  // linhas do serviço de interesse
+  let keys = [];
+  if (il) {
+    for (const [kw, ks] of Object.entries(prices._interest_map || {})) {
+      if (il.includes(kw)) { keys = ks; break; }
+    }
+  }
+  if (keys.length) {
+    const rows = keys.map((k) => [labels[k] || k,
+      tier ? priceVal(prices.matrix[k] || {}, tier)
+           : spanFor(prices.matrix[k] || {}, prices._tiers)]).filter(([, v]) => v);
+    if (rows.length) {
+      return (
+        <div className="dsec">
+          <div className="dl">Prices for their interest{tier ? ` · tier: ${tier}` : " (general — tier unknown)"}</div>
+          <p>{rows.map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+        </div>
+      );
+    }
+  }
+  // interesse indefinido → pergunta de abertura + Price sheet
   return (
     <div className="dsec">
-      <div className="dl">General price table — car tier unknown (set it after the call)</div>
-      <p>{rows.map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+      <div className="dl">Service interest unknown</div>
+      <p>Open with: <b>&ldquo;What are you looking to get done on the car — protection, coating or tint?&rdquo;</b> Then use the 💲 Price sheet (top bar) for exact numbers.</p>
     </div>
   );
+}
+function spanFor(row, tiers) {
+  if (row.flat != null) return `$${row.flat}`;
+  if (row.from != null) return `from $${row.from}`;
+  const vs = (tiers || []).map((t) => row[t]).filter((v) => v != null);
+  return vs.length ? `$${Math.min(...vs)}–$${Math.max(...vs)}` : null;
 }
 
 function QuoteBlock({ c }) {
@@ -331,7 +365,15 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
         {c.score ? <span className="score">Score {c.score}</span> : null}
       </div>
       <div className="detail">
-        {c.type === "quote_followup" && <QuoteBlock c={c} />}
+        {c.how && c.how.interest && c.how.interest.value && (
+          <div className="dsec" style={{ background: "var(--blue-soft)", borderColor: "var(--blue-border)" }}>
+            <div className="dl">Looking for</div>
+            <p><b>{c.how.interest.value}</b>
+              <span className="meta"> · source: {c.how.interest.source === "form_seed" ? "intake form" : c.how.interest.source}
+              {c.how.interest.updated ? ` · updated ${c.how.interest.updated}` : ""}</span></p>
+          </div>
+        )}
+        {c.how && c.how.quote && <QuoteBlock c={c} />}
         <div className="dsec">
           <div className="dl">Why now</div>
           <p>{c.why}</p>
