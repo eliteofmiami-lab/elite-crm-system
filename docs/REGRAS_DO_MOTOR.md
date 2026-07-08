@@ -5,6 +5,16 @@ Este documento é a regra completa que decide: (1) a ORDEM dos cards na fila do 
 
 ---
 
+## 0. O princípio zero — a unidade de análise é o LEAD, não a call
+
+Nenhum score, próxima ação ou card nasce de uma call isolada. Tudo nasce da **síntese cronológica do lead**: todas as calls analisadas + todos os SMS (enviados e respondidos) + eventos (quotes, appointments, no-shows, inbound perdidas), em ordem de data. Regras da cronologia:
+- **Evidência mais nova SOBRESCREVE a antiga** (pediu quote em maio, cancelou em junho → intenção atual = aguardando; cada componente do score carrega a DATA da evidência)
+- **"Cliente pediu espaço" é respeitado**: "not right now, I'll call you" → estado `aguardando_decisao_cliente` com data — sai da discagem ativa, entra em nurture leve com cadência mínima
+- **Evento futuro conhecido** ("esperando o modelo novo em setembro") → follow-up agendado PARA a janela certa, não retry genérico
+- **Tentativa de retorno do cliente não atendida** (ligou de volta e ninguém atendeu) = urgência máxima, sempre registrada
+- **Pós-venda fica FORA do sistema, por completo**: call de garantia/pós-venda reconhecida = o sistema NÃO gera nada — sem card, sem task, sem score, sem mover stage, sem rascunho, sem advice, sem board. Registra `pos_venda` e silencia. Pós-venda é gerenciado pessoalmente pelo Rafael, um a um. Reentrada só se o cliente iniciar conversa de venda NOVA (novo carro/serviço) — aí nasce como lead normal
+- O card conta a HISTÓRIA ("2 calls depois, em 9/jun, ele disse que liga quando decidir — não perseguir"), não a foto de uma call antiga
+
 ## 1. O princípio
 
 **Posição na fila = CAMADA → GATILHO → SCORE → antiguidade.**
