@@ -9,11 +9,13 @@ const GHL = "https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contac
 const COLS = [
   { n: 1, title: "Return · Reply · Hot", cap: "missed calls, unanswered SMS, HOT LEADS · oldest first" },
   { n: 2, title: "New Leads — Call ASAP", cap: "stage New Lead · oldest first" },
-  { n: 3, title: "Tasks & Quote follow-ups", cap: "GHL tasks due · Urable sent, no reply" },
-  { n: 4, title: "Pipeline follow-ups", cap: "Contact 1/2 · Follow Up stages · oldest first" },
+  { n: 3, title: "Tasks & Quote follow-ups", cap: "GHL tasks due · Urable no reply · quote without task = red" },
+  { n: 4, title: "Pipeline — Contact 1/2/3", cap: "newest first · 1–2 calls/day · 2 moves today = done till tomorrow" },
+  { n: 7, title: "Follow-ups", cap: "task due today/overdue · no task = red flag" },
   { n: 5, title: "Appointments · next 2 days", cap: "confirm the pending · know who's coming" },
   { n: 6, title: "Warm up", cap: "daily ration · Lost recoverable + 30d+ idle" },
 ];
+const RED_KINDS = new Set(["followup_notask", "quote_notask"]);
 
 function ageOf(ts) {
   if (!ts) return "";
@@ -39,8 +41,10 @@ function beep() {
 
 function KCard({ c, conf, isSpanish, isOwner, onSpanish }) {
   const [open, setOpen] = useState(false);
+  const red = RED_KINDS.has(c.kind);
   return (
     <div className={`kcard${conf ? " conf" : ""}${open ? " open" : ""}`}
+      style={red ? { border: "1.5px solid var(--red-border)", borderLeft: "4px solid var(--red)", background: "#FFFBFA" } : undefined}
       onClick={(e) => { if (e.target.closest("a,button,input")) return; setOpen(!open); }}>
       <div className="nm">{isSpanish ? "🇪🇸 " : ""}{c.nome || "—"}
         {conf
@@ -222,7 +226,15 @@ export default function BoardView({ session, data, reload, role }) {
   }
   const openByCol = (n) => open.filter((c) => c.coluna === n)
     .filter((c) => (isOwner ? true : !spanishSet.has(c.contact_id)))
-    .sort((a, b) => new Date(a.origem_ts || a.created_at) - new Date(b.origem_ts || b.created_at));
+    .sort((a, b) => {
+      // regra Rafael: Pipeline (col 4) = mais NOVOS primeiro; resto mais antigo primeiro.
+      // Vermelhos de task faltando sobem pro topo da coluna deles.
+      const redDiff = (RED_KINDS.has(b.kind) ? 1 : 0) - (RED_KINDS.has(a.kind) ? 1 : 0);
+      if (redDiff) return redDiff;
+      const ta = new Date(a.origem_ts || a.created_at);
+      const tb = new Date(b.origem_ts || b.created_at);
+      return n === 4 ? tb - ta : ta - tb;
+    });
   const today = new Date().toISOString().slice(0, 10);
   const createdToday = (n) => cards.filter((c) => c.coluna === n && c.day_created === today).length;
   const resolvedToday = (n) => cards.filter((c) => c.coluna === n && c.status === "resolved" &&

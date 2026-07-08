@@ -62,17 +62,27 @@ CLOSES = {
                 "Unanswered: move to Contact 1.",
     "task": "Closes when: task completed in GHL after the call + resolution.",
     "urable": "Closes when: call/SMS made → resolution (appointment · new task · Lost).",
-    "pipeline": "Closes when: call made → resolution. Unanswered: next stage.",
+    "pipeline": "Closes when: call made → resolution. Unanswered: next stage. "
+                "2 stage moves today = done until tomorrow.",
     "appt_confirm": "Closes when: confirmation SMS sent OR status \"confirmed\" in GHL.",
     "warmup": "Closes when: call made → resolution; unanswered → reactivation SMS sent "
               "OR Lost terminal.",
+    "followup": "Closes when: the task is completed in GHL (after the call → one "
+                "resolution) OR the stage moves.",
+    "followup_notask": "RED FLAG — in Follow Up with NO task. Create a follow-up task "
+                       "with a date OR move to another stage. Closes when either happens.",
+    "quote_notask": "RED FLAG — quote sent with NO follow-up task. Create the task so "
+                    "you know when to call back. Closes when the task exists.",
 }
-CALL_KINDS = {"missed_inbound", "hot", "new_lead", "task", "urable", "pipeline", "warmup"}
+CALL_KINDS = {"missed_inbound", "hot", "new_lead", "task", "urable", "pipeline",
+              "warmup", "followup"}
+# Regra Rafael 2026-07-08: Contact 1/2/3 = coluna 4 (mais novos primeiro; 2 moves/dia
+# = completo por hoje). Follow Up = coluna 7, AMARRADO a task (sem task = vermelho).
 STAGE_COLS = {"HOT LEADS": (1, "hot"), "New Lead": (2, "new_lead"),
               "Contact 1 (AM)": (4, "pipeline"), "Contact 1 (PM)": (4, "pipeline"),
               "Contact 2 (AM)": (4, "pipeline"), "Contact 2 (PM)": (4, "pipeline"),
-              "Contact 3 (AM)": (4, "pipeline"), "Contact 3 (PM)": (4, "pipeline"),
-              "Follow Up": (4, "pipeline")}
+              "Contact 3 (AM)": (4, "pipeline"), "Contact 3 (PM)": (4, "pipeline")}
+STAGE_KINDS = {"hot", "new_lead", "pipeline", "followup", "followup_notask", "quote_notask"}
 
 CF_VEH = {"make": "CiRd678lAFn854igklGR", "model": "LHwTnTb8TPz5BbJ0I2XV",
           "year": "C01IzbXlbESCLfhoHkrZ"}
@@ -371,7 +381,8 @@ def cycle(full_task_pass=False):
     AGE_WIN = {"missed_inbound": W["col1_days"], "sms_reply": W["col1_days"],
                "hot": W["col1_days"], "new_lead": W["col2_days"],
                "task": W["task_overdue_days"], "urable": W["urable_days"],
-               "pipeline": W["pipeline_days"]}
+               "pipeline": W["pipeline_days"], "followup": W["pipeline_days"],
+               "followup_notask": W["pipeline_days"], "quote_notask": W["pipeline_days"]}
     aged_n = 0
     for c in list(oc):
         win_d = AGE_WIN.get(c["kind"])
@@ -390,6 +401,14 @@ def cycle(full_task_pass=False):
     # ---- 4. colunas 1/2/4 (espelho com janelas) ----
     n_new = 0
     now = now_utc()
+
+    def moves_today(cid):
+        """Cadência (regra Rafael): 2 mudanças de stage HOJE = completo por hoje."""
+        rows = sb._sb("GET", f"board_cards?contact_id=eq.{cid}&status=eq.resolved"
+                             f"&resolved_at=gte.{today}T04:00:00Z"
+                             "&resolved_by=like.stage*&select=id") or []
+        return len(rows)
+
     for cid, lst in opps.items():
         for stage, o in lst:
             col, kind = STAGE_COLS[stage]
@@ -402,6 +421,8 @@ def cycle(full_task_pass=False):
                 continue
             if kind == "hot" and age_days > W["col1_days"]:
                 continue  # HOT envelhecido (ex.: legado migrado) → ração do warm-up
+            if kind == "pipeline" and moves_today(cid) >= 2:
+                continue  # 1-2 ligações/dia feitas → volta amanhã se ainda no pipeline
             brief = contact_brief(cid)
             if not ok_contact(cid, brief):
                 continue
@@ -410,6 +431,46 @@ def cycle(full_task_pass=False):
                       f"{stage} · since {ots:%b %d}")
             n_new += upsert_card(col, kind, cid, origem, ots, brief,
                                  opportunity_id=o["id"], stage=stage, existing=existing)
+
+    # ---- col7: Follow Up amarrado a TASK · col3: Quote Sent sem task = vermelho ----
+    for fu_stage, notask_kind, task_kind, col_flag in (
+            ("Follow Up", "followup_notask", "followup", 7),
+            ("Quote Sent", "quote_notask", None, 3)):
+        for o in paged_opps(rules.STAGES[fu_stage]):
+            if o.get("status") != "open":
+                continue
+            cid = o["contactId"]
+            ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt")) or now
+            if (now - ots).days > W["pipeline_days"]:
+                continue  # envelhecido → warm-up cuida
+            tr = ghl.get(f"/contacts/{cid}/tasks")
+            tasks = [t for t in (tr.json().get("tasks", []) if tr.status_code == 200 else [])
+                     if not t.get("completed") and t.get("dueDate")]
+            brief = None
+            if not tasks:
+                brief = contact_brief(cid)
+                if not ok_contact(cid, brief):
+                    continue
+                n_new += upsert_card(
+                    col_flag, notask_kind, cid,
+                    f"{fu_stage} since {ots:%b %d} — NO TASK · needs a decision",
+                    ots, brief, opportunity_id=o["id"], stage=fu_stage, existing=existing)
+                continue
+            if task_kind:  # Follow Up com task: só aparece na data (hoje/vencida)
+                due_list = sorted(tasks, key=lambda t: t.get("dueDate") or "")
+                nxt = due_list[0]
+                due = parse_ts(nxt["dueDate"])
+                if due and due.date() <= dt.datetime.now(ET).date():
+                    brief = contact_brief(cid)
+                    if not ok_contact(cid, brief):
+                        continue
+                    overdue = (dt.datetime.now(ET).date() - due.date()).days
+                    label = "due today" if overdue <= 0 else f"overdue {overdue}d"
+                    n_new += upsert_card(
+                        7, task_kind, cid,
+                        f"Follow Up · task \"{(nxt.get('title') or '')[:38]}\" · {label}",
+                        due, brief, opportunity_id=o["id"], stage=fu_stage,
+                        task_id=nxt.get("id"), existing=existing)
 
     # col1: inbound perdida sem retorno + SMS aguardando resposta (janela 3d)
     col1_win = now - dt.timedelta(days=W["col1_days"])
@@ -582,11 +643,39 @@ def cycle(full_task_pass=False):
         created = parse_ts(card["created_at"])
         # ESPELHO PRIMEIRO (caso Jamile): card de stage cuja opp SAIU do stage fecha
         # SEMPRE — o card do stage novo assume. Vale com ou sem call no meio.
-        if kind in ("hot", "new_lead", "pipeline") and card.get("stage") \
-                and card["stage"] not in stage_now.get(cid, set()):
-            resolve_card(card, "stage moved", "")
-            resolutions += 1
+        # (Follow Up/Quote Sent: stage_now não os pagina — checar direto na opp.)
+        if kind in STAGE_KINDS and card.get("stage"):
+            if card["stage"] in ("Follow Up", "Quote Sent"):
+                opr = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID,
+                                                        "contact_id": cid, "limit": 5})
+                cur = {rules.STAGE_BY_ID.get(o.get("pipelineStageId"))
+                       for o in (opr.json().get("opportunities", []) if opr.status_code == 200 else [])
+                       if o.get("status") == "open"}
+                if card["stage"] not in cur:
+                    resolve_card(card, "stage moved", "")
+                    resolutions += 1
+                    continue
+            elif card["stage"] not in stage_now.get(cid, set()):
+                resolve_card(card, "stage moved", "")
+                resolutions += 1
+                continue
+        # vermelhos de task faltando: somem quando a task com data EXISTE
+        if kind in ("followup_notask", "quote_notask"):
+            tr = ghl.get(f"/contacts/{cid}/tasks")
+            has_task = any(not t.get("completed") and t.get("dueDate")
+                           for t in (tr.json().get("tasks", []) if tr.status_code == 200 else []))
+            if has_task:
+                resolve_card(card, "task created", "")
+                resolutions += 1
             continue
+        # follow-up com task: fecha quando a task é CONCLUÍDA no GHL
+        if kind == "followup" and card.get("task_id"):
+            tr = ghl.get(f"/contacts/{cid}/tasks")
+            tlist = tr.json().get("tasks", []) if tr.status_code == 200 else []
+            if any(t.get("id") == card["task_id"] and t.get("completed") for t in tlist):
+                resolve_card(card, "task completed", "")
+                resolutions += 1
+                continue
         # SMS card: resposta enviada fecha
         if kind == "sms_reply":
             reply = next((s for s in sms_out if s["contact_id"] == cid

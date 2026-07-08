@@ -23,13 +23,15 @@ const STAGE_BY_ID = {
   "125cfc10-4578-4275-86ae-5344aeea0676": "Lost",
   "361f01f1-fd89-4e2f-8e74-eaf3a17b6cad": "HOT LEADS",
 };
+// Follow Up/Quote Sent NÃO criam card aqui: são regidos por TASK (ciclo cuida);
+// o webhook só FECHA os cards do stage antigo em ≤8s.
 const STAGE_CARD = {
   "HOT LEADS": [1, "hot"], "New Lead": [2, "new_lead"],
   "Contact 1 (AM)": [4, "pipeline"], "Contact 1 (PM)": [4, "pipeline"],
   "Contact 2 (AM)": [4, "pipeline"], "Contact 2 (PM)": [4, "pipeline"],
   "Contact 3 (AM)": [4, "pipeline"], "Contact 3 (PM)": [4, "pipeline"],
-  "Follow Up": [4, "pipeline"],
 };
+const STAGE_KINDS = ["hot", "new_lead", "pipeline", "followup", "followup_notask", "quote_notask"];
 const CLOSES = {
   hot: "Closes when: call made → one resolution (appointment · task · estimate+stage · Lost). Unanswered: next stage.",
   new_lead: "Closes when: call made → appointment · task · estimate+stage · Lost. Unanswered: move to Contact 1.",
@@ -81,7 +83,7 @@ async function miniMirrorStage(cid) {
   const open = await sb("GET", `board_cards?status=eq.open&contact_id=eq.${cid}&select=*`);
   let closed = 0, created = 0;
   for (const card of open) {
-    const stale = ["hot", "new_lead", "pipeline"].includes(card.kind) &&
+    const stale = STAGE_KINDS.includes(card.kind) &&
       card.stage && !stagesNow.has(card.stage);
     if (isWin || stale) {
       // espelho primeiro: opp saiu do stage (ou virou Win) → card fecha SEMPRE
@@ -98,10 +100,16 @@ async function miniMirrorStage(cid) {
     }
   }
   if (!isWin) {
+    // cadência (regra Rafael): 2 mudanças de stage HOJE = completo por hoje —
+    // não recria card do pipeline até amanhã
+    const today = new Date().toISOString().slice(0, 10);
+    const movedToday = await sb("GET",
+      `board_cards?contact_id=eq.${cid}&status=eq.resolved&resolved_at=gte.${today}T04:00:00Z&resolved_by=like.stage*&select=id`);
     for (const o of opps.filter((x) => x.status === "open")) {
       const st = STAGE_BY_ID[o.pipelineStageId];
       const map = STAGE_CARD[st];
       if (!map) continue;
+      if (map[1] === "pipeline" && (movedToday || []).length >= 2) continue;
       const dup = await sb("GET",
         `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.${map[1]}&select=id&limit=1`);
       if (dup.length) continue;
