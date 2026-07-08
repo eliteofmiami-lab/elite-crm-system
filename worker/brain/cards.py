@@ -53,6 +53,8 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
     existing = _sb("GET", f"cards?status=eq.open&type=eq.{type_}&contact_id=eq.{contact_id}&select=id")
     if existing:
         return None  # já tem card aberto igual
+    if not card_eligible(contact_id, layer):
+        return None  # regra dura: Win/delete nunca; Lost só camada 3
     return _sb("POST", "cards", json={
         "type": type_, "layer": layer, "contact_id": contact_id,
         "opportunity_id": opportunity_id, "title": title, "why": why,
@@ -162,6 +164,77 @@ def sync_warm_calls(limit=25):
                 opportunity_id=o["id"], score=sc(o) or None)
             n += made is not None
     return n
+
+
+# ---------- ELEGIBILIDADE (regra dura — adendo A7.4 / bug 2026-07-08) ----------
+# Win NUNCA gera card e FECHA os abertos (+ confirma comissão) · dup usa a opp
+# mais avançada · Lost só na Camada 3 · delete/spam nunca.
+STAGE_RANK = {  # quanto maior, mais avançada no funil
+    "Win": 100, "Appointment Booked": 90, "Quote Sent": 80, "Follow Up": 70,
+    "Contact 3 (PM)": 65, "Contact 3 (AM)": 64, "Contact 2 (PM)": 63,
+    "Contact 2 (AM)": 62, "Contact 1 (PM)": 61, "Contact 1 (AM)": 60,
+    "New Lead": 50, "HOT LEADS": 45, "Great Cars": 40,
+    "Lost": 10, "delete": 0,
+}
+
+
+def most_advanced_stage(contact_id):
+    """Entre TODAS as opps do contato, o stage mais avançado (regra do dup)."""
+    r = ghl.get("/opportunities/search",
+                {"location_id": LOC, "contact_id": contact_id, "limit": 20})
+    if r.status_code != 200:
+        return None
+    best, best_rank = None, -1
+    for o in r.json().get("opportunities", []):
+        st = rules.STAGE_BY_ID.get(o.get("pipelineStageId"))
+        rk = STAGE_RANK.get(st, -1)
+        # status won conta como Win mesmo se o stage não bater
+        if o.get("status") == "won":
+            st, rk = "Win", 100
+        if rk > best_rank:
+            best, best_rank = st, rk
+    return best
+
+
+def confirm_commissions(contact_id):
+    """Opp virou Win → comissões 'potencial' do lead viram 'confirmado' (A4)."""
+    now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+    rows = _sb("PATCH",
+               f"commissions?contact_id=eq.{contact_id}&status=eq.potencial",
+               json={"status": "confirmado", "resolved_at": now}) or []
+    return len(rows)
+
+
+def eligibility_sync(verbose=False):
+    """Expurga cards inelegíveis contra o stage REAL atual. Roda antes da geração."""
+    purged = []
+    for c in open_cards():
+        st = most_advanced_stage(c["contact_id"])
+        if st is None:
+            continue
+        if st == "Win":
+            close_card(c["id"], "won — cliente fechou", {"stage": st})
+            n_comm = confirm_commissions(c["contact_id"])
+            purged.append((c["title"], "Win" + (f" (+{n_comm} comissão confirmada)" if n_comm else "")))
+        elif st == "delete":
+            close_card(c["id"], "inelegível — stage delete/spam", {"stage": st})
+            purged.append((c["title"], "delete"))
+        elif st == "Lost" and c["layer"] in (1, 2):
+            close_card(c["id"], "movido p/ Lost — só Camada 3 (cold)", {"stage": st})
+            purged.append((c["title"], "Lost em L1/L2"))
+        if verbose and purged and purged[-1][0] == c["title"]:
+            print(f"  expurgado: {c['title'][:50]} ({purged[-1][1]})")
+    return purged
+
+
+def card_eligible(contact_id, layer):
+    """Guard usado na CRIAÇÃO de cards."""
+    st = most_advanced_stage(contact_id)
+    if st == "Win" or st == "delete":
+        return False
+    if st == "Lost" and layer in (1, 2):
+        return False
+    return True
 
 
 def has_any_outbound(contact_id):
@@ -309,6 +382,7 @@ def autoclose():
 
 
 def sync_all():
+    el = len(eligibility_sync())
     ft = sync_first_touch()
     a = sync_appointment_confirmations()
     q = sync_quote_followups()
@@ -316,5 +390,5 @@ def sync_all():
     x = autoclose()
     r = reopen_snoozed()
     ml = flush_manual_logs()
-    return {"first_touch": ft, "appt": a, "quotes": q, "warm": w,
+    return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
             "fechados": x, "reabertos": r, "manual_logs": ml}
