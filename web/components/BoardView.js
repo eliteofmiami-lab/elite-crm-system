@@ -9,13 +9,20 @@ const GHL = "https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contac
 const COLS = [
   { n: 1, title: "Return · Reply · Hot", cap: "missed calls, unanswered SMS, HOT LEADS · oldest first" },
   { n: 2, title: "New Leads — Call ASAP", cap: "stage New Lead · oldest first" },
-  { n: 3, title: "Tasks & Quote follow-ups", cap: "GHL tasks due · Urable no reply · quote without task = red" },
+  { n: 3, title: "Today's tasks — Quotes · Follow-ups", cap: "🟢 quote task first · 🔵 follow-up task · 🟡 other tasks · Urable no reply" },
   { n: 4, title: "Pipeline — Contact 1/2/3", cap: "newest first · 1–2 calls/day · 2 moves today = done till tomorrow" },
-  { n: 7, title: "Follow-ups", cap: "task due today/overdue · no task = red flag" },
+  { n: 7, title: "⚠ Needs attention — no task", cap: "Quote Sent & Follow Up without a task — create task + date" },
   { n: 5, title: "Appointments · next 2 days", cap: "confirm the pending · know who's coming" },
   { n: 6, title: "Warm up", cap: "daily ration · Lost recoverable + 30d+ idle" },
 ];
 const RED_KINDS = new Set(["followup_notask", "quote_notask"]);
+// cores por importância (regra Rafael): verde quote+task · azul follow-up+task · amarelo task avulsa
+const KIND_STYLE = {
+  quote_task: { border: "1.5px solid var(--green-border)", borderLeft: "4px solid var(--green)", background: "#F6FEF9" },
+  followup: { border: "1.5px solid #B2CCFF", borderLeft: "4px solid var(--blue)", background: "#F5F9FF" },
+  task: { border: "1.5px solid var(--amber-border)", borderLeft: "4px solid var(--amber)", background: "#FFFDF5" },
+};
+const KIND_RANK = { quote_task: 0, followup: 1, task: 2, urable: 3 };
 
 function ageOf(ts) {
   if (!ts) return "";
@@ -42,9 +49,12 @@ function beep() {
 function KCard({ c, conf, isSpanish, isOwner, onSpanish }) {
   const [open, setOpen] = useState(false);
   const red = RED_KINDS.has(c.kind);
+  const style = red
+    ? { border: "1.5px solid var(--red-border)", borderLeft: "4px solid var(--red)", background: "#FFFBFA" }
+    : KIND_STYLE[c.kind];
   return (
     <div className={`kcard${conf ? " conf" : ""}${open ? " open" : ""}`}
-      style={red ? { border: "1.5px solid var(--red-border)", borderLeft: "4px solid var(--red)", background: "#FFFBFA" } : undefined}
+      style={style}
       onClick={(e) => { if (e.target.closest("a,button,input")) return; setOpen(!open); }}>
       <div className="nm">{isSpanish ? "🇪🇸 " : ""}{c.nome || "—"}
         {conf
@@ -227,10 +237,14 @@ export default function BoardView({ session, data, reload, role }) {
   const openByCol = (n) => open.filter((c) => c.coluna === n)
     .filter((c) => (isOwner ? true : !spanishSet.has(c.contact_id)))
     .sort((a, b) => {
-      // regra Rafael: Pipeline (col 4) = mais NOVOS primeiro; resto mais antigo primeiro.
-      // Vermelhos de task faltando sobem pro topo da coluna deles.
+      // regra Rafael: col 3 por importância (verde→azul→amarelo→urable);
+      // col 4 mais NOVOS primeiro; resto mais antigo primeiro; vermelhos no topo.
       const redDiff = (RED_KINDS.has(b.kind) ? 1 : 0) - (RED_KINDS.has(a.kind) ? 1 : 0);
       if (redDiff) return redDiff;
+      if (n === 3) {
+        const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);
+        if (kd) return kd;
+      }
       const ta = new Date(a.origem_ts || a.created_at);
       const tb = new Date(b.origem_ts || b.created_at);
       return n === 4 ? tb - ta : ta - tb;
