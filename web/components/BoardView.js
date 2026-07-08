@@ -107,7 +107,10 @@ export default function BoardView({ session, data, reload, role }) {
     async function ping() {
       try {
         const { data: s } = await supabase.auth.getSession();
-        await fetch("/api/delta", { headers: { Authorization: `Bearer ${s?.session?.access_token || ""}` } });
+        // cache-buster: URL única por chamada — CDN nunca serve HIT do delta
+        await fetch(`/api/delta?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${s?.session?.access_token || ""}` } });
       } catch (_) { /* delta é reconciliação — falha silenciosa */ }
     }
     ping();
