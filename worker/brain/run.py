@@ -139,6 +139,10 @@ def send_capi(event_name, contact_id, opportunity_id, value=None):
 
 SCORE_CF = {"score": "OKX1hfCHkn2FWZud9lj1", "breakdown": "b7HYU3fGCvWTs8lTHVXS"}
 
+# KILL-SWITCH (ordem do Rafael 2026-07-08): TRUE = nenhuma chamada Deepgram/Claude
+# (análise, síntese de estado, crítico). A fila continua viva em modo leitura.
+ANALYSIS_OFF = True
+
 
 def refresh_score(contact_id, opp, analysis=None):
     """SCORE EM TEMPO REAL — A12-a: delega ao motor v3 (score_engine), que junta
@@ -279,7 +283,9 @@ def process_call(msg, st):
 
     analysis = None
     transcript_text = None
-    if answered and meta.get("duration", 0) > 20:   # A8: skip <20s
+    if ANALYSIS_OFF:
+        pass  # ORDEM RAFAEL 2026-07-08 ~11h: zero custo de análise até nova missão
+    elif answered and meta.get("duration", 0) > 20:   # A8: skip <20s
         try:
             audio = transcribe.download_recording(call_id)
             if not audio:
@@ -346,14 +352,15 @@ def process_call(msg, st):
     if analysis:
         post_analysis_signals(msg, opp, analysis)  # A11 observação + A12-c visita provável
     # A16 (Regra Zero / MVP): evento novo → re-sintetizar o ESTADO do lead (síncrono)
-    # e aplicar na fila; o score sai do estado.
-    try:
-        from brain import lead_state
-        state, _ = lead_state.synthesize(msg["contactId"])
-        lead_state.apply_state(msg["contactId"], state)
-        print(f"  estado: {state.get('situacao')} ({str(state.get('situacao_evidencia'))[:50]!r})")
-    except Exception as e:
-        print(f"  [warn] síntese de estado falhou: {e}")
+    # e aplicar na fila; o score sai do estado. [desligado com ANALYSIS_OFF]
+    if not ANALYSIS_OFF:
+        try:
+            from brain import lead_state
+            state, _ = lead_state.synthesize(msg["contactId"])
+            lead_state.apply_state(msg["contactId"], state)
+            print(f"  estado: {state.get('situacao')} ({str(state.get('situacao_evidencia'))[:50]!r})")
+        except Exception as e:
+            print(f"  [warn] síntese de estado falhou: {e}")
     # MVP item 6: verificador pós-call — compara call vs. GHL e APONTA (nunca executa)
     if analysis:
         try:
@@ -429,12 +436,13 @@ def main():
                 key = f"sms:{msg['id']}"
                 if key not in st["processed_call_ids"]:
                     opp = opportunity_for_contact(msg["contactId"])
-                    try:
-                        from brain import lead_state
-                        state, _ = lead_state.synthesize(msg["contactId"])
-                        lead_state.apply_state(msg["contactId"], state)
-                    except Exception as e:
-                        print(f"  [warn] síntese (sms) falhou: {e}")
+                    if not ANALYSIS_OFF:
+                        try:
+                            from brain import lead_state
+                            state, _ = lead_state.synthesize(msg["contactId"])
+                            lead_state.apply_state(msg["contactId"], state)
+                        except Exception as e:
+                            print(f"  [warn] síntese (sms) falhou: {e}")
                     refresh_score(msg["contactId"], opp)
                     st["processed_call_ids"] = (st["processed_call_ids"] + [key])[-2000:]
 
