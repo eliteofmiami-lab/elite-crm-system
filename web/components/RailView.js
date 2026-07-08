@@ -96,12 +96,21 @@ function FeedbackBox({ c, states, onDone }) {
   );
 }
 
-export default function RailView({ data }) {
+export default function RailView({ data, reload }) {
   const [openId, setOpenId] = useState(null);
   const [showCount, setShowCount] = useState(null);
   const [showFb, setShowFb] = useState(null);
+  const [gone, setGone] = useState({});
   const hour = new Date().getHours();
   const states = data.states || {};
+  async function closeCard(c) {
+    setGone({ ...gone, [c.id]: true });
+    await supabase.from("cards").update({
+      status: "done", result: "closed manually in rail", closed_by: "manual-rail",
+      closed_at: new Date().toISOString(),
+    }).eq("id", c.id);
+    reload && reload();
+  }
   const scores = data.scores || {};
   const pendById = {};
   (data.pendencias || []).forEach((p) => {
@@ -119,13 +128,13 @@ export default function RailView({ data }) {
         <b>Call queue</b>
         <span style={{ color: "#98A2B3" }}>· {queue.length} · sorted for you — take #1</span>
       </div>
-      {queue.map((c, i) => {
+      {queue.filter((c) => !gone[c.id]).map((c, i) => {
         const st = states[c.contact_id] || {};
         const sit = (c.how && c.how.state) || st.situacao;
         const lbl = STATE_LABEL[sit];
-        const veh = st.state && st.state.vehicle
+        const veh = (c.how && c.how.veh) || (st.state && st.state.vehicle
           ? [st.state.vehicle.year, st.state.vehicle.make, st.state.vehicle.model]
-            .filter(Boolean).join(" ") : null;
+            .filter(Boolean).join(" ") : null);
         const interest = c.how && c.how.interest && c.how.interest.value;
         const pends = pendById[c.contact_id] || [];
         const open = openId === c.id || (openId === null && i === 0);
@@ -150,6 +159,13 @@ export default function RailView({ data }) {
                 style={{ border: "1px solid #E4E7EC", background: "#fff", borderRadius: 999,
                   width: 20, height: 20, fontSize: 11, cursor: "pointer", color: "#475467" }}>i</button>
             </div>
+            {(veh || interest) && (
+              <div style={{ marginTop: 4, fontSize: 12.2, color: "#475467" }}>
+                {veh ? <>🚗 <b>{veh}</b></> : null}
+                {veh && interest ? " · " : ""}
+                {interest ? <>looking for <b>{interest}</b></> : null}
+              </div>
+            )}
             {lbl && (
               <span style={{ display: "inline-block", margin: "6px 0 0", padding: "2px 8px",
                 borderRadius: 999, fontSize: 11.5, fontWeight: 600,
@@ -163,12 +179,6 @@ export default function RailView({ data }) {
             {open && (
               <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.45 }}
                 onClick={(e) => e.stopPropagation()}>
-                {(veh || interest) && (
-                  <div style={{ color: "#475467" }}>
-                    {veh ? <>🚗 {veh}</> : null}{veh && interest ? " · " : ""}
-                    {interest ? <>Looking for <b>{interest}</b></> : null}
-                  </div>
-                )}
                 <div style={{ margin: "6px 0", color: "#101828" }}>{c.why}</div>
                 {pends.length > 0 && (
                   <div style={{ background: "#FEF3F2", border: "1px solid #FECDCA",
@@ -190,6 +200,13 @@ export default function RailView({ data }) {
                     style={{ border: "1px solid #E4E7EC", background: "#fff", borderRadius: 8,
                       padding: "5px 9px", fontSize: 11.5, cursor: "pointer", color: "#475467" }}>
                     ⚑ Report error
+                  </button>
+                  <button onClick={() => closeCard(c)}
+                    title="Close this card (queue only — GHL is not touched)"
+                    style={{ border: "1px solid #ABEFC6", background: "#ECFDF3", borderRadius: 8,
+                      padding: "5px 9px", fontSize: 11.5, cursor: "pointer",
+                      color: "#067647", fontWeight: 600 }}>
+                    ✓ Done
                   </button>
                   <a href={c.ghl_link} target="_blank" rel="noreferrer"
                     style={{ marginLeft: "auto", background: "#2970FF", color: "#fff",

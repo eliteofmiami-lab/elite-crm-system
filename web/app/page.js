@@ -108,7 +108,7 @@ export default function Home() {
   // MVP: fila somente-leitura para todos (?layout=rail é o modo do Custom Menu Link
   // do GHL; sem o parâmetro a mesma fila renderiza em coluna central)
   if (MVP_QUEUE_ONLY) {
-    return <RailView data={data} />;
+    return <RailView data={data} reload={load} />;
   }
 
   const role =

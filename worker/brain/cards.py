@@ -956,19 +956,49 @@ def sync_all():
 
 
 def refresh_card_narrativas():
-    """Regra Zero na fila VIVA: card aberto conta a HISTÓRIA do estado (com datas) —
-    não a foto de quando foi criado. Atualiza why/how.state dos abertos."""
+    """Regra Zero na fila VIVA: card aberto conta a HISTÓRIA do estado (com datas) e
+    mostra QUAL CARRO o cliente tem + O QUE ele busca (extraídos das calls anteriores),
+    quando disponíveis. Atualiza why/how dos abertos."""
     n = 0
     sts = {r["contact_id"]: r for r in
            (_sb("GET", "lead_states?select=contact_id,situacao,state") or [])}
     for c in open_cards():
         st = sts.get(c["contact_id"])
-        if not st:
-            continue
-        narrativa = (st.get("state") or {}).get("narrativa_do_card")
+        how = dict(c.get("how") or {})
+        changed = False
+        narrativa = None
+        if st:
+            state = st.get("state") or {}
+            narrativa = state.get("narrativa_do_card")
+            if how.get("state") != st.get("situacao"):
+                how["state"] = st.get("situacao")
+                changed = True
+            sv = state.get("vehicle") or {}
+            veh = " ".join(str(x) for x in (sv.get("year"), sv.get("make"), sv.get("model")) if x)
+            if veh and how.get("veh") != veh:
+                how["veh"] = veh
+                changed = True
+        if not how.get("veh"):  # fallback: veículo da última análise de call
+            ana = _sb("GET", ("analyses?select=payload,calls!inner(contact_id)"
+                              f"&calls.contact_id=eq.{c['contact_id']}"
+                              "&order=created_at.desc&limit=1")) or []
+            if ana:
+                av = (ana[0]["payload"].get("vehicle") or {})
+                veh = " ".join(str(x) for x in (av.get("year"), av.get("make"), av.get("model")) if x)
+                if veh:
+                    how["veh"] = veh
+                    changed = True
+        if not (how.get("interest") or {}).get("value"):
+            intr = interest_for(c["contact_id"])
+            if intr:
+                how["interest"] = intr
+                changed = True
+        payload = {}
         if narrativa and narrativa != c.get("why"):
-            how = dict(c.get("how") or {})
-            how["state"] = st.get("situacao")
-            _sb("PATCH", f"cards?id=eq.{c['id']}", json={"why": narrativa, "how": how})
+            payload["why"] = narrativa
+            changed = True
+        if changed:
+            payload["how"] = how
+            _sb("PATCH", f"cards?id=eq.{c['id']}", json=payload)
             n += 1
     return n
