@@ -37,12 +37,12 @@ function beep() {
   } catch (_) { /* sem som, sem drama */ }
 }
 
-function KCard({ c, conf }) {
+function KCard({ c, conf, isSpanish, isOwner, onSpanish }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`kcard${conf ? " conf" : ""}${open ? " open" : ""}`}
       onClick={(e) => { if (e.target.closest("a,button,input")) return; setOpen(!open); }}>
-      <div className="nm">{c.nome || "—"}
+      <div className="nm">{isSpanish ? "🇪🇸 " : ""}{c.nome || "—"}
         {conf
           ? <span className="ok">✓ {new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span>
           : <span className={`age ${ageClass(c.origem_ts)}`}>{c.kind === "appt_confirm" && c.appt_start
@@ -57,9 +57,19 @@ function KCard({ c, conf }) {
       <div className="kx">
         <div className="row">
           <span className="ph">📞 {c.phone || "—"}</span>
+          {onSpanish && (
+            <button onClick={() => onSpanish(c, !isSpanish)}
+              title={isSpanish ? "Send back to Eugene's board" : "Send to Rafael's board (Spanish speaker)"}
+              style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: 8,
+                padding: "6px 10px", font: "600 11.5px Inter", cursor: "pointer", color: "var(--sub)" }}>
+              {isSpanish ? (isOwner ? "Remove 🇪🇸 flag" : "🇪🇸 flagged") : "🇪🇸 Spanish only"}
+            </button>
+          )}
           <a className="open" href={GHL + c.contact_id} target="_blank" rel="noreferrer">Open ↗</a>
         </div>
         {c.closes_when && <div className="closes"><b>Closes when:</b>{c.closes_when.replace("Closes when:", "")}</div>}
+        {isSpanish && <div style={{ fontSize: 11, color: "var(--purple-text)", marginTop: 6, fontWeight: 600 }}>
+          Spanish speaker — lives on Rafael&apos;s board, off Eugene&apos;s.</div>}
       </div>
     </div>
   );
@@ -194,7 +204,21 @@ export default function BoardView({ session, data, reload, role }) {
     );
   }
 
+  // 🇪🇸 Spanish-only: sai do board do Eugene, vive no do Rafael (lead_flags — Supabase)
+  const spanishSet = data.spanish || new Set();
+  async function flagSpanish(c, on) {
+    if (on) {
+      await supabase.from("lead_flags").upsert(
+        { contact_id: c.contact_id, spanish_only: true, set_by: email },
+        { onConflict: "contact_id" });
+    } else {
+      await supabase.from("lead_flags").update({ spanish_only: false })
+        .eq("contact_id", c.contact_id);
+    }
+    reload && reload();
+  }
   const openByCol = (n) => open.filter((c) => c.coluna === n)
+    .filter((c) => (isOwner ? true : !spanishSet.has(c.contact_id)))
     .sort((a, b) => new Date(a.origem_ts || a.created_at) - new Date(b.origem_ts || b.created_at));
   const today = new Date().toISOString().slice(0, 10);
   const createdToday = (n) => cards.filter((c) => c.coluna === n && c.day_created === today).length;
@@ -302,11 +326,14 @@ export default function BoardView({ session, data, reload, role }) {
                   {col.n === 5 ? (
                     <>
                       <div className="subhead">To confirm · {toConf.length}</div>
-                      {toConf.map((c) => <KCard key={c.id} c={c} />)}
+                      {toConf.map((c) => <KCard key={c.id} c={c}
+                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
                       <div className="subhead">✓ Confirmed — who&apos;s coming · {confd.length}</div>
-                      {confd.map((c) => <KCard key={c.id} c={c} conf />)}
+                      {confd.map((c) => <KCard key={c.id} c={c} conf
+                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
                     </>
-                  ) : items.map((c) => <KCard key={c.id} c={c} />)}
+                  ) : items.map((c) => <KCard key={c.id} c={c}
+                    isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
                   {items.length === 0 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
                 </div>
               );
@@ -379,6 +406,14 @@ export default function BoardView({ session, data, reload, role }) {
             </div>
           </div>
           <OwnerFeedback email={email} />
+          <div className="ccard" style={{ marginTop: 14 }}>
+            <h3>🇪🇸 Spanish-only leads — yours</h3>
+            <p style={{ fontSize: 13, color: "var(--sub)" }}>
+              {open.filter((c) => spanishSet.has(c.contact_id)).length} open card(s) flagged Spanish
+              — hidden from Eugene&apos;s board, visible on yours (badge 🇪🇸 on the card).
+              Flag/unflag lives inside each card.
+            </p>
+          </div>
           <div className="ccard" style={{ marginTop: 14 }}>
             <h3>Activity by user — today</h3>
             <p style={{ fontSize: 13, color: "var(--sub)" }}>
