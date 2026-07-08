@@ -28,3 +28,8 @@ transcripts/
 
 # PII por-lead (lista com telefones) — não versionar
 docs/TOP_PRIORITIES.md
+
+# Auditorias e demos com PII — revisão local, fora do git
+AUDIT_ESCRITAS.md
+SCORE_SAMPLE.md
+G2_DEMO.md

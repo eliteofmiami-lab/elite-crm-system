@@ -136,19 +136,22 @@ def refresh_score(contact_id, opp, analysis=None):
                     how_soon = cf.get("value")
         s = score.compute(opp_name=opp.get("name"), how_soon=how_soon,
                           msgs=msgs, call_analysis=analysis)
-        payload = {"customFields": [
-            {"id": SCORE_CF["score"], "field_value": s["known"]},
-            {"id": SCORE_CF["breakdown"], "field_value": s["breakdown"]},
-        ]}
-        pr = requests.put(f"{ghl.BASE}/opportunities/{opp['id']}",
-                          headers={**ghl.H, "Content-Type": "application/json"},
-                          json=payload, timeout=30)
-        # espelha nos cards abertos do lead
+        # GHL: gravação de score respeita o gate global (disciplina 2026-07-07:
+        # dry-run → aprovação → execução, sem exceções). Painel/Supabase é livre.
+        if not writer.DRY_RUN:
+            payload = {"customFields": [
+                {"id": SCORE_CF["score"], "field_value": s["known"]},
+                {"id": SCORE_CF["breakdown"], "field_value": s["breakdown"]},
+            ]}
+            requests.put(f"{ghl.BASE}/opportunities/{opp['id']}",
+                         headers={**ghl.H, "Content-Type": "application/json"},
+                         json=payload, timeout=30)
+        # espelha nos cards abertos do lead (Supabase = livre)
         url, h = _supabase()
         if url:
             requests.patch(f"{url}/rest/v1/cards?status=eq.open&contact_id=eq.{contact_id}",
                            headers=h, json={"score": s["known"]}, timeout=15)
-        print(f"  score atualizado: {opp.get('name')!r} -> {s['known']} ({pr.status_code})")
+        print(f"  score recalculado: {opp.get('name')!r} -> {s['known']} (GHL write={'on' if not writer.DRY_RUN else 'gated'})")
         return s
     except Exception as e:
         print(f"  [warn] refresh_score falhou: {e}")
