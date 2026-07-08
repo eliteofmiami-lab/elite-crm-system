@@ -88,11 +88,11 @@ def sync_appointment_confirmations():
                 continue
             made = create_card(
                 "confirm_appt", 2, cid,
-                f"Confirmar appointment: {e.get('title') or 'agendamento'}",
-                f"Marcado para {e.get('startTime')} ({cal_name}) e ainda sem confirmação.",
-                {"passos": ["Enviar SMS de confirmação ou ligar",
-                            "Se não responder até 11am, ligar direto",
-                            "No-show custa um slot do dia — confirmar evita"]},
+                f"Confirm appointment: {e.get('title') or 'booking'}",
+                f"Scheduled for {e.get('startTime')} ({cal_name}) and still unconfirmed.",
+                {"passos": ["Send a confirmation SMS or call",
+                            "No reply by 11 AM: call directly",
+                            "A no-show costs a slot — confirming prevents it"]},
                 due_at=None)
             n += made is not None
     return n
@@ -122,11 +122,11 @@ def sync_quote_followups():
         for o in r.json().get("opportunities", []):
             made = create_card(
                 "quote_followup", 2, o["contactId"],
-                f"Follow-up da quote: {o.get('name') or 'lead'}",
-                "Quote enviada e sem resposta. Lead esfriando a cada dia.",
-                {"passos": ["Ligar e perguntar o que achou da proposta",
-                            "Se achou caro: oferecer opção menor (não desconto direto)",
-                            "Mencionar disponibilidade da agenda desta semana"]},
+                f"Quote follow-up: {o.get('name') or 'lead'}",
+                "Quote sent, no reply yet. This lead cools down every day.",
+                {"passos": ["Call and ask what they thought of the quote",
+                            "If price pushback: offer a smaller package (never a straight discount)",
+                            "Mention this week's schedule availability"]},
                 opportunity_id=o["id"], score=opp_score(o))
             n += made is not None
     return n
@@ -154,11 +154,11 @@ def sync_warm_calls(limit=25):
         for o in sorted(opps, key=sc, reverse=True)[:limit]:
             made = create_card(
                 "warm_call", 3, o["contactId"],
-                f"Ligar: {o.get('name') or 'lead'} ({stage})",
-                f"Score {sc(o) or '?'} — lead do {stage}, quanto antes ligar maior a chance.",
-                {"passos": ["Abrir o contato no GHL e ler as notas",
-                            "Ligar; se não atender, SMS curto e pessoal",
-                            "Objetivo: agendar visita ou enviar quote"]},
+                f"Call {o.get('name') or 'lead'} ({stage})",
+                f"Score {sc(o) or '?'} — {stage} lead; the sooner you call, the better the odds.",
+                {"passos": ["Open the contact in GHL and read the notes",
+                            "Call; if no answer, send a short personal SMS",
+                            "Goal: book a visit or send a quote"]},
                 opportunity_id=o["id"], score=sc(o) or None)
             n += made is not None
     return n
@@ -195,7 +195,7 @@ def autoclose():
                 if when <= created or msg.get("direction") != "outbound":
                     continue
                 if msg.get("messageType") in ("TYPE_CALL", "TYPE_SMS"):
-                    kind = "ligação feita" if msg["messageType"] == "TYPE_CALL" else "SMS enviado"
+                    kind = "call made" if msg["messageType"] == "TYPE_CALL" else "SMS sent"
                     close_card(c["id"], kind, {"message_id": msg.get("id"), "at": ts})
                     closed = True
                     n += 1

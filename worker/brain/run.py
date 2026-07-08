@@ -109,6 +109,52 @@ def send_capi(event_name, contact_id, opportunity_id, value=None):
         print(f"  [warn] CAPI {event_name} falhou: {e}")
 
 
+SCORE_CF = {"score": "OKX1hfCHkn2FWZud9lj1", "breakdown": "b7HYU3fGCvWTs8lTHVXS"}
+
+
+def refresh_score(contact_id, opp, analysis=None):
+    """SCORE EM TEMPO REAL (pedido do Rafael): recalcula no evento e grava
+    na opportunity (escrita já aprovada no G0-B) + espelha no card do painel."""
+    import requests
+    if not opp:
+        return None
+    try:
+        # histórico de mensagens fresco (engajamento)
+        msgs = []
+        r = ghl.get("/conversations/search", {"locationId": LOC, "contactId": contact_id})
+        if r.status_code == 200:
+            for cv in r.json().get("conversations", [])[:1]:
+                m = ghl.get(f"/conversations/{cv['id']}/messages")
+                if m.status_code == 200:
+                    msgs = m.json().get("messages", {}).get("messages", [])
+        # how_soon do contato (proxy de intenção)
+        how_soon = None
+        cr = ghl.get(f"/contacts/{contact_id}")
+        if cr.status_code == 200:
+            for cf in cr.json().get("contact", {}).get("customFields", []):
+                if cf.get("id") == "21s4ZqYAMUEAD30f0Xyd":  # contact.how_soon_...
+                    how_soon = cf.get("value")
+        s = score.compute(opp_name=opp.get("name"), how_soon=how_soon,
+                          msgs=msgs, call_analysis=analysis)
+        payload = {"customFields": [
+            {"id": SCORE_CF["score"], "field_value": s["known"]},
+            {"id": SCORE_CF["breakdown"], "field_value": s["breakdown"]},
+        ]}
+        pr = requests.put(f"{ghl.BASE}/opportunities/{opp['id']}",
+                          headers={**ghl.H, "Content-Type": "application/json"},
+                          json=payload, timeout=30)
+        # espelha nos cards abertos do lead
+        url, h = _supabase()
+        if url:
+            requests.patch(f"{url}/rest/v1/cards?status=eq.open&contact_id=eq.{contact_id}",
+                           headers=h, json={"score": s["known"]}, timeout=15)
+        print(f"  score atualizado: {opp.get('name')!r} -> {s['known']} ({pr.status_code})")
+        return s
+    except Exception as e:
+        print(f"  [warn] refresh_score falhou: {e}")
+        return None
+
+
 def persist_call(msg, meta, opp, analysis):
     """Grava call + análise no Supabase (alimenta Advice e KPIs do painel)."""
     import requests
@@ -155,16 +201,8 @@ def process_call(msg, st):
                     transcribe.diarized_as_text(t["diarized"]) or t["full_text"],
                     {"direction": direction, "duration_sec": meta.get("duration"),
                      "status": msg.get("status")})
-                # cliente falou espanhol? marca o lead (Eugene não fala ES — Rafael assume)
-                if (t.get("language") or "").startswith("es"):
-                    import requests
-                    url, h = _supabase()
-                    if url:
-                        requests.post(f"{url}/rest/v1/lead_flags",
-                                      headers={**h, "Prefer": "resolution=merge-duplicates"},
-                                      json={"contact_id": msg["contactId"],
-                                            "spanish_only": True, "set_by": "auto (call em espanhol)"},
-                                      timeout=15)
+                # (decisão do Rafael: NÃO marcar espanhol automaticamente —
+                #  ele/Eugene tentam em inglês primeiro e marcam manual no painel)
         except Exception as e:
             # chave faltando / falha de transcrição não pode derrubar o ciclo
             print(f"  [warn] análise da call {call_id} pulada: {e}")
@@ -185,17 +223,18 @@ def process_call(msg, st):
                 origem = " (Google Ads)" if msg.get("to") == rules.GOOGLE_ADS_NUMBER else ""
                 _cards.create_card(
                     "callback", 1, msg["contactId"],
-                    f"📞 LIGAÇÃO PERDIDA{origem}: {opp.get('name') or 'lead'}",
-                    f"Ligou de {msg.get('from')} e ninguém atendeu. Retornar AGORA — "
-                    "quem pegar primeiro resolve.",
-                    {"passos": ["Ligar de volta imediatamente",
-                                "Se não atender: SMS 'saw your call, how can I help?'",
-                                "Registrar o resultado no GHL"]},
+                    f"📞 MISSED CALL{origem}: {opp.get('name') or 'lead'}",
+                    f"Called from {msg.get('from')} and nobody answered. Call back NOW — "
+                    "first one to call handles it.",
+                    {"passos": ["Call back immediately",
+                                "No answer: text 'saw your call, how can I help?'",
+                                "Log the outcome in GHL"]},
                     opportunity_id=opp.get("id"))
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)
     persist_call(msg, meta, opp, analysis)
+    refresh_score(msg["contactId"], opp, analysis)  # score em tempo real
 
     st["processed_call_ids"] = (st["processed_call_ids"] + [call_id])[-2000:]
     return analysis
@@ -226,6 +265,13 @@ def main():
                     if opp:
                         apply_actions(rules.on_quote_detected(opp, msg["contactId"], mlink.group(0)))
                         n_quotes += 1
+            elif msg.get("messageType") == "TYPE_SMS" and msg.get("direction") == "inbound":
+                # lead respondeu → engajamento mudou → score em tempo real
+                key = f"sms:{msg['id']}"
+                if key not in st["processed_call_ids"]:
+                    opp = opportunity_for_contact(msg["contactId"])
+                    refresh_score(msg["contactId"], opp)
+                    st["processed_call_ids"] = (st["processed_call_ids"] + [key])[-2000:]
 
     # CAPI watcher: quem ENTROU em Great Cars desde o último ciclo → QualifiedLead
     # (event_id determinístico no Meta impede duplicar mesmo se reprocessar)
