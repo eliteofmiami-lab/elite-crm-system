@@ -313,11 +313,11 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
                         f"&kind=eq.{kind}&select=id&limit=1")
     if dup:
         return False
-    # ⚑ reportado: suprime só a MESMA ocorrência — evento NOVO (origem_ts mais novo)
-    # recria normalmente (ex.: nova perdida volta; dia de confirmar aparece)
+    # ⚑ reportado ou fechado na mão: suprime só a MESMA ocorrência — evento NOVO
+    # (origem_ts mais novo) recria normalmente (nova perdida volta; nova resposta idem)
     rep = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
-                        "&resolved_by=like.*reported*&select=origem_ts"
-                        "&order=resolved_at.desc&limit=1")
+                        "&or=(resolved_by.like.*reported*,resolved_by.like.*closed%20manually*)"
+                        "&select=origem_ts&order=resolved_at.desc&limit=1")
     if rep and origem_ts and rep[0].get("origem_ts"):
         if iso(origem_ts) <= rep[0]["origem_ts"]:
             return False  # mesma ocorrência já reportada — aguarda revisão

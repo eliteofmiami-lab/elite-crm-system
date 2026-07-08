@@ -46,7 +46,7 @@ function beep() {
   } catch (_) { /* sem som, sem drama */ }
 }
 
-function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport }) {
+function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
   const [open, setOpen] = useState(false);
   const [fb, setFb] = useState("");
   const [showFb, setShowFb] = useState(false);
@@ -86,6 +86,14 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport }) {
         {c.closes_when && <div className="closes"><b>Closes when:</b>{c.closes_when.replace("Closes when:", "")}</div>}
         {isSpanish && <div style={{ fontSize: 11, color: "var(--purple-text)", marginTop: 6, fontWeight: 600 }}>
           Spanish speaker — lives on Rafael&apos;s board, off Eugene&apos;s.</div>}
+        {c.kind === "sms_reply" && onClose && (
+          <button onClick={() => onClose(c)}
+            style={{ marginTop: 7, border: "1px solid var(--green-border)", background: "var(--green-soft)",
+              color: "var(--green-text)", borderRadius: 7, padding: "6px 10px",
+              font: "600 11.5px Inter", cursor: "pointer" }}>
+            ✓ Close — no reply needed
+          </button>
+        )}
         {onReport && (
           <div style={{ marginTop: 7 }}>
             {!showFb ? (
@@ -262,6 +270,14 @@ export default function BoardView({ session, data, reload, role }) {
     reload && reload();
   }
 
+  // ✓ fechamento manual simples do card de SMS (caso Carlos Quinhones)
+  async function closeNoReply(c) {
+    await supabase.from("board_cards").update({
+      status: "resolved", resolved_by: "closed manually — no reply needed",
+      resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
+    reload && reload();
+  }
+
   // 🇪🇸 Spanish-only: sai do board do Eugene, vive no do Rafael (lead_flags — Supabase)
   const spanishSet = data.spanish || new Set();
   async function flagSpanish(c, on) {
@@ -398,15 +414,15 @@ export default function BoardView({ session, data, reload, role }) {
                       <div className="subhead">To confirm · {toConf.length}</div>
                       {toConf.map((c) => <KCard key={c.id} c={c}
                         isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
-                        onSpanish={flagSpanish} onReport={reportClose} />)}
+                        onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
                       <div className="subhead">✓ Confirmed — who&apos;s coming · {confd.length}</div>
                       {confd.map((c) => <KCard key={c.id} c={c} conf
                         isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
-                        onSpanish={flagSpanish} onReport={reportClose} />)}
+                        onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
                     </>
                   ) : items.map((c) => <KCard key={c.id} c={c}
                     isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
-                    onSpanish={flagSpanish} onReport={reportClose} />)}
+                    onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
                   {items.length === 0 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
                 </div>
               );
