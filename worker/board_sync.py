@@ -46,8 +46,10 @@ DEFAULT_CFG = {
     "windows": {"col1_days": 3, "col2_days": 7, "task_overdue_days": 7,
                 "urable_days": 14, "pipeline_days": 30, "stalled_days": 30},
     "ration": 20,
-    # dispositions (tags criadas pelos workflows do Rafael): fora do warm-up pra sempre
-    "warmup_excluded_tags": ["lost-invalid-number", "lost-not-interested"],
+    # dispositions (tags criadas pelos workflows do Rafael): fora do warm-up pra sempre.
+    # faxina-*: limpeza ordenada pelo Rafael 08/jul — "não servem", não voltam na ração
+    "warmup_excluded_tags": ["lost-invalid-number", "lost-not-interested",
+                             "faxina-hot-migrado", "faxina-90d-sem-resposta"],
     "confirm_window_h": 48,
     "confirm_mode": "either",   # sms OU status confirmed
     "tiers": {"t1": 30, "t2": 35, "t3": 40, "rate1": 10, "rate2": 20,
