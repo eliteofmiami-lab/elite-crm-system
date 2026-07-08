@@ -153,7 +153,7 @@ def sync_warm_calls(limit=25):
 
 def reopen_snoozed():
     """Snoozed com due_at vencido volta pra fila (5 min antes já reabre)."""
-    now = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)).isoformat()
+    now = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
     rows = _sb("PATCH", f"cards?status=eq.snoozed&due_at=lt.{now}",
                json={"status": "open"}) or []
     return len(rows)
