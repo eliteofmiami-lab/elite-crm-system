@@ -75,3 +75,33 @@ rail/fila antiga, extensão. CAPI watcher tb fora do ciclo (workflow nativo Grea
 segue funcionando — me diga se quiser o watcher de volta).
 
 *Painel entregue. Parado, aguardando o Rafael.*
+
+---
+
+# ADENDO — TEMPO REAL NO AR (aceite medido · 2026-07-08 ~15:15 ET)
+
+## Arquitetura em 3 camadas — VIVA
+- **Push ≤5s**: 5 workflows de webhook no GHL (criados pelo Rafael) → `/api/ghl-event`.
+  Eventos REAIS já processados em 208–851ms (tabela `ghl_events` audita cada um).
+- **Realtime na tela**: Supabase Realtime — zero F5; indicador "● Live · last event".
+- **Delta 60s** (`/api/delta`, SMS enviados + validação de tentativa) + ponte local 2 min
+  + varredura CI como reconciliação.
+
+## Aceite com o lead de teste (GIEjjPmMs3CqUCzIUWpU)
+| Teste | Exigido | Medido |
+|---|---|---|
+| Stage movido → card some | ≤5s | **0,68s** |
+| SMS inbound → card col 1 | ≤5s | **0,73s** |
+| Delta (SMS outbound fecha) | ≤90s | exec 0,13s · pior caso ~75s |
+
+## Caso-prova Jamile (bug que originou a missão)
+Corrigido na causa: atendida = `completed` OU ≥25s; card de stage fecha SEMPRE que a
+opp sai do stage; alias do Rafael no mobile mapeado. Card HOT dela: `resolved · stage moved`.
+
+## Bugs reais pegos pelo teste (e corrigidos)
+1. Vercel cacheava o GET do delta (`force-dynamic` aplicado).
+2. 12 SEM RESOLUÇÃO antigos rotulados "answered" com calls de 6–15s → corrigidos.
+
+## Segurança e custo
+- Webhook autentica por chave (401 sem ela) · zero escrita no GHL (write_log md5 intacto)
+- Custo IA do dia: **$0,00**
