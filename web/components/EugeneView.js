@@ -4,10 +4,13 @@ import { supabase } from "../lib/supabaseClient";
 
 const CHIP = {
   callback: { cls: "hot", label: "Hot" },
+  first_touch: { cls: "hot", label: "First contact" },
   quote_followup: { cls: "quote", label: "Quote" },
   confirm_appt: { cls: "appt", label: "Appointment" },
   nice_to_talk: { cls: "quote", label: "Approve" },
 };
+// prioridade dentro da camada 2: first_touch SEMPRE acima (regra do Rafael)
+const TYPE_RANK = { first_touch: 0 };
 function chipFor(c) {
   if (CHIP[c.type]) return CHIP[c.type];
   const t = (c.title || "") + " " + (c.why || "");
@@ -48,8 +51,91 @@ function Snooze({ card, reload }) {
   );
 }
 
+function LogCall({ card, userEmail, reload }) {
+  const [f, setF] = useState({ outcome: "", make: "", model: "", year: "", momento: "",
+    interest: "", prices: "", hook: "", next_step: "", next_date: "", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  async function save() {
+    setSaving(true);
+    // 1) registro no banco (fonte da verdade; entrada manual VENCE o cérebro)
+    const { data: rows } = await supabase.from("manual_logs").insert({
+      contact_id: card.contact_id, card_id: card.id, fields: f, logged_by: userEmail,
+    }).select();
+    const row = rows && rows[0];
+    // 2) write-through imediato via API (se o servidor tiver a credencial GHL)
+    let instant = false;
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const res = await fetch("/api/log-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json",
+                   Authorization: `Bearer ${s.session.access_token}` },
+        body: JSON.stringify({ contact_id: card.contact_id, fields: f }),
+      });
+      instant = res.ok;
+      if (instant && row) {
+        await supabase.from("manual_logs").update({
+          status: "synced", synced_at: new Date().toISOString() }).eq("id", row.id);
+      }
+    } catch (_) { /* fallback: worker sincroniza em ≤5 min */ }
+    setSaving(false);
+    setSaved(instant ? "Saved to GHL ✓" : "Saved — syncing to GHL (≤5 min)");
+    reload();
+  }
+  const sel = { width: "100%", border: "1px solid var(--line)", borderRadius: 8,
+    padding: "9px 11px", font: "400 13px Inter,system-ui,sans-serif", color: "var(--ink)",
+    background: "var(--card)", marginBottom: 8 };
+  return (
+    <div className="snooze" style={{ marginTop: 10 }}>
+      <div className="sl"><b>Log call details</b> — what you type here wins over the AI; it only fills the blanks.</div>
+      <select style={sel} value={f.outcome} onChange={set("outcome")}>
+        <option value="">Outcome…</option>
+        <option>Answered — good talk</option><option>Answered — not interested</option>
+        <option>No answer</option><option>Voicemail left</option><option>Wrong number</option>
+      </select>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input style={sel} placeholder="Make" value={f.make} onChange={set("make")} />
+        <input style={sel} placeholder="Model" value={f.model} onChange={set("model")} />
+        <input style={sel} placeholder="Year" value={f.year} onChange={set("year")} />
+      </div>
+      <select style={sel} value={f.momento} onChange={set("momento")}>
+        <option value="">Car timing…</option>
+        <option>Just delivered / brand new</option><option>Arriving soon</option>
+        <option>Bought under 3 months ago</option><option>3–6 months</option>
+        <option>6–12 months</option><option>Over a year</option><option>Unknown</option>
+      </select>
+      <select style={sel} value={f.interest} onChange={set("interest")}>
+        <option value="">Interest level…</option>
+        <option>Hot — ready to move</option><option>Warm — interested, needs follow-up</option>
+        <option>Just exploring</option><option>Not interested</option>
+      </select>
+      <input style={sel} placeholder="Prices discussed (e.g. Full front PPF $2,200)"
+        value={f.prices} onChange={set("prices")} />
+      <input style={sel} placeholder="Personal note / hook (e.g. daughter's birthday trip, back Wednesday)"
+        value={f.hook} onChange={set("hook")} />
+      <div style={{ display: "flex", gap: 8 }}>
+        <select style={sel} value={f.next_step} onChange={set("next_step")}>
+          <option value="">Next step…</option>
+          <option>Follow up</option><option>Send quote</option>
+          <option>Book appointment</option><option>None</option>
+        </select>
+        <input style={sel} type="datetime-local" value={f.next_date} onChange={set("next_date")} />
+      </div>
+      <input style={sel} placeholder="Anything else worth remembering"
+        value={f.notes} onChange={set("notes")} />
+      <button className="btn primary sm" onClick={save} disabled={saving}>
+        {saving ? "Saving…" : "Save call log"}
+      </button>
+      {saved && <span style={{ marginLeft: 10, fontSize: 12.5, color: "#067647", fontWeight: 600 }}>{saved}</span>}
+    </div>
+  );
+}
+
 function Task({ c, idx, current, reload, preview = false, spanish = false, sinkSpanish = false, userEmail = "" }) {
   const [showSnooze, setShowSnooze] = useState(false);
+  const [showLog, setShowLog] = useState(false);
   const chip = spanish ? { cls: "appt", label: "🇪🇸 Spanish" } : chipFor(c);
   const how = (c.how && c.how.passos) || [];
   async function toggleSpanish() {
@@ -105,6 +191,9 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
         <div className="actions">
           <a className="btn primary" href={c.ghl_link} target="_blank" rel="noreferrer">Open in GHL ↗</a>
           {!preview && (
+            <button className="btn ghost" onClick={() => setShowLog(!showLog)}>Log call details</button>
+          )}
+          {!preview && (
             <button className="btn ghost" onClick={() => setShowSnooze(!showSnooze)}>Can&apos;t do now</button>
           )}
           {!preview && (
@@ -122,6 +211,7 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
             }}>Done ✓</button>
           )}
         </div>
+        {showLog && <LogCall card={c} userEmail={userEmail} reload={reload} />}
         {showSnooze && <Snooze card={c} reload={reload} />}
       </div>
     </div>
@@ -130,11 +220,18 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
 
 export default function EugeneView({ session, data, reload, preview = false, previewEmail = null, sinkSpanish = false }) {
   const email = preview ? previewEmail : session.user.email;
+  // ordenação: camada → first_touch acima na L2 → score desc → mais recente primeiro
+  const ranked = [...data.cards].sort((a, b) =>
+    (a.layer - b.layer) ||
+    ((TYPE_RANK[a.type] ?? 1) - (TYPE_RANK[b.type] ?? 1)) ||
+    ((b.score || 0) - (a.score || 0)) ||
+    (new Date(b.created_at) - new Date(a.created_at))
+  );
   // espanhol afunda na fila do Eugene (ele não fala ES); na fila do Rafael fica na ordem normal
   const orderedCards = sinkSpanish
-    ? [...data.cards.filter((c) => !data.spanish.has(c.contact_id)),
-       ...data.cards.filter((c) => data.spanish.has(c.contact_id))]
-    : data.cards;
+    ? [...ranked.filter((c) => !data.spanish.has(c.contact_id)),
+       ...ranked.filter((c) => data.spanish.has(c.contact_id))]
+    : ranked;
   const myShift = data.shifts.find((s) => s.user_email === email && !s.clock_out);
   const myPause = data.pauses.find(
     (p) => !p.ended_at && data.shifts.some((s) => s.id === p.shift_id && s.user_email === email)

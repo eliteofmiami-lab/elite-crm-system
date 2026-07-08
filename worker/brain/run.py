@@ -96,6 +96,30 @@ def apply_actions(actions):
         fn(**kwargs, gate="G2", motivo=motivo)
 
 
+def is_test_contact(contact):
+    """Tag teste-interno: fora de score write-back, CAPI, relatórios, comissões."""
+    return "teste-interno" in (contact.get("tags") or [])
+
+
+def register_test_contact(contact_id):
+    """Guarda os ids de teste no config p/ o botão 'limpar dados de teste' do painel."""
+    import requests
+    url, h = _supabase()
+    if not url:
+        return
+    try:
+        r = requests.get(f"{url}/rest/v1/config?key=eq.test_contact_ids&select=value",
+                         headers=h, timeout=10)
+        ids = set((r.json() or [{}])[0].get("value", []) if r.json() else [])
+        if contact_id not in ids:
+            ids.add(contact_id)
+            requests.post(f"{url}/rest/v1/config",
+                          headers={**h, "Prefer": "resolution=merge-duplicates"},
+                          json={"key": "test_contact_ids", "value": sorted(ids)}, timeout=10)
+    except Exception:
+        pass
+
+
 def send_capi(event_name, contact_id, opportunity_id, value=None):
     """Evento CAPI p/ Meta (QualifiedLead / AppointmentBooked / Purchase).
     CAPI está LIVE desde 2026-07-07 (pedido do Rafael) — independe do dry-run das
@@ -103,6 +127,10 @@ def send_capi(event_name, contact_id, opportunity_id, value=None):
     from brain import capi
     cr = ghl.get(f"/contacts/{contact_id}")
     contact = cr.json().get("contact", {}) if cr.status_code == 200 else {}
+    if is_test_contact(contact):
+        register_test_contact(contact_id)
+        print(f"  [teste-interno] CAPI {event_name} PULADO p/ contato de teste")
+        return
     try:
         capi.send_event(event_name, contact, opportunity_id, value=value)
     except Exception as e:
@@ -130,10 +158,14 @@ def refresh_score(contact_id, opp, analysis=None):
         # how_soon do contato (proxy de intenção)
         how_soon = None
         cr = ghl.get(f"/contacts/{contact_id}")
-        if cr.status_code == 200:
-            for cf in cr.json().get("contact", {}).get("customFields", []):
-                if cf.get("id") == "21s4ZqYAMUEAD30f0Xyd":  # contact.how_soon_...
-                    how_soon = cf.get("value")
+        contact_obj = cr.json().get("contact", {}) if cr.status_code == 200 else {}
+        if is_test_contact(contact_obj):
+            register_test_contact(contact_id)
+            print(f"  [teste-interno] score write-back PULADO p/ contato de teste")
+            return None
+        for cf in contact_obj.get("customFields", []):
+            if cf.get("id") == "21s4ZqYAMUEAD30f0Xyd":  # contact.how_soon_...
+                how_soon = cf.get("value")
         s = score.compute(opp_name=opp.get("name"), how_soon=how_soon,
                           msgs=msgs, call_analysis=analysis)
         # GHL: gravação de score respeita o gate global (disciplina 2026-07-07:

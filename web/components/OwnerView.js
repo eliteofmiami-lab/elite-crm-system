@@ -1,5 +1,6 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
 const FUNIL_COLORS = ["#2970FF", "#58A6FF", "#7A5AF8", "#B4A5FC", "#06AED4", "#12B76A"];
 
@@ -174,7 +175,44 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
         </div>
       </div>
 
+      <Diagnostics testIds={data.config.test_contact_ids || []} />
+
       <p className="footnote">Full daily report generated at 6:30 PM · commissions reconcile with sales at month close.</p>
+    </div>
+  );
+}
+
+function Diagnostics({ testIds }) {
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function clearTestData() {
+    if (!testIds.length) { setMsg("No test contacts registered yet."); return; }
+    if (!window.confirm(`Delete panel data for ${testIds.length} test contact(s)? GHL is NOT touched.`)) return;
+    setBusy(true);
+    const list = `(${testIds.map((i) => `"${i}"`).join(",")})`;
+    const { data: testCalls } = await supabase.from("calls").select("id").in("contact_id", testIds);
+    if (testCalls && testCalls.length) {
+      await supabase.from("analyses").delete().in("call_id", testCalls.map((c) => c.id));
+    }
+    await supabase.from("calls").delete().in("contact_id", testIds);
+    await supabase.from("cards").delete().in("contact_id", testIds);
+    await supabase.from("commissions").delete().in("contact_id", testIds);
+    await supabase.from("lead_flags").delete().in("contact_id", testIds);
+    await supabase.from("manual_logs").delete().in("contact_id", testIds);
+    setBusy(false);
+    setMsg(`Cleared panel data for ${testIds.length} test contact(s).`);
+  }
+  return (
+    <div className="panel" style={{ marginTop: 12 }}>
+      <h3>Diagnostics</h3>
+      <p className="meta" style={{ marginBottom: 10 }}>
+        Contacts tagged <b>teste-interno</b> in GHL are excluded from scoring, Meta events,
+        reports, commissions and bonus — but still show in the queue. Registered: {testIds.length}.
+      </p>
+      <button className="btn ghost sm" onClick={clearTestData} disabled={busy}>
+        {busy ? "Clearing…" : "🧹 Clear test data"}
+      </button>
+      {msg && <span style={{ marginLeft: 10, fontSize: 12.5, color: "var(--sub)" }}>{msg}</span>}
     </div>
   );
 }

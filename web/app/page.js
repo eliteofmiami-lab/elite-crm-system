@@ -57,7 +57,7 @@ export default function Home() {
         supabase.from("shifts").select("*").gte("clock_in", iso),
         supabase.from("pauses").select("*").gte("started_at", iso),
         supabase.from("commissions").select("*").gte("booked_at", monthStart),
-        supabase.from("config").select("key,value").in("key", ["stats_today", "bonus_period"]),
+        supabase.from("config").select("key,value").in("key", ["stats_today", "bonus_period", "test_contact_ids"]),
         supabase.from("lead_flags").select("contact_id,spanish_only").eq("spanish_only", true),
       ]);
     setData({

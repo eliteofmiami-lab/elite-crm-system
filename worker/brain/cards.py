@@ -164,6 +164,109 @@ def sync_warm_calls(limit=25):
     return n
 
 
+def has_any_outbound(contact_id):
+    """True se JÁ houve alguma tentativa de contato (call/SMS/email outbound)."""
+    r = ghl.get("/conversations/search", {"locationId": LOC, "contactId": contact_id})
+    if r.status_code != 200:
+        return True  # em dúvida, não marca como intocado
+    for cv in r.json().get("conversations", []):
+        m = ghl.get(f"/conversations/{cv['id']}/messages")
+        if m.status_code != 200:
+            continue
+        for msg in m.json().get("messages", {}).get("messages", []):
+            if msg.get("direction") == "outbound" and msg.get("messageType") in (
+                    "TYPE_CALL", "TYPE_SMS", "TYPE_EMAIL"):
+                return True
+    return False
+
+
+def sync_first_touch():
+    """REGRA DO RAFAEL (urgência 1): New Lead/HOT LEADS sem NENHUMA tentativa de
+    contato → topo da Camada 2 (type first_touch; painel ordena acima dos demais)."""
+    n = 0
+    for stage in ("New Lead", "HOT LEADS"):
+        r = ghl.get("/opportunities/search", {"location_id": LOC,
+                                              "pipeline_id": rules.NEW_PIPELINE_ID,
+                                              "pipeline_stage_id": rules.STAGES[stage],
+                                              "limit": 100})
+        if r.status_code != 200:
+            continue
+        for o in r.json().get("opportunities", []):
+            if o.get("status") != "open":
+                continue
+            cid = o["contactId"]
+            # já avaliado? (qualquer card first_touch, aberto ou fechado, = já visto)
+            seen = _sb("GET", f"cards?type=eq.first_touch&contact_id=eq.{cid}&select=id&limit=1")
+            if seen:
+                continue
+            if has_any_outbound(cid):
+                # registra card fechado "já contatado" p/ não re-checar a cada ciclo
+                _sb("POST", "cards", json={
+                    "type": "first_touch", "layer": 2, "contact_id": cid,
+                    "opportunity_id": o["id"], "title": f"(checked) {o.get('name')}",
+                    "why": "contact already attempted", "status": "done",
+                    "result": "já havia tentativa de contato", "closed_by": "auto",
+                    "ghl_link": GHL_LINK.format(loc=LOC, cid=cid)})
+                continue
+            made = create_card(
+                "first_touch", 2, cid,
+                f"FIRST CONTACT — {o.get('name') or 'lead'} ({stage})",
+                "Zero contact attempts so far. Untouched lead — always beats scheduled follow-ups.",
+                {"passos": ["Call now — first voice wins the deal",
+                            "No answer: voicemail + short intro SMS",
+                            "Goal: qualify the car and book a visit"]},
+                opportunity_id=o["id"], score=opp_score(o))
+            if made:
+                n += 1
+                # substitui warm_call duplicado do mesmo contato
+                _sb("PATCH", f"cards?status=eq.open&type=eq.warm_call&contact_id=eq.{cid}",
+                    json={"status": "done", "result": "superseded por first_touch",
+                          "closed_by": "auto"})
+    return n
+
+
+def flush_manual_logs():
+    """Formulário 'Log call details' (urgência 2): entrada manual do painel →
+    write-through no GHL (custom fields do contato + nota estruturada).
+    Escrita INICIADA PELO USUÁRIO = autorizada (não é o cérebro decidindo)."""
+    import requests as rq
+    import config
+    Hw = dict(config.ghl_headers(config.load()["GHL_API_TOKEN"]))
+    Hw["Content-Type"] = "application/json"
+    CF_VEH = {"make": "CiRd678lAFn854igklGR", "model": "LHwTnTb8TPz5BbJ0I2XV",
+              "year": "C01IzbXlbESCLfhoHkrZ"}  # contact.vehicle_* (IDs reais, recon F0)
+    rows = _sb("GET", "manual_logs?status=eq.pending&select=*") or []
+    n = 0
+    for row in rows:
+        f = row["fields"]
+        cid = row["contact_id"]
+        try:
+            cfs = [{"id": CF_VEH[k], "field_value": f[k]} for k in ("make", "model", "year")
+                   if f.get(k)]
+            if cfs:
+                rq.put(f"{config.GHL_BASE_URL}/contacts/{cid}", headers=Hw,
+                       json={"customFields": cfs}, timeout=30)
+            nota = ["📋 CALL LOG (manual — painel)"]
+            labels = [("outcome", "Outcome"), ("make", "Make"), ("model", "Model"),
+                      ("year", "Year"), ("momento", "Car timing"), ("interest", "Interest"),
+                      ("prices", "Prices discussed"), ("hook", "Personal note"),
+                      ("next_step", "Next step"), ("next_date", "When"), ("notes", "Notes")]
+            for k, lab in labels:
+                if f.get(k):
+                    nota.append(f"{lab}: {f[k]}")
+            nota.append(f"— logged by {row['logged_by']} via panel")
+            rq.post(f"{config.GHL_BASE_URL}/contacts/{cid}/notes", headers=Hw,
+                    json={"body": "\n".join(nota)}, timeout=30)
+            _sb("PATCH", f"manual_logs?id=eq.{row['id']}",
+                json={"status": "synced",
+                      "synced_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")})
+            n += 1
+        except Exception as e:
+            _sb("PATCH", f"manual_logs?id=eq.{row['id']}",
+                json={"status": "error", "error": str(e)[:200]})
+    return n
+
+
 def reopen_snoozed():
     """Snoozed com due_at vencido volta pra fila (5 min antes já reabre)."""
     now = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
@@ -206,9 +309,12 @@ def autoclose():
 
 
 def sync_all():
+    ft = sync_first_touch()
     a = sync_appointment_confirmations()
     q = sync_quote_followups()
     w = sync_warm_calls()
     x = autoclose()
     r = reopen_snoozed()
-    return {"appt": a, "quotes": q, "warm": w, "fechados": x, "reabertos": r}
+    ml = flush_manual_logs()
+    return {"first_touch": ft, "appt": a, "quotes": q, "warm": w,
+            "fechados": x, "reabertos": r, "manual_logs": ml}
