@@ -51,21 +51,32 @@ def wlog(action, **kw):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def put_stage(opp_id, extra_tries=3):
-    body = {"pipelineId": rules.NEW_PIPELINE_ID, "pipelineStageId": LOST_ID}
-    for i in range(extra_tries):
-        r = requests.put(f"{ghl.BASE}/opportunities/{opp_id}", headers=ghl.H,
-                         json=body, timeout=45)
+def _req(method, url, body, tries=4):
+    """Escrita com retry/backoff p/ 429 E erros de rede (mesma política do ghl.get)."""
+    last = None
+    for i in range(tries):
+        try:
+            r = requests.request(method, url, headers=ghl.H, json=body, timeout=45)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last = e
+            time.sleep(2 ** (i + 1))
+            continue
         if r.status_code == 429:
             time.sleep(2 ** (i + 1))
             continue
         return r
+    if last:
+        raise last
     return r
 
 
+def put_stage(opp_id):
+    return _req("PUT", f"{ghl.BASE}/opportunities/{opp_id}",
+                {"pipelineId": rules.NEW_PIPELINE_ID, "pipelineStageId": LOST_ID})
+
+
 def add_tag(cid, tag):
-    r = requests.post(f"{ghl.BASE}/contacts/{cid}/tags", headers=ghl.H,
-                      json={"tags": [tag]}, timeout=45)
+    r = _req("POST", f"{ghl.BASE}/contacts/{cid}/tags", {"tags": [tag]})
     return r.status_code in (200, 201)
 
 
