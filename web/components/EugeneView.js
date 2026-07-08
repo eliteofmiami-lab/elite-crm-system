@@ -10,7 +10,29 @@ const CHIP = {
   nice_to_talk: { cls: "quote", label: "Approve" },
 };
 // prioridade dentro da camada 2: first_touch SEMPRE acima (regra do Rafael)
-const TYPE_RANK = { first_touch: 0 };
+// REGRAS DO MOTOR §1: posição = CAMADA → GATILHO → SCORE → antiguidade.
+// Gatilho L1 (ordem fixa §2): bonus guard crítico > lead novo > inbound perdida >
+// respondeu/pediu ligação > 80+ chegando nas 24h. Gatilho L2 (§3): bloco da manhã
+// (confirmações até 11h) > sem primeira tentativa > follow-up na hora > quotes/wrap-ups.
+function triggerRank(c) {
+  const t = (c.title || "");
+  if (c.layer === 1) {
+    if (t.includes("BONUS GUARD")) return 0;
+    if (c.type === "new_lead" || t.includes("NEW LEAD")) return 1;
+    if (t.includes("MISSED CALL")) return 2;
+    if (t.includes("replied") || t.includes("asked for a call")) return 3;
+    if (t.includes("orphan")) return 4;
+    return 3;
+  }
+  if (c.layer === 2) {
+    if (c.type === "confirm_appt") return new Date().getHours() < 11 ? 0 : 2.5;
+    if (c.type === "first_touch") return 1;
+    if (c.type === "follow_up") return 2;
+    if (c.type === "quote_followup") return 3;
+    return 4;
+  }
+  return 0;
+}
 function chipFor(c) {
   if (CHIP[c.type]) return CHIP[c.type];
   const t = (c.title || "") + " " + (c.why || "");
@@ -588,12 +610,12 @@ export default function EugeneView({ session, data, reload, preview = false, pre
   const email = preview ? previewEmail : session.user.email;
   const [openId, setOpenId] = useState(null);       // acordeão (spec 6.1)
   const [showPrices, setShowPrices] = useState(false);
-  // ordenação: camada → first_touch acima na L2 → score desc → mais recente primeiro
+  // REGRAS DO MOTOR §1: camada → gatilho → score desc → mais ANTIGO primeiro
   const ranked = [...data.cards].sort((a, b) =>
     (a.layer - b.layer) ||
-    ((TYPE_RANK[a.type] ?? 1) - (TYPE_RANK[b.type] ?? 1)) ||
+    (triggerRank(a) - triggerRank(b)) ||
     ((b.score || 0) - (a.score || 0)) ||
-    (new Date(b.created_at) - new Date(a.created_at))
+    (new Date(a.created_at) - new Date(b.created_at))
   );
   // espanhol afunda na fila do Eugene (ele não fala ES); na fila do Rafael fica na ordem normal
   const orderedCards = sinkSpanish
