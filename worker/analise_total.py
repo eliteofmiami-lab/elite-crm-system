@@ -205,6 +205,10 @@ def add_cost(call_id, provider, model, units, usd):
 
 def process_one(cid, info):
     """download → deepgram → sonnet (+ gate haiku) → persist → sinais → rescore."""
+    # guard de orçamento NO INÍCIO de cada task (lição Onda 0: o guard só na
+    # submissão não segura futures já enfileirados — custo real passou do teto)
+    if _spend["usd"] >= CAP_USD * 0.95:
+        raise RuntimeError(f"teto ${CAP_USD} atingido — call vai pra Onda 1")
     call = info["last_call"]
     call_id = call["id"]
     client = analyze.get_client()
