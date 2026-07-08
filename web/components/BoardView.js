@@ -135,6 +135,7 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
 export default function BoardView({ session, data, reload, role }) {
   const [tab, setTab] = useState("board");
   const [live, setLive] = useState(null);
+  const [lineShown, setLineShown] = useState(30);
   const beeped = useRef({});
   const reloadT = useRef(0);
   const email = session.user.email;
@@ -192,6 +193,11 @@ export default function BoardView({ session, data, reload, role }) {
 
   const cards = data.boardCards || [];
   const open = cards.filter((c) => c.status === "open");
+  // fila de espera do Warm up (regra Rafael): a coluna é a CASA do passivo — mostra
+  // a fila inteira em ordem, além dos cards liberados do dia
+  const poolItems = (data.config.warmup_pool || {}).items || [];
+  const openIdsSet = new Set(open.map((c) => c.contact_id));
+  const waitingLine = poolItems.filter((p) => !openIdsSet.has(p.cid));
   const attempts = data.attempts || [];
   const myShift = (data.shifts || []).find((s) => s.user_email === email && !s.clock_out);
   const myPause = (data.pauses || []).find((p) => !p.ended_at &&
@@ -452,7 +458,34 @@ export default function BoardView({ session, data, reload, role }) {
                   ) : items.map((c) => <KCard key={c.id} c={c}
                     isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
                     onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
-                  {items.length === 0 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
+                  {col.n === 6 && waitingLine.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <div className="subhead">In line — next up · {waitingLine.length}</div>
+                      {waitingLine.slice(0, lineShown).map((p) => (
+                        <div key={p.cid} style={{ display: "flex", gap: 6, alignItems: "baseline",
+                          padding: "5px 8px", borderBottom: "1px solid var(--line)",
+                          fontSize: 11.5, color: "var(--sub)" }}>
+                          <span style={{ fontWeight: 700, color: p.tier === 0 ? "#B93815"
+                            : p.tier === 1 ? "#175CD3" : "var(--faint)" }}>
+                            {p.tier === 0 ? "①" : p.tier === 1 ? "②" : p.tier === 3 ? "④" : "③"}
+                          </span>
+                          <span style={{ fontWeight: 600, color: "var(--ink)",
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                            maxWidth: 110 }}>{p.nome || "—"}</span>
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden",
+                            textOverflow: "ellipsis", flex: 1 }}>{p.veh || p.origem}</span>
+                        </div>
+                      ))}
+                      {waitingLine.length > lineShown && (
+                        <button onClick={() => setLineShown(lineShown + 50)}
+                          style={{ border: "none", background: "transparent", color: "var(--faint)",
+                            font: "600 11px Inter", cursor: "pointer", padding: "6px 8px" }}>
+                          show +50 of {waitingLine.length - lineShown} more…
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {items.length === 0 && col.n !== 6 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
                 </div>
               );
             })}
