@@ -124,8 +124,39 @@ def opp_score(o):
     return None
 
 
+def quote_facts(contact_id):
+    """spec 6.1 — a QUOTE REAL do cliente: link+data do SMS detectado,
+    valores exatos + sentimento da call analisada (se existir)."""
+    q = {}
+    # link + data: varre o histórico atrás do SMS com go.urable.com
+    r = ghl.get("/conversations/search", {"locationId": LOC, "contactId": contact_id})
+    if r.status_code == 200:
+        for cv in r.json().get("conversations", [])[:1]:
+            m = ghl.get(f"/conversations/{cv['id']}/messages")
+            if m.status_code != 200:
+                continue
+            for msg in m.json().get("messages", {}).get("messages", []):
+                if msg.get("messageType") == "TYPE_SMS" and msg.get("direction") == "outbound":
+                    mt = rules.URABLE_LINK.search(msg.get("body") or "")
+                    if mt:
+                        q["link"] = mt.group(0).rstrip(".,)")
+                        q["sent_date"] = msg.get("dateAdded")
+    # valores + sentimento: última análise do lead
+    a = _sb("GET", ("analyses?select=payload,calls!inner(contact_id)"
+                    f"&calls.contact_id=eq.{contact_id}"
+                    "&order=created_at.desc&limit=1")) or []
+    if a:
+        pay = a[0]["payload"]
+        if pay.get("precos_falados"):
+            q["items"] = pay["precos_falados"]
+        s = (pay.get("sentimento") or {})
+        if s.get("geral"):
+            q["sentiment"] = s["geral"][:60]
+    return q
+
+
 def sync_quote_followups():
-    """Opps em Quote Sent → follow-up da quote (camada 2)."""
+    """Opps em Quote Sent → follow-up com A QUOTE REAL no card (spec 6.1)."""
     r = ghl.get("/opportunities/search", {"location_id": LOC,
                                           "pipeline_id": rules.NEW_PIPELINE_ID,
                                           "pipeline_stage_id": rules.STAGES["Quote Sent"],
@@ -139,7 +170,8 @@ def sync_quote_followups():
                 "Quote sent, no reply yet. This lead cools down every day.",
                 {"passos": ["Call and ask what they thought of the quote",
                             "If price pushback: offer a smaller package (never a straight discount)",
-                            "Mention this week's schedule availability"]},
+                            "Mention this week's schedule availability"],
+                 "quote": quote_facts(o["contactId"])},
                 opportunity_id=o["id"], score=opp_score(o))
             n += made is not None
     return n

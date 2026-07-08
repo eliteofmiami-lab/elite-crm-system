@@ -210,22 +210,78 @@ function tierFor(c) {
   for (const [tier, kws] of Object.entries(TIER_KEYWORDS)) {
     if (kws.some((k) => t.includes(k))) return tier;
   }
-  return "Standard";
+  return null; // porte desconhecido → tabela geral, nunca chutar
+}
+function priceVal(row, tier) {
+  if (row.flat != null) return `$${row.flat}`;
+  if (row.from != null) return `from $${row.from}`;
+  if (tier && row[tier] != null) return `$${row[tier]}`;
+  return null;
 }
 
 function PriceHint({ c, prices }) {
-  // A7.3: "Prices for this car" — matriz oficial × porte do veículo
-  if (!prices || !prices.matrix) return null;
+  // A7.3: matriz oficial × porte. NUNCA em card de quote (a quote real manda lá).
+  if (!prices || !prices.matrix || c.type === "quote_followup") return null;
   const tier = tierFor(c);
   const labels = prices._labels || {};
-  const rows = Object.entries(prices.matrix)
-    .map(([k, tiers]) => [labels[k] || k, tiers[tier]])
-    .filter(([, v]) => v != null);
-  if (!rows.length) return null;
+  if (tier) {
+    const rows = Object.entries(prices.matrix)
+      .map(([k, row]) => [labels[k] || k, priceVal(row, tier)])
+      .filter(([, v]) => v);
+    return (
+      <div className="dsec">
+        <div className="dl">Prices for this car · tier: {tier}</div>
+        <p>{rows.slice(0, 5).map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+      </div>
+    );
+  }
+  // porte desconhecido → linha completa rotulada como tabela geral
+  const rows = Object.entries(prices.matrix).slice(0, 4).map(([k, row]) => {
+    const tiers = (prices._tiers || []).map((t) => row[t]).filter((v) => v != null);
+    const span = row.flat != null ? `$${row.flat}` : row.from != null ? `from $${row.from}`
+      : tiers.length ? `$${Math.min(...tiers)}–$${Math.max(...tiers)}` : null;
+    return [labels[k] || k, span];
+  }).filter(([, v]) => v);
   return (
     <div className="dsec">
-      <div className="dl">Prices for this car · tier: {tier}</div>
-      <p>{rows.slice(0, 5).map(([s, v]) => `${s} — $${v}`).join(" · ")}</p>
+      <div className="dl">General price table — car tier unknown (set it after the call)</div>
+      <p>{rows.map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+    </div>
+  );
+}
+
+function QuoteBlock({ c }) {
+  // spec 6.1: card de quote mostra A QUOTE REAL como bloco principal
+  const q = (c.how && c.how.quote) || {};
+  const sent = q.sent_date ? new Date(q.sent_date).toLocaleDateString("en-US",
+    { month: "short", day: "numeric" }) : null;
+  if (!q.link && !(q.items && q.items.length)) {
+    const created = new Date(c.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return (
+      <div className="dsec">
+        <div className="dl">The quote</div>
+        <p>Quote sent {sent || `by ${created}`} — details pending analysis.
+          <b> Open the conversation to review before calling.</b></p>
+      </div>
+    );
+  }
+  return (
+    <div className="dsec">
+      <div className="dl">The quote (what THIS client received)</div>
+      {(q.items || []).map((it, i) => (
+        <p key={i}><b>{it.servico || it.service}</b>{it.escopo ? ` · ${it.escopo}` : ""} — <b>{it.valor || it.value}</b></p>
+      ))}
+      <p className="meta">
+        {sent ? `Sent ${sent}` : ""}{q.sentiment ? ` · call sentiment: ${q.sentiment}` : ""}
+      </p>
+      {q.link && (
+        <span className="exh">
+          <a href={q.link} target="_blank" rel="noreferrer"
+            style={{ color: "inherit", textDecoration: "none" }}>
+            Review the quote ↗ {q.link.replace("https://", "")}
+          </a>
+        </span>
+      )}
     </div>
   );
 }
@@ -275,6 +331,7 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
         {c.score ? <span className="score">Score {c.score}</span> : null}
       </div>
       <div className="detail">
+        {c.type === "quote_followup" && <QuoteBlock c={c} />}
         <div className="dsec">
           <div className="dl">Why now</div>
           <p>{c.why}</p>
