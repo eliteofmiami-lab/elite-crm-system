@@ -67,9 +67,9 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport }) {
       </div>
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
       <div className="org"><b>{(c.origem || "").split("·")[0]}</b>·{(c.origem || "").split("·").slice(1).join("·")}</div>
-      {conf && (c.last_note
+      {c.last_note
         ? <div className="note"><b>{c.last_note.split(":")[0]}:</b>{c.last_note.split(":").slice(1).join(":")}</div>
-        : <div className="note empty">No notes on this contact yet — add the call notes so the visit starts prepared.</div>)}
+        : conf && <div className="note empty">No notes on this contact yet — add the call notes so the visit starts prepared.</div>}
       <div className="kx">
         <div className="row">
           <span className="ph">📞 {c.phone || "—"}</span>

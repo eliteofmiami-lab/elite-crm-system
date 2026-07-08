@@ -189,6 +189,19 @@ def paged_opps(stage_id):
     return out
 
 
+def last_note_for(contact_id):
+    """Última nota do contato (HTML limpo) — 'facilita a visualização antes da ação'."""
+    r = ghl.get(f"/contacts/{contact_id}/notes")
+    notes = r.json().get("notes", []) if r.status_code == 200 else []
+    if not notes:
+        return None
+    ln = max(notes, key=lambda x: x.get("dateAdded") or "")
+    body = re.sub(r"<[^>]+>", " ", ln.get("body") or "").strip()
+    body = re.sub(r"\s+", " ", body)
+    ts = parse_ts(ln.get("dateAdded"))
+    return f"Note ({ts:%b %d}): \"{body[:220]}\"" if body else None
+
+
 def contact_brief(contact_id, cache={}):
     """nome, veh, interest, phone, tags (com cache do processo)."""
     if contact_id in cache:
@@ -212,8 +225,9 @@ def contact_brief(contact_id, cache={}):
 
 
 def scan_conversations(since, max_pages=4):
-    """Eventos desde `since`: calls, sms in/out (com autor), última direção por conversa."""
-    calls, sms_out, sms_in, conv_last = [], [], [], {}
+    """Eventos desde `since`: calls, sms in/out (com autor), comentários internos,
+    última direção por conversa."""
+    calls, sms_out, sms_in, comments, conv_last = [], [], [], [], {}
     page = 1
     while page <= max_pages:
         r = ghl.get("/conversations/search",
@@ -256,6 +270,8 @@ def scan_conversations(since, max_pages=4):
                     calls.append(rec)
                 elif msg.get("messageType") == "TYPE_SMS":
                     (sms_in if msg.get("direction") == "inbound" else sms_out).append(rec)
+                elif msg.get("messageType") == "TYPE_INTERNAL_COMMENT":
+                    comments.append(rec)
             if msgs:
                 last = max(msgs, key=lambda x: x.get("dateAdded") or "")
                 conv_last[cid] = {"ts": parse_ts(last.get("dateAdded")),
@@ -265,7 +281,7 @@ def scan_conversations(since, max_pages=4):
         if stop or len(convs) < 100:
             break
         page += 1
-    return calls, sms_out, sms_in, conv_last
+    return calls, sms_out, sms_in, comments, conv_last
 
 
 # -------------------- elegibilidade --------------------
@@ -300,6 +316,11 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
                         "&select=id&limit=1")
     if dup:
         return False
+    if last_note is None:
+        try:  # regra Rafael: toda nota/comentário interno aparece no card
+            last_note = last_note_for(contact_id)
+        except Exception:
+            last_note = None
     sb._sb("POST", "board_cards", json={
         "coluna": coluna, "grupo": grupo, "kind": kind, "contact_id": contact_id,
         "opportunity_id": opportunity_id,
@@ -361,9 +382,34 @@ def cycle(full_task_pass=False):
     log(f"stages espelhados: {len(by_opp)} opps ({sum(len(v) for v in opps.values())} após dedupe)")
 
     # ---- 2. varredura de conversas ----
-    calls, sms_out, sms_in, conv_last = scan_conversations(lookback)
-    log(f"scan: {len(calls)} calls · {len(sms_out)} sms out · {len(sms_in)} sms in")
+    calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback)
+    log(f"scan: {len(calls)} calls · {len(sms_out)} sms out · {len(sms_in)} sms in · "
+        f"{len(comments)} comentários")
     manual_sms = [s for s in sms_out if s.get("source") != "workflow" and s.get("user_id")]
+
+    # regra Rafael: nota/comentário interno NOVO aparece nos cards abertos do lead
+    freshened = set()
+    for ev in comments:
+        cid = ev["contact_id"]
+        if cid in freshened:
+            continue
+        freshened.add(cid)
+        body = re.sub(r"\s+", " ", (ev.get("body") or "").strip())
+        if body:
+            sb._sb("PATCH", f"board_cards?status=eq.open&contact_id=eq.{cid}",
+                   json={"last_note": f"Internal ({ev['ts'].astimezone(ET):%b %d %H:%M}): "
+                                      f"\"{body[:220]}\""})
+    # eventos de contato (call/sms) também renovam a nota do card (nota pode ter mudado)
+    for cid in {c["contact_id"] for c in calls} | {s["contact_id"] for s in sms_in}:
+        if cid in freshened:
+            continue
+        freshened.add(cid)
+        has_open = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{cid}&select=id&limit=1")
+        if has_open:
+            ln = last_note_for(cid)
+            if ln:
+                sb._sb("PATCH", f"board_cards?status=eq.open&contact_id=eq.{cid}",
+                       json={"last_note": ln})
 
     # ---- 3. tentativas válidas (régua do PAINEL_DIARIO, determinística) ----
     # atendida ("completed") → válida · não atendida/voicemail com ≥25s + SMS manual
