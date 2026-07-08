@@ -11,15 +11,22 @@ H = config.ghl_headers(TOKEN)
 
 
 def get(path, params=None, tries=4):
-    """GET com retry/backoff simples. Levanta em erro != 2xx (exceto passa o body)."""
+    """GET com retry/backoff p/ 429 E erros de rede (timeout, conexão)."""
     url = path if path.startswith("http") else f"{BASE}{path}"
+    last_exc = None
     for i in range(tries):
-        r = requests.get(url, headers=H, params=params, timeout=30)
+        try:
+            r = requests.get(url, headers=H, params=params, timeout=45)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_exc = e
+            time.sleep(2 ** i)
+            continue
         if r.status_code == 429:
-            wait = 2 ** i
-            time.sleep(wait)
+            time.sleep(2 ** i)
             continue
         return r
+    if last_exc:
+        raise last_exc
     return r
 
 
