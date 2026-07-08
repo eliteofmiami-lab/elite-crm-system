@@ -325,6 +325,13 @@ def main():
         if not info["last_call"]:
             no_call += 1
             continue
+        # elegibilidade extra p/ candidatos vindos só de no-show: Win/terminal fora
+        if info["stage"] == "no-show":
+            fl = cards._sb("GET", f"lead_flags?contact_id=eq.{cid}&select=cold_excluded") or []
+            if fl and fl[0].get("cold_excluded"):
+                continue
+            if cards.most_advanced_stage(cid) in ("Win", "delete"):
+                continue
         if already_analyzed(info["last_call"]["id"]):
             skipped_done += 1
             try:  # sem custo: rescore v3 com a análise existente
