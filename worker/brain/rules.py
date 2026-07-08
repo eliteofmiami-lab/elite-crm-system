@@ -106,6 +106,7 @@ def on_quote_detected(opp, contact_id, link):
 
 
 EUGENE_USER_ID = "EbVhbGHnGfuvbQurQoga"  # recon Fase 0
+RAFAEL_USER_ID = "7dYD2aALTReBpvw0YYCM"  # recon Fase 0 (tasks de callback técnico, A11)
 
 
 def on_missed_inbound(opp, contact_id, lead_name, called_number=None,

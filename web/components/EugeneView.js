@@ -321,7 +321,7 @@ function QuoteBlock({ c }) {
 }
 
 function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = false,
-                sinkSpanish = false, userEmail = "", prices = null }) {
+                sinkSpanish = false, userEmail = "", prices = null, flag = null }) {
   const [showSnooze, setShowSnooze] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const chip = spanish ? { cls: "appt", label: "🇪🇸 Spanish" } : chipFor(c);
@@ -350,7 +350,9 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
             </div>
           </div>
           <span className={`chip ${chip.cls}`}>{chip.label}</span>
-          <span className={`score${c.score ? "" : " mid"}`}>{c.score || "—"}</span>
+          <span className={`score${c.score ? "" : " mid"}`}>
+            {c.score ? `${c.score}${c.score_max ? `/${c.score_max}` : ""}` : "—"}
+          </span>
           <span className="chev">›</span>
         </div>
       </div>
@@ -362,9 +364,50 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
         <span className="num">{idx}</span>
         <div className="grow"><div className="ttl">{c.title}</div></div>
         <span className={`chip ${chip.cls}`}>{chip.label}</span>
-        {c.score ? <span className="score">Score {c.score}</span> : null}
+        {c.score ? (
+          <span className="score" title={c.score_breakdown || ""}>
+            Score {c.score}{c.score_max ? `/${c.score_max}` : ""}
+            {c.score_badge ? (c.score_badge === "call-verified" ? " · ✓ call-verified" : " · partial") : ""}
+          </span>
+        ) : null}
       </div>
       <div className="detail">
+        {c.score_breakdown && (
+          <div className="meta" style={{ marginBottom: 6 }}>
+            {c.score_breakdown.replace("car:", "Car ").replace("mom:", "· Timing ")
+              .replace("eng:", "· Engagement ").replace("int:", "· Intent ")}
+            {c.score_breakdown.includes("?") ? " — ? = no data yet (never counted as zero)" : ""}
+          </div>
+        )}
+        {flag && flag.visited_store && (
+          <div className="dsec" style={{ background: "var(--green-soft, #ECFDF3)", borderColor: "#ABEFC6" }}>
+            <div className="dl">🏪 Visited the store</div>
+            <p>This lead already came in person — <b>maximum intent</b>. Close the next visit or the deal.</p>
+          </div>
+        )}
+        {flag && !flag.visited_store && flag.visit_probable && (
+          <div className="dsec" style={{ background: "#FFFAEB", borderColor: "#FEDF89" }}>
+            <div className="dl">🏪 Store visit detected on a call — confirm?</div>
+            <p className="meta">“{flag.visit_probable.evidencia}”</p>
+            {!preview && (
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <button className="btn primary sm" onClick={async () => {
+                  await supabase.from("manual_logs").insert({
+                    contact_id: c.contact_id, card_id: c.id,
+                    fields: { visit_confirmed: true }, logged_by: userEmail });
+                  await supabase.from("lead_flags").update({
+                    visited_store: true, visit_probable: null }).eq("contact_id", c.contact_id);
+                  reload();
+                }}>✓ Yes, they visited</button>
+                <button className="btn ghost sm" onClick={async () => {
+                  await supabase.from("lead_flags").update({ visit_probable: null })
+                    .eq("contact_id", c.contact_id);
+                  reload();
+                }}>No</button>
+              </div>
+            )}
+          </div>
+        )}
         {c.how && c.how.interest && c.how.interest.value && (
           <div className="dsec" style={{ background: "var(--blue-soft)", borderColor: "var(--blue-border)" }}>
             <div className="dl">Looking for</div>
@@ -671,7 +714,8 @@ export default function EugeneView({ session, data, reload, preview = false, pre
                 reload={reload} preview={preview}
                 spanish={data.spanish.has(c.contact_id)}
                 sinkSpanish={sinkSpanish} userEmail={session.user.email}
-                prices={data.config.prices} />
+                prices={data.config.prices}
+                flag={(data.flags || {})[c.contact_id]} />
             ))}
             {data.snoozed.map((c) => (
               <div className="task snoozed" key={c.id}>

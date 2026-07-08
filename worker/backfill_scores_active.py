@@ -1,6 +1,13 @@
-"""Score v2 para leads ATIVOS do New Pipeline que ainda não têm elite_score
-(ex.: os 198 HOT LEADS migrados do legado). Extensão do G0-B já aprovado.
-Grava o CF na opportunity + atualiza o score nos cards abertos do painel."""
+"""DEPRECATED — NÃO RODAR (A12-a, 2026-07-08).
+
+Este script causou o bug do score 35 (K WASHINGTON): calculava com opp_name +
+mensagens da 1ª conversa apenas — sem veículo, sem how_soon, sem análise — e
+rodou sem gate próprio (incidente G0-B "extensão"). Substituído pelo motor v3:
+worker/brain/score_engine.compute_for() (usado pelo runner e pela análise total).
+Mantido só como registro histórico."""
+import sys as _sys
+_sys.exit("DEPRECATED: use worker/brain/score_engine.compute_for (motor v3). Ver A12.")
+
 import json
 import os
 import sys

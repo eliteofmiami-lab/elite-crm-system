@@ -44,7 +44,7 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
     const iso = today.toISOString();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports] =
+    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports, techObs] =
       await Promise.all([
         supabase.from("cards").select("*").eq("status", "open")
           .order("layer").order("score", { ascending: false, nullsFirst: false })
@@ -60,8 +60,11 @@ export default function Home() {
         supabase.from("commissions").select("*").gte("booked_at", monthStart),
         supabase.from("config").select("key,value").in("key",
           ["stats_today", "bonus_period", "test_contact_ids", "prices", "bonus_guard"]),
-        supabase.from("lead_flags").select("contact_id,spanish_only").eq("spanish_only", true),
+        supabase.from("lead_flags").select("contact_id,spanish_only,visited_store,visit_probable")
+          .or("spanish_only.eq.true,visited_store.eq.true,visit_probable.not.is.null"),
         supabase.from("reports").select("*").order("report_date", { ascending: false }).limit(4),
+        supabase.from("technical_observations").select("*").eq("status", "observacao")
+          .order("created_at", { ascending: false }).limit(20),
       ]);
     setData({
       cards: cards.data || [], snoozed: snoozed.data || [], wrapups: wrapups.data || [],
@@ -69,8 +72,10 @@ export default function Home() {
       analyses: analyses.data || [], shifts: shifts.data || [],
       pauses: pauses.data || [], commissions: comms.data || [],
       config: Object.fromEntries((cfg.data || []).map((r) => [r.key, r.value])),
-      spanish: new Set((flags.data || []).map((f) => f.contact_id)),
+      spanish: new Set((flags.data || []).filter((f) => f.spanish_only).map((f) => f.contact_id)),
+      flags: Object.fromEntries((flags.data || []).map((f) => [f.contact_id, f])),
       reports: reports.data || [],
+      techObs: techObs.data || [],
     });
   }, [session]);
 

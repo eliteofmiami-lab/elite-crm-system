@@ -26,7 +26,9 @@ ANALYSIS_SCHEMA = {
     "required": ["vehicle", "momento", "intencao", "sentimento", "motivacao_principal",
                  "servico_interesse", "gancho_pessoal", "precos_falados", "script_coverage",
                  "voicemail_left", "resultado", "proxima_acao", "resumo_3_linhas",
-                 "advice_en", "advice_pt"],
+                 "advice_en", "advice_pt", "advice_evidencia", "advice_alavanca",
+                 "advice_motivo_silencio", "pergunta_tecnica", "visita_loja",
+                 "extras_empurrados"],
     "properties": {
         "vehicle": {"type": "object", "additionalProperties": False,
                     "required": ["make", "model", "year", "is_new_or_just_bought", "delivery_date_or_window"],
@@ -76,11 +78,30 @@ ANALYSIS_SCHEMA = {
                          "required": ["tipo", "data_sugerida", "motivo"],
                          "properties": {"tipo": {"type": "string",
                                                  "enum": ["follow_up", "enviar_quote", "agendar",
+                                                          "agendar_visita",
                                                           "transferir_rafael", "descartar"]},
                                         "data_sugerida": SN, "motivo": S}},
         "resumo_3_linhas": S,
+        # A12-d: advice com portão de qualidade — "" = sem advice (silêncio é válido)
         "advice_en": S,
         "advice_pt": S,
+        "advice_evidencia": S,        # trecho LITERAL da transcrição que embasa o advice
+        "advice_alavanca": S,         # fechamento_visita|defesa_valor|timing|objecao|upsell_contextual
+        "advice_motivo_silencio": S,  # quando advice="" (ex.: "call bem conduzida")
+        # A11/A11.1: pergunta técnica (modo observação)
+        "pergunta_tecnica": {"type": "object", "additionalProperties": False,
+                             "required": ["houve", "transferida", "resposta_improvisada",
+                                          "prometeu_callback", "pergunta", "categoria"],
+                             "properties": {"houve": B, "transferida": B,
+                                            "resposta_improvisada": B,
+                                            "prometeu_callback": B,
+                                            "pergunta": SN, "categoria": SN}},
+        # A12-c: visita à loja mencionada na call (vira visita_provavel, não prova)
+        "visita_loja": {"type": "object", "additionalProperties": False,
+                        "required": ["ja_visitou_mencionado", "evidencia"],
+                        "properties": {"ja_visitou_mencionado": B, "evidencia": SN}},
+        # A10: extras empurrados sem o cliente pedir (observação, nunca punição)
+        "extras_empurrados": B,
     },
 }
 
@@ -96,14 +117,41 @@ ficam com string vazia "" (nunca invente); enums sem evidência ficam null.
   null se a call não deixar claro.
 - precos_falados: TODOS os valores citados, com serviço e escopo exatos.
 - voicemail_left: se a call não foi atendida, o operador deixou recado?
-- advice_en / advice_pt: o MESMO insight de venda em dois idiomas (advice_en em inglês pro
-  operador, advice_pt em português pro dono). Julgue PRIMEIRO pelo resultado. Se o cliente
-  conseguiu o que queria (ex.: agendou, recebeu o preço que pediu), a call foi um SUCESSO —
-  diga isso e sugira no máximo UMA melhoria proporcional ao contexto. NÃO cobre o checklist
-  completo de qualificação (orçamento, garagem, concorrência, keep-or-trade) em chamadas
-  simples/transacionais que converteram — esses itens são para venda consultiva (PPF/ceramic
-  de alto valor) que NÃO fechou. script_coverage é fato registrado; ausência de item ≠ erro.
-  Advice é ajuda de venda, nunca punição — tom construtivo, 1-2 frases, acionável.
+- proxima_acao: a FILOSOFIA da loja é fechar a VISITA, não número final por telefone.
+  Para lead engajado (e SEMPRE para vinyl wrap / color change), prefira tipo=agendar_visita
+  (ver materiais na loja → preço final na hora → depósito trava material e agenda).
+  enviar_quote continua válido quando o cliente pede número por escrito.
+
+REGRA Nº 1 — ADVICE COM PORTÃO DE QUALIDADE (A12). Advice só existe se passar nos 4 testes:
+  (a) EVIDÊNCIA: advice_evidencia = trecho LITERAL da transcrição em que se baseia
+      (copie as palavras exatas). Sem trecho literal → NÃO há advice.
+  (b) ALAVANCA DE CONVERSÃO: só fechamento de visita, defesa de valor, timing, tratamento
+      de objeção ou upsell contextual (advice_alavanca com um desses valores).
+      Higiene de processo NUNCA é advice.
+  (c) NÃO-REDUNDANTE: PROIBIDO recomendar o que o sistema já automatiza — registrar
+      telefone/dados (o caller ID já captura), anotar/logar informações, mover stage,
+      agendar follow-up (já vira task), mandar mensagem de wrap-up (já tem fluxo).
+  (d) SILÊNCIO É OUTPUT VÁLIDO E PREFERÍVEL A FILLER: call bem conduzida →
+      advice_en = advice_pt = "" e advice_motivo_silencio = "call bem conduzida" (ou similar).
+  LISTA BANIDA (nunca gere): pedir dados que o sistema já captura; "seja mais
+  empático/confiante" e genéricos sem evidência; sugestões de CRM/processo; qualquer coisa
+  não ancorada na transcrição. Julgue PRIMEIRO pelo resultado: se o cliente conseguiu o que
+  queria, a call foi um SUCESSO — o padrão é silêncio. NÃO cobre checklist de qualificação
+  em call transacional que converteu. advice_en/advice_pt = o MESMO insight nos 2 idiomas,
+  1-2 frases, tom construtivo. O advice deve reforçar a estratégia da visita quando couber
+  ("não feche número final por telefone — feche a visita").
+- pergunta_tecnica (classificação CONSERVADORA — A11.1): técnica = exige julgamento de
+  especialista (avaliação do estado da pintura, instalação painel a painel, comparação
+  profunda de specs, caso-limite de garantia). NÃO são técnicas (lane do operador): marca e
+  linha de produto (usamos Ceramic Pro, instalador certificado, garantia vitalícia, Carfax),
+  conteúdo dos pacotes, garantia básica, prazos e preços. houve=true só para pergunta
+  técnica DE VERDADE; prometeu_callback=true se o operador prometeu retorno do
+  técnico/dono; categoria = tema curto (ex.: "estado da pintura").
+- visita_loja.ja_visitou_mencionado: true APENAS se a conversa indicar que o lead JÁ ESTEVE
+  na loja (ex.: "when I was there...", "passei aí semana passada") — com o trecho em
+  evidencia. Planejar visita futura NÃO conta.
+- extras_empurrados: true se o operador ofereceu add-ons (paint correction, interior
+  coating, wheels) SEM o cliente perguntar. Não oferecer extras NUNCA é erro.
 - resumo_3_linhas: máx 3 linhas, direto, em inglês (o Eugene lê em inglês).
 A transcrição vem diarizada (S0/S1...) e pode ser em inglês, espanhol ou português.
 O atendente pode ser o Eugene OU o Rafael (dono) — não presuma qual dos dois."""

@@ -34,7 +34,8 @@ CALENDARS = {  # os 3 calendários reais de booking (recon)
 def _sb(method, path, **kw):
     if not SB_URL:
         return None
-    r = requests.request(method, f"{SB_URL}/rest/v1/{path}", headers=H, timeout=20, **kw)
+    hh = {**H, **kw.pop("headers_extra", {})}
+    r = requests.request(method, f"{SB_URL}/rest/v1/{path}", headers=hh, timeout=20, **kw)
     if r.status_code >= 300:
         print(f"  [warn] supabase {method} {path}: {r.status_code} {r.text[:120]}")
         return None
@@ -78,10 +79,21 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
             how["passos"] = build_quote_passos(q)
     except Exception:
         pass
+    # A12-b: exibição honesta — score do motor v3 (lead_scores) vence o CF estale do GHL
+    s_max = s_badge = s_break = None
+    try:
+        ls = _sb("GET", f"lead_scores?contact_id=eq.{contact_id}"
+                        "&select=known,max_possible,badge,breakdown") or []
+        if ls:
+            score = ls[0]["known"]
+            s_max, s_badge, s_break = ls[0]["max_possible"], ls[0]["badge"], ls[0]["breakdown"]
+    except Exception:
+        pass
     return _sb("POST", "cards", json={
         "type": type_, "layer": layer, "contact_id": contact_id,
         "opportunity_id": opportunity_id, "title": title, "why": why,
-        "how": how, "score": score, "due_at": due_at, "draft_message": draft,
+        "how": how, "score": score, "score_max": s_max, "score_badge": s_badge,
+        "score_breakdown": s_break, "due_at": due_at, "draft_message": draft,
         "ghl_link": GHL_LINK.format(loc=LOC, cid=contact_id),
     })
 
@@ -428,6 +440,23 @@ def flush_manual_logs():
         f = row["fields"]
         cid = row["contact_id"]
         try:
+            # A12-c: confirmação de visita no painel → tag visitou-loja (prova) no GHL
+            # + flag persistente. Clique do usuário = escrita autorizada (write-through).
+            if f.get("visit_confirmed"):
+                rq.post(f"{config.GHL_BASE_URL}/contacts/{cid}/tags", headers=Hw,
+                        json={"tags": ["visitou-loja"]}, timeout=30)
+                rq.post(f"{SB_URL}/rest/v1/lead_flags?on_conflict=contact_id",
+                        headers={**H, "Prefer": "resolution=merge-duplicates"},
+                        json={"contact_id": cid, "visited_store": True,
+                              "visit_probable": None,
+                              "set_by": f"visita confirmada por {row['logged_by']}"},
+                        timeout=15)
+                if not any(k != "visit_confirmed" and v for k, v in f.items()):
+                    _sb("PATCH", f"manual_logs?id=eq.{row['id']}",
+                        json={"status": "synced",
+                              "synced_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")})
+                    n += 1
+                    continue
             cfs = [{"id": CF_VEH[k], "field_value": f[k]} for k in ("make", "model", "year")
                    if f.get(k)]
             if f.get("service_interest"):

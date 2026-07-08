@@ -141,36 +141,22 @@ SCORE_CF = {"score": "OKX1hfCHkn2FWZud9lj1", "breakdown": "b7HYU3fGCvWTs8lTHVXS"
 
 
 def refresh_score(contact_id, opp, analysis=None):
-    """SCORE EM TEMPO REAL (pedido do Rafael): recalcula no evento e grava
-    na opportunity (escrita já aprovada no G0-B) + espelha no card do painel."""
+    """SCORE EM TEMPO REAL — A12-a: delega ao motor v3 (score_engine), que junta
+    veículo (manual/CF/análise), análise SALVA no Supabase (não só a do ciclo),
+    todas as conversas, quote enviada e visita à loja. Persistência no Supabase é
+    livre; o CF no GHL respeita o gate global (G2/G-SCORE-FIX)."""
     import requests
-    if not opp:
-        return None
     try:
-        # histórico de mensagens fresco (engajamento)
-        msgs = []
-        r = ghl.get("/conversations/search", {"locationId": LOC, "contactId": contact_id})
-        if r.status_code == 200:
-            for cv in r.json().get("conversations", [])[:1]:
-                m = ghl.get(f"/conversations/{cv['id']}/messages")
-                if m.status_code == 200:
-                    msgs = m.json().get("messages", {}).get("messages", [])
-        # how_soon do contato (proxy de intenção)
-        how_soon = None
         cr = ghl.get(f"/contacts/{contact_id}")
         contact_obj = cr.json().get("contact", {}) if cr.status_code == 200 else {}
         if is_test_contact(contact_obj):
             register_test_contact(contact_id)
             print(f"  [teste-interno] score write-back PULADO p/ contato de teste")
             return None
-        for cf in contact_obj.get("customFields", []):
-            if cf.get("id") == "21s4ZqYAMUEAD30f0Xyd":  # contact.how_soon_...
-                how_soon = cf.get("value")
-        s = score.compute(opp_name=opp.get("name"), how_soon=how_soon,
-                          msgs=msgs, call_analysis=analysis)
-        # GHL: gravação de score respeita o gate global (disciplina 2026-07-07:
-        # dry-run → aprovação → execução, sem exceções). Painel/Supabase é livre.
-        if not writer.DRY_RUN:
+        from brain import score_engine
+        s = score_engine.compute_for(contact_id, opp=opp, analysis=analysis,
+                                     contact=contact_obj)
+        if opp and not writer.DRY_RUN:
             payload = {"customFields": [
                 {"id": SCORE_CF["score"], "field_value": s["known"]},
                 {"id": SCORE_CF["breakdown"], "field_value": s["breakdown"]},
@@ -178,12 +164,8 @@ def refresh_score(contact_id, opp, analysis=None):
             requests.put(f"{ghl.BASE}/opportunities/{opp['id']}",
                          headers={**ghl.H, "Content-Type": "application/json"},
                          json=payload, timeout=30)
-        # espelha nos cards abertos do lead (Supabase = livre)
-        url, h = _supabase()
-        if url:
-            requests.patch(f"{url}/rest/v1/cards?status=eq.open&contact_id=eq.{contact_id}",
-                           headers=h, json={"score": s["known"]}, timeout=15)
-        print(f"  score recalculado: {opp.get('name')!r} -> {s['known']} (GHL write={'on' if not writer.DRY_RUN else 'gated'})")
+        print(f"  score v3: {(opp or {}).get('name')!r} -> {s['known']}/{s['max_possible']} "
+              f"[{s['badge']}] (GHL write={'on' if not writer.DRY_RUN else 'gated'})")
         return s
     except Exception as e:
         print(f"  [warn] refresh_score falhou: {e}")
@@ -204,8 +186,8 @@ def _log_cost(call_id, provider, model, units, est_usd):
         pass
 
 
-def persist_call(msg, meta, opp, analysis):
-    """Grava call + análise no Supabase (alimenta Advice e KPIs do painel)."""
+def persist_call(msg, meta, opp, analysis, transcript_text=None):
+    """Grava call + transcript + análise no Supabase (alimenta Advice e KPIs)."""
     import requests
     url, h = _supabase()
     if not url:
@@ -221,6 +203,10 @@ def persist_call(msg, meta, opp, analysis):
             "user_id": msg.get("userId"), "called_at": msg.get("dateAdded"),
             "recording_downloaded": analysis is not None,
         }, timeout=15)
+        if transcript_text:
+            requests.post(f"{url}/rest/v1/transcripts", headers=h2, json={
+                "call_id": msg["id"], "full_text": transcript_text,
+            }, timeout=15)
         if analysis:
             requests.post(f"{url}/rest/v1/analyses", headers=h2, json={
                 "call_id": msg["id"], "model": "claude-sonnet-5",
@@ -228,6 +214,47 @@ def persist_call(msg, meta, opp, analysis):
             }, timeout=15)
     except Exception as e:
         print(f"  [warn] persistência da call falhou: {e}")
+
+
+def post_analysis_signals(msg, opp, analysis):
+    """A11.1 (observação de pergunta técnica) + A12-c (visita provável)."""
+    from brain import cards as _c
+    cid = msg["contactId"]
+    pt = (analysis or {}).get("pergunta_tecnica") or {}
+    if pt.get("houve"):
+        dup = _c._sb("GET", f"technical_observations?call_id=eq.{msg['id']}&select=id&limit=1")
+        if not dup:
+            _c._sb("POST", "technical_observations", json={
+                "call_id": msg["id"], "contact_id": cid,
+                "contact_name": (opp or {}).get("name"),
+                "pergunta": pt.get("pergunta"), "categoria": pt.get("categoria"),
+                "transferida": pt.get("transferida"),
+                "resposta_improvisada": pt.get("resposta_improvisada"),
+                "como_tratou": ("transferida ao vivo" if pt.get("transferida")
+                                else "callback prometido" if pt.get("prometeu_callback")
+                                else "respondida na hora"),
+                "promised_callback": pt.get("prometeu_callback", False)})
+            # EXCEÇÃO do modo observação: callback PROMETIDO ao cliente não espera
+            # calibragem → task pro Rafael (via writer: executa pós-G2, logada antes)
+            if pt.get("prometeu_callback"):
+                due = (dt.datetime.now(dt.timezone.utc)
+                       + dt.timedelta(hours=4)).isoformat()
+                writer.create_task(
+                    cid, f"Callback técnico — {(opp or {}).get('name') or 'lead'}: "
+                         f"\"{(pt.get('pergunta') or '')[:80]}\"",
+                    "Pergunta técnica com callback prometido na call. Prazo: mesmo dia.",
+                    due, rules.RAFAEL_USER_ID, gate="G2",
+                    motivo="A11: callback técnico prometido ao cliente")
+    vl = (analysis or {}).get("visita_loja") or {}
+    if vl.get("ja_visitou_mencionado"):
+        fl = _c._sb("GET", f"lead_flags?contact_id=eq.{cid}&select=visited_store,visit_probable") or []
+        if not (fl and fl[0].get("visited_store")):
+            _c._sb("POST", "lead_flags?on_conflict=contact_id",
+                   headers_extra={"Prefer": "resolution=merge-duplicates"},
+                   json={"contact_id": cid, "visit_probable": {
+                       "evidencia": vl.get("evidencia"), "call_id": msg["id"],
+                       "detected_at": dt.datetime.now(dt.timezone.utc).isoformat()}})
+            print(f"  [visita_provavel] {cid}: {str(vl.get('evidencia'))[:60]!r}")
 
 
 def process_call(msg, st):
@@ -240,6 +267,7 @@ def process_call(msg, st):
     opp = opportunity_for_contact(msg["contactId"])
 
     analysis = None
+    transcript_text = None
     if answered and meta.get("duration", 0) > 20:   # A8: skip <20s
         try:
             audio = transcribe.download_recording(call_id)
@@ -256,15 +284,21 @@ def process_call(msg, st):
                 _log_cost(call_id, "deepgram", "nova-2",
                           round(meta["duration"] / 60, 2),
                           round(meta["duration"] / 60 * 0.0043, 5))
+                transcript_text = transcribe.diarized_as_text(t["diarized"]) or t["full_text"]
                 from brain import analyze
                 analysis = analyze.analyze_call(
-                    transcribe.diarized_as_text(t["diarized"]) or t["full_text"],
+                    transcript_text,
                     {"direction": direction, "duration_sec": meta.get("duration"),
                      "status": msg.get("status")})
                 m = analysis.get("_meta", {})
                 if m:
                     _log_cost(call_id, "anthropic", m["model"],
                               m["in_tokens"] + m["out_tokens"], m["est_usd"])
+                # A12-d: crítico Haiku valida o advice ANTES de qualquer exibição
+                from brain import advice_gate
+                analysis, _, _ = advice_gate.gate_analysis(
+                    analysis, transcript_text, call_id=call_id,
+                    contact_id=msg["contactId"])
                 # (decisão do Rafael: NÃO marcar espanhol automaticamente —
                 #  ele/Eugene tentam em inglês primeiro e marcam manual no painel)
         except Exception as e:
@@ -297,7 +331,9 @@ def process_call(msg, st):
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)
-    persist_call(msg, meta, opp, analysis)
+    persist_call(msg, meta, opp, analysis, transcript_text)
+    if analysis:
+        post_analysis_signals(msg, opp, analysis)  # A11 observação + A12-c visita provável
     refresh_score(msg["contactId"], opp, analysis)  # score em tempo real
     # A9: interesse vivo — call analisada atualiza a trilha + o card
     if analysis and analysis.get("servico_interesse"):

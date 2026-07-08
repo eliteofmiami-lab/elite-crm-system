@@ -184,3 +184,49 @@ create policy config_write on config for all to authenticated
   using (public.user_role() = 'owner') with check (public.user_role() = 'owner');
 
 -- Demais escritas: somente service_role (worker) — sem policy de insert p/ authenticated.
+
+-- ============ A12 (2026-07-08): integridade de score + portão de advice ============
+create table if not exists lead_scores (
+  contact_id text primary key,
+  known int not null,
+  max_possible int not null,
+  badge text not null default 'partial',      -- call-verified | partial
+  components jsonb not null,                  -- {car|momento|eng|int: {value,reason,source}}
+  breakdown text,
+  visited_store boolean default false,
+  computed_at timestamptz not null default now()
+);
+alter table cards add column if not exists score_max int;
+alter table cards add column if not exists score_badge text;
+alter table cards add column if not exists score_breakdown text;
+
+create table if not exists advice_rejected (
+  id uuid primary key default gen_random_uuid(),
+  call_id text, contact_id text,
+  advice_en text, advice_pt text, evidencia text,
+  motivo text not null,
+  rejected_by text not null default 'haiku-critic',
+  created_at timestamptz not null default now()
+);
+
+alter table lead_flags add column if not exists visited_store boolean default false;
+alter table lead_flags add column if not exists visit_probable jsonb;
+alter table lead_flags add column if not exists analysis_priority int;
+
+create table if not exists technical_observations (   -- A11.1 modo observação
+  id uuid primary key default gen_random_uuid(),
+  call_id text, contact_id text, contact_name text,
+  pergunta text, categoria text,
+  transferida boolean, resposta_improvisada boolean,
+  como_tratou text,
+  promised_callback boolean default false,
+  status text not null default 'observacao',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists daily_snapshots (           -- baseline análise total
+  id uuid primary key default gen_random_uuid(),
+  snapshot_date date not null unique,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);

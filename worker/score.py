@@ -86,45 +86,69 @@ INTENT_FROM_CALL = {"pediu_quote": 15, "sem_recuar": 15, "indeciso": 10, "so_pes
 # faixas de Momento derivadas de transcrição/nota
 MOMENTO_FAIXA = {"recem_entregue": 25, "chegando": 25, "menos_3m": 20,
                  "mais_3m": 15, "mais_6m": 10, "mais_1a": 5}
+# formulário Log call details (rótulos EN do painel) → faixa
+MOMENTO_FORM = {"Just delivered / brand new": "recem_entregue", "Arriving soon": "chegando",
+                "Bought under 3 months ago": "menos_3m", "3–6 months": "mais_3m",
+                "6–12 months": "mais_6m", "Over a year": "mais_1a"}
 
 
 def compute(*, make=None, model=None, year=None, opp_name=None, how_soon=None,
-            msgs=None, call_analysis=None):
+            msgs=None, call_analysis=None, momento_manual=None,
+            visited_store=False, visit_reason=None,
+            quote_sent=False, quote_reason=None):
     """
-    Retorna dict com componentes, conhecido, maximo_possivel e breakdown textual.
-    call_analysis (opcional): saída da análise Claude (2.2) que sobrescreve Momento/Intenção.
+    Retorna dict com componentes, conhecido, maximo_possivel, breakdown e selo (A12-b).
+    Precedência:
+      Momento  — manual (Log call VENCE) > transcrição > '?'
+      Intenção — visita à loja (prova, A12-c) > transcrição > quote enviada > proxy how_soon
+    Cada componente carrega `_src` (origem) p/ exibição honesta e auditoria.
     """
     cs, cs_r = car_score(make, model, year, opp_name)
     eng, eng_r = engagement_from_messages(msgs or [])
 
-    # Momento — só com transcrição/nota
-    momento = "?"
-    momento_r = "sem transcrição/nota"
-    if call_analysis and call_analysis.get("momento", {}).get("faixa") in MOMENTO_FAIXA:
+    # Momento — manual vence; senão transcrição; senão '?'
+    momento, momento_r, momento_src = "?", "sem transcrição/nota", None
+    faixa_manual = MOMENTO_FORM.get(momento_manual or "", momento_manual)
+    if faixa_manual in MOMENTO_FAIXA:
+        momento = MOMENTO_FAIXA[faixa_manual]
+        momento_r = f"informado pelo Eugene ({momento_manual})"
+        momento_src = "manual"
+    elif call_analysis and call_analysis.get("momento", {}).get("faixa") in MOMENTO_FAIXA:
         momento = MOMENTO_FAIXA[call_analysis["momento"]["faixa"]]
         momento_r = call_analysis["momento"].get("evidencia", "transcrição")
+        momento_src = "call"
 
-    # Intenção — transcrição sobrescreve proxy how_soon
-    if call_analysis and call_analysis.get("intencao", {}).get("nivel") in INTENT_FROM_CALL:
+    # Intenção — visita à loja é o sinal mais forte do funil (A12-c)
+    if visited_store:
+        intenc, intenc_r, intenc_src = 15, visit_reason or "visitou a loja", "visita"
+    elif call_analysis and call_analysis.get("intencao", {}).get("nivel") in INTENT_FROM_CALL:
         intenc = INTENT_FROM_CALL[call_analysis["intencao"]["nivel"]]
         intenc_r = call_analysis["intencao"].get("evidencia", "transcrição")
+        intenc_src = "call"
+    elif quote_sent:
+        intenc, intenc_r, intenc_src = 15, quote_reason or "quote enviada", "quote"
     else:
         intenc, intenc_r = intent_from_how_soon(how_soon)
+        intenc_src = "how_soon" if isinstance(intenc, int) else None
 
-    comps = {"car": cs, "momento": momento, "eng": eng, "int": intenc}
     known = cs + eng + sum(v for v in (momento, intenc) if isinstance(v, int))
-    # máximo possível = soma dos componentes com dado (os '?' contam com seu teto? não:
-    # reportamos conhecido/teto-dos-que-temos p/ ser honesto sobre o que falta)
+    # máximo apurável = teto só dos componentes COM dado — honestidade sobre o que falta
     max_possible = 35 + 25 + (25 if isinstance(momento, int) else 0) + (15 if isinstance(intenc, int) else 0)
+
+    # selo (A12-b): call-verified quando Momento OU Intenção vêm de evidência real
+    # (transcrição, visita provada, quote detectada, entrada manual do Eugene)
+    verified = momento_src in ("call", "manual") or intenc_src in ("call", "visita", "quote")
+    badge = "call-verified" if verified else "partial"
 
     def fmt(v):
         return str(v) if isinstance(v, int) else "?"
     breakdown = f"car:{cs} mom:{fmt(momento)} eng:{eng} int:{fmt(intenc)}"
     return {
         "car": cs, "car_reason": cs_r,
-        "momento": momento, "momento_reason": momento_r,
+        "momento": momento, "momento_reason": momento_r, "momento_src": momento_src,
         "eng": eng, "eng_reason": eng_r,
-        "int": intenc, "int_reason": intenc_r,
+        "int": intenc, "int_reason": intenc_r, "int_src": intenc_src,
         "known": known, "max_possible": max_possible,
-        "breakdown": breakdown,
+        "badge": badge, "breakdown": breakdown,
+        "visited_store": bool(visited_store),
     }
