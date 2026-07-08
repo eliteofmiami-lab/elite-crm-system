@@ -25,9 +25,12 @@ function Login() {
   );
 }
 
+const EUGENE_EMAIL = "eugenebaruelova@gmail.com";
+
 export default function Home() {
   const [session, setSession] = useState(undefined);
   const [data, setData] = useState(null);
+  const [viewAs, setViewAs] = useState(null); // null | "eugene"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: d }) => setSession(d.session));
@@ -80,8 +83,29 @@ export default function Home() {
     session.user.app_metadata?.role ||
     ((session.user.email || "").includes("rafael") ? "owner" : "operator");
 
+  if (role === "owner" && viewAs === "eugene") {
+    return (
+      <>
+        <div style={{
+          position: "sticky", top: 0, zIndex: 50, display: "flex",
+          justifyContent: "center", padding: "8px 0", background: "#101828",
+        }}>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginRight: 12, alignSelf: "center" }}>
+            👁 Você está vendo a tela do Eugene (ao vivo, somente leitura)
+          </span>
+          <button className="btn primary sm" onClick={() => setViewAs(null)}>
+            ← Voltar à visão do dono
+          </button>
+        </div>
+        <EugeneView session={session} data={data} reload={load}
+          preview previewEmail={EUGENE_EMAIL} />
+      </>
+    );
+  }
+
   return role === "owner" ? (
-    <OwnerView session={session} data={data} reload={load} />
+    <OwnerView session={session} data={data} reload={load}
+      onViewEugene={() => setViewAs("eugene")} />
   ) : (
     <EugeneView session={session} data={data} reload={load} />
   );

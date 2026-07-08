@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 const FUNIL_COLORS = ["#2970FF", "#58A6FF", "#7A5AF8", "#B4A5FC", "#06AED4", "#12B76A"];
 
-export default function OwnerView({ session, data }) {
+export default function OwnerView({ session, data, onViewEugene }) {
   const now = new Date();
   const dateStr = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" });
 
@@ -91,6 +91,7 @@ export default function OwnerView({ session, data }) {
           ) : (
             <span className="pill"><span className="dot"></span>Eugene fora do turno</span>
           )}
+          <button className="btn ghost sm" onClick={onViewEugene}>👁 Ver tela do Eugene</button>
         </div>
       </div>
 

@@ -48,7 +48,7 @@ function Snooze({ card, reload }) {
   );
 }
 
-function Task({ c, idx, current, reload }) {
+function Task({ c, idx, current, reload, preview = false }) {
   const [showSnooze, setShowSnooze] = useState(false);
   const chip = chipFor(c);
   const how = (c.how && c.how.passos) || [];
@@ -90,8 +90,10 @@ function Task({ c, idx, current, reload }) {
         )}
         <div className="actions">
           <a className="btn primary" href={c.ghl_link} target="_blank" rel="noreferrer">Open in GHL ↗</a>
-          <button className="btn ghost" onClick={() => setShowSnooze(!showSnooze)}>Can&apos;t do now</button>
-          {c.type === "quote_followup" && (
+          {!preview && (
+            <button className="btn ghost" onClick={() => setShowSnooze(!showSnooze)}>Can&apos;t do now</button>
+          )}
+          {!preview && c.type === "quote_followup" && (
             <button className="btn ghost" onClick={async () => {
               await supabase.from("cards").update({
                 status: "done", result: "confirmado manualmente",
@@ -107,8 +109,8 @@ function Task({ c, idx, current, reload }) {
   );
 }
 
-export default function EugeneView({ session, data, reload }) {
-  const email = session.user.email;
+export default function EugeneView({ session, data, reload, preview = false, previewEmail = null }) {
+  const email = preview ? previewEmail : session.user.email;
   const myShift = data.shifts.find((s) => s.user_email === email && !s.clock_out);
   const myPause = data.pauses.find(
     (p) => !p.ended_at && data.shifts.some((s) => s.id === p.shift_id && s.user_email === email)
@@ -159,14 +161,17 @@ export default function EugeneView({ session, data, reload }) {
   );
 
   async function clockIn() {
+    if (preview) return; // somente leitura no modo espiar
     await supabase.from("shifts").insert({ user_email: email });
     reload();
   }
   async function clockOut() {
+    if (preview) return;
     await supabase.from("shifts").update({ clock_out: new Date().toISOString() }).eq("id", myShift.id);
     reload();
   }
   async function toggleBreak() {
+    if (preview) return;
     if (myPause) {
       await supabase.from("pauses").update({ ended_at: new Date().toISOString() }).eq("id", myPause.id);
     } else {
@@ -203,13 +208,20 @@ export default function EugeneView({ session, data, reload }) {
         </div>
       </div>
 
-      {!myShift ? (
+      {!myShift && preview ? (
+        <div className="gate">
+          <h2>Eugene ainda não bateu o ponto</h2>
+          <p>{inQueue} tasks esperando na fila dele · a tela abaixo é o que ele verá ao entrar</p>
+        </div>
+      ) : null}
+      {!myShift && !preview ? (
         <div className="gate">
           <h2>Your day is ready</h2>
           <p>{inQueue} tasks in the queue · {data.cards.filter((c) => c.type === "confirm_appt").length} appointments to confirm</p>
           <button className="btn primary big" onClick={clockIn}>▶ Clock in</button>
         </div>
-      ) : (
+      ) : null}
+      {(myShift || preview) && (
         <>
           <div className="kpis">
             <div className="kpi"><div className="l">Calls today</div><div className="v">{callsToday}<small> / ~100</small></div></div>
@@ -247,7 +259,7 @@ export default function EugeneView({ session, data, reload }) {
               <span className="cap">Auto-sorted by priority — always take task 1</span>
             </div>
             {data.cards.map((c, i) => (
-              <Task key={c.id} c={c} idx={i + 1} current={i === 0} reload={reload} />
+              <Task key={c.id} c={c} idx={i + 1} current={i === 0} reload={reload} preview={preview} />
             ))}
             {data.snoozed.map((c) => (
               <div className="task snoozed" key={c.id}>
