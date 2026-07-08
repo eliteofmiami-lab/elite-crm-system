@@ -54,17 +54,17 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
     existing = _sb("GET", f"cards?status=eq.open&type=eq.{type_}&contact_id=eq.{contact_id}&select=id")
     if existing:
         return None  # já tem card aberto igual
-    if not card_eligible(contact_id, layer):
-        return None  # regra dura: Win/delete nunca; Lost só camada 3
-    # A6(3): advice mais recente do lead entra no "How to play it" (insight vira ação)
+    if not card_eligible(contact_id, layer, type_=type_):
+        return None  # regra dura: Win/delete nunca; Lost só camada 3; estado bloqueia discagem
+    # A6(3) CONGELADO (MVP): advice engine fora do ar — nada de advice no card.
+    # A16: a narrativa do ESTADO vira o "porquê" do card (2 linhas, com datas).
     try:
-        adv = _sb("GET", ("analyses?select=payload,calls!inner(contact_id)"
-                          f"&calls.contact_id=eq.{contact_id}"
-                          "&order=created_at.desc&limit=1")) or []
-        tip = adv and (adv[0]["payload"].get("advice_en") or "")
-        if tip:
+        from brain import lead_state as _ls
+        st_lead = _ls.state_for(contact_id)
+        if st_lead and st_lead.get("narrativa_do_card"):
+            why = st_lead["narrativa_do_card"]
             how = dict(how or {})
-            how["advice"] = tip
+            how["state"] = st_lead.get("situacao")
     except Exception:
         pass
     # A9: interesse vivo em TODO card + quote real quando o lead está em Quote Sent
@@ -89,11 +89,19 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
             s_max, s_badge, s_break = ls[0]["max_possible"], ls[0]["badge"], ls[0]["breakdown"]
     except Exception:
         pass
+    phone = None
+    try:  # MVP rail: telefone visível no card
+        cr = ghl.get(f"/contacts/{contact_id}")
+        if cr.status_code == 200:
+            phone = cr.json().get("contact", {}).get("phone")
+    except Exception:
+        pass
     return _sb("POST", "cards", json={
         "type": type_, "layer": layer, "contact_id": contact_id,
         "opportunity_id": opportunity_id, "title": title, "why": why,
         "how": how, "score": score, "score_max": s_max, "score_badge": s_badge,
         "score_breakdown": s_break, "due_at": due_at, "draft_message": draft,
+        "phone": phone,
         "ghl_link": GHL_LINK.format(loc=LOC, cid=contact_id),
     })
 
@@ -326,7 +334,11 @@ def most_advanced_stage(contact_id):
 
 
 def confirm_commissions(contact_id):
-    """Opp virou Win → comissões 'potencial' do lead viram 'confirmado' (A4)."""
+    """Opp virou Win → comissões 'potencial' do lead viram 'confirmado' (A4).
+    CONGELADO (MVP): motor de comissões fora do ar."""
+    from brain import writer as _w
+    if _w.MVP_READONLY:
+        return 0
     now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
     rows = _sb("PATCH",
                f"commissions?contact_id=eq.{contact_id}&status=eq.potencial",
@@ -356,8 +368,21 @@ def eligibility_sync(verbose=False):
     return purged
 
 
-def card_eligible(contact_id, layer):
-    """Guard usado na CRIAÇÃO de cards."""
+def card_eligible(contact_id, layer, type_=None):
+    """Guard usado na CRIAÇÃO de cards. A16 (Regra Zero): o ESTADO do lead manda —
+    pos_venda nunca; aguardando_*/agendado bloqueiam a discagem ativa
+    (só confirm_appt e callback passam)."""
+    try:
+        from brain import lead_state as _ls
+        st_lead = _ls.state_for(contact_id)
+        if st_lead:
+            sit = st_lead.get("situacao")
+            if sit == "pos_venda":
+                return False  # A16.1: o sistema fica inerte
+            if sit in _ls.BLOCK_DIAL and type_ not in ("confirm_appt", "callback"):
+                return False
+    except Exception:
+        pass
     st = most_advanced_stage(contact_id)
     if st == "Win" or st == "delete":
         return False
@@ -429,6 +454,15 @@ def sync_first_touch():
 
 
 def flush_manual_logs():
+    """CONGELADO (MVP 2026-07-08): zero escrita no GHL. O Eugene registra direto
+    no GHL (campos/notas nativos) e o worker LÊ no próximo ciclo. Código mantido."""
+    from brain import writer as _w
+    if _w.MVP_READONLY:
+        return 0
+    return _flush_manual_logs_frozen()
+
+
+def _flush_manual_logs_frozen():
     """Formulário 'Log call details' (urgência 2): entrada manual do painel →
     write-through no GHL (custom fields do contato + nota estruturada).
     Escrita INICIADA PELO USUÁRIO = autorizada (não é o cérebro decidindo)."""
@@ -728,6 +762,14 @@ META_EVENTS_DEFAULT = {"showed": "QualifiedVisit", "comprou": "Purchase", "nosho
 
 
 def flush_appointment_actions():
+    """CONGELADO (MVP 2026-07-08): board fora do ar; zero escrita. Código mantido."""
+    from brain import writer as _w
+    if _w.MVP_READONLY:
+        return 0
+    return _flush_appointment_actions_frozen()
+
+
+def _flush_appointment_actions_frozen():
     """Toques do Rafael no Appointments Board → write-through no GHL.
     Escrita INICIADA PELO USUÁRIO (toque) = autorizada; tudo vai pro write_log."""
     import requests as rq
@@ -888,6 +930,9 @@ def flush_outbox(dry_run=True):
 
 
 def sync_all():
+    """MVP (2026-07-08): a fila e SÓ a fila. Congelados (código vivo, execução não):
+    bonus_guard_check · build_visit_briefing · build_appointments_board ·
+    flush_appointment_actions · flush_manual_logs · flush_outbox (rascunhos/wrap-up)."""
     el = len(eligibility_sync())
     ft = sync_first_touch()
     a = sync_appointment_confirmations()
@@ -895,20 +940,6 @@ def sync_all():
     w = sync_warm_calls()
     x = autoclose()
     r = reopen_snoozed()
-    ml = flush_manual_logs()
     sync_prices()
-    bg = bonus_guard_check()
-    try:
-        vb = build_visit_briefing()
-    except Exception as e:
-        vb = f"erro: {str(e)[:50]}"
-    try:
-        build_appointments_board()
-        aa = flush_appointment_actions()
-    except Exception as e:
-        aa = f"erro: {str(e)[:50]}"
-    from brain import writer as _w
-    ob = flush_outbox(dry_run=_w.DRY_RUN)
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
-            "fechados": x, "reabertos": r, "manual_logs": ml, "guard": bg,
-            "briefing": vb, "board_actions": aa, "outbox": ob}
+            "fechados": x, "reabertos": r}

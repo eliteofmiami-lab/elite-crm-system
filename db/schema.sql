@@ -255,3 +255,12 @@ create table if not exists appointment_actions (       -- A14 Appointments Board
   status text not null default 'pending', error text,
   created_at timestamptz not null default now(), synced_at timestamptz
 );
+
+create table if not exists lead_states (               -- A16 Regra Zero: estado por lead
+  contact_id text primary key,
+  situacao text,
+  state jsonb not null,
+  computed_at timestamptz not null default now()
+);
+
+alter table cards add column if not exists phone text;   -- MVP rail: telefone no card

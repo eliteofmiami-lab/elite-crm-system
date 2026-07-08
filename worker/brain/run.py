@@ -255,15 +255,7 @@ def post_analysis_signals(msg, opp, analysis):
                     "Pergunta técnica com callback prometido na call. Prazo: mesmo dia.",
                     due, rules.RAFAEL_USER_ID, gate="G2",
                     motivo="A11: callback técnico prometido ao cliente")
-    cp = (analysis or {}).get("cupom_oferecido") or {}
-    if cp.get("houve"):
-        dup = _c._sb("GET", f"coupons?call_id=eq.{msg['id']}&select=id&limit=1")
-        if not dup:
-            _c._sb("POST", "coupons", json={
-                "contact_id": cid, "call_id": msg["id"], "source": "call",
-                "contexto": (cp.get("contexto") or "")[:300],
-                "offered_by": "detectado na transcrição"})
-            print(f"  [cupom-$200] registrado p/ {cid}: {str(cp.get('contexto'))[:50]!r}")
+    # A13 CONGELADO (MVP): rastreio de cupom fora do ar.
     vl = (analysis or {}).get("visita_loja") or {}
     if vl.get("ja_visitou_mencionado"):
         fl = _c._sb("GET", f"lead_flags?contact_id=eq.{cid}&select=visited_store,visit_probable") or []
@@ -313,11 +305,8 @@ def process_call(msg, st):
                 if m:
                     _log_cost(call_id, "anthropic", m["model"],
                               m["in_tokens"] + m["out_tokens"], m["est_usd"])
-                # A12-d: crítico Haiku valida o advice ANTES de qualquer exibição
-                from brain import advice_gate
-                analysis, _, _ = advice_gate.gate_analysis(
-                    analysis, transcript_text, call_id=call_id,
-                    contact_id=msg["contactId"])
+                # A12-d CONGELADO (MVP): advice engine fora do ar — análise vira só
+                # INSUMO da síntese de estado; crítico Haiku não roda (custo zero).
                 # (decisão do Rafael: NÃO marcar espanhol automaticamente —
                 #  ele/Eugene tentam em inglês primeiro e marcam manual no painel)
         except Exception as e:
@@ -325,35 +314,47 @@ def process_call(msg, st):
             print(f"  [warn] análise da call {call_id} pulada: {e}")
 
     actions = []
+    if direction == "inbound" and not answered:
+        # A16(3): inbound perdida vale p/ QUALQUER contato — existente, com ou sem opp
+        # (caso Agie: cliente retornou a ligação e o sistema não registrou porque o
+        # tratamento inteiro estava atrás de `if opp:`). Regra do Rafael: alerta duplo.
+        import os
+        nome = (opp or {}).get("name") or "existing contact"
+        actions += rules.on_missed_inbound(
+            opp or {"id": None, "pipelineStageId": None}, msg["contactId"], nome,
+            called_number=msg.get("to"), lead_phone=msg.get("from"),
+            eugene_phone=os.environ.get("EUGENE_PHONE"),
+            rafael_phone=os.environ.get("RAFAEL_PHONE"))
+        from brain import cards as _cards
+        origem = " (Google Ads)" if msg.get("to") == rules.GOOGLE_ADS_NUMBER else ""
+        _cards.create_card(
+            "callback", 1, msg["contactId"],
+            f"📞 MISSED CALL{origem}: {nome}",
+            f"Called from {msg.get('from')} and nobody answered. Call back NOW — "
+            "first one to call handles it.",
+            {"passos": ["Call back immediately",
+                        "No answer: text 'saw your call, how can I help?'",
+                        "Log the outcome in GHL"]},
+            opportunity_id=(opp or {}).get("id"))
     if opp:
         if direction == "inbound":
             actions += rules.on_inbound_call(opp)
-            if not answered:  # regra do Rafael: inbound perdida = alerta duplo urgente
-                import os
-                actions += rules.on_missed_inbound(
-                    opp, msg["contactId"], opp.get("name") or "lead",
-                    called_number=msg.get("to"), lead_phone=msg.get("from"),
-                    eugene_phone=os.environ.get("EUGENE_PHONE"),
-                    rafael_phone=os.environ.get("RAFAEL_PHONE"))
-                # card VERMELHO no painel (Supabase — imediato, sem gate)
-                from brain import cards as _cards
-                origem = " (Google Ads)" if msg.get("to") == rules.GOOGLE_ADS_NUMBER else ""
-                _cards.create_card(
-                    "callback", 1, msg["contactId"],
-                    f"📞 MISSED CALL{origem}: {opp.get('name') or 'lead'}",
-                    f"Called from {msg.get('from')} and nobody answered. Call back NOW — "
-                    "first one to call handles it.",
-                    {"passos": ["Call back immediately",
-                                "No answer: text 'saw your call, how can I help?'",
-                                "Log the outcome in GHL"]},
-                    opportunity_id=opp.get("id"))
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)
     persist_call(msg, meta, opp, analysis, transcript_text)
     if analysis:
         post_analysis_signals(msg, opp, analysis)  # A11 observação + A12-c visita provável
-    refresh_score(msg["contactId"], opp, analysis)  # score em tempo real
+    # A16 (Regra Zero / MVP): evento novo → re-sintetizar o ESTADO do lead (síncrono)
+    # e aplicar na fila; o score sai do estado.
+    try:
+        from brain import lead_state
+        state, _ = lead_state.synthesize(msg["contactId"])
+        lead_state.apply_state(msg["contactId"], state)
+        print(f"  estado: {state.get('situacao')} ({str(state.get('situacao_evidencia'))[:50]!r})")
+    except Exception as e:
+        print(f"  [warn] síntese de estado falhou: {e}")
+    refresh_score(msg["contactId"], opp, analysis)  # score em tempo real (lê o estado)
     # A9: interesse vivo — call analisada atualiza a trilha + o card
     if analysis and analysis.get("servico_interesse"):
         import requests
@@ -413,10 +414,16 @@ def main():
                         apply_actions(rules.on_quote_detected(opp, msg["contactId"], mlink.group(0)))
                         n_quotes += 1
             elif msg.get("messageType") == "TYPE_SMS" and msg.get("direction") == "inbound":
-                # lead respondeu → engajamento mudou → score em tempo real
+                # lead respondeu → evento novo → re-sintetizar estado + score (Regra Zero)
                 key = f"sms:{msg['id']}"
                 if key not in st["processed_call_ids"]:
                     opp = opportunity_for_contact(msg["contactId"])
+                    try:
+                        from brain import lead_state
+                        state, _ = lead_state.synthesize(msg["contactId"])
+                        lead_state.apply_state(msg["contactId"], state)
+                    except Exception as e:
+                        print(f"  [warn] síntese (sms) falhou: {e}")
                     refresh_score(msg["contactId"], opp)
                     st["processed_call_ids"] = (st["processed_call_ids"] + [key])[-2000:]
 

@@ -6,7 +6,8 @@ name: elite-brain
 on:
   schedule:
     - cron: "*/5 12-22 * * 1-6"   # ciclos de 5 min (8:00am–6:55pm EDT, seg–sáb)
-    - cron: "30 22 * * 1-6"       # fim de dia 6:30pm EDT: relatórios (M4)
+    # CONGELADO (MVP 2026-07-08): relatório 18:30 fora do ar — reativar com ordem
+    # - cron: "30 22 * * 1-6"
   workflow_dispatch: {}            # rodada manual p/ testes
 
 concurrency:
@@ -57,10 +58,7 @@ jobs:
         with:
           path: out/state.json
           key: worker-state-${{ github.run_id }}
-      - name: relatório de fim de dia (só na rodada 22:30 UTC)
-        if: github.event.schedule == '30 22 * * 1-6'
-        run: |
-          python worker/brain/eod_report.py
-          git config user.name "elite-brain" && git config user.email "bot@elite"
-          git add docs/reports/ && git diff --cached --quiet || \
-            (git commit -m "relatório diário $(date +%F)" && git push)
+      # CONGELADO (MVP 2026-07-08): relatório 18:30 fora do agendamento — reativar com ordem.
+      - name: relatório de fim de dia (CONGELADO)
+        if: ${{ false }}
+        run: python worker/brain/eod_report.py

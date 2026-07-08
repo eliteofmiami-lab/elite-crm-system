@@ -3,8 +3,13 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import EugeneView from "../components/EugeneView";
 import OwnerView from "../components/OwnerView";
+import RailView from "../components/RailView";
 
 const EUGENE_EMAIL = "eugenebaruelova@gmail.com";
+// MVP (decisão do Rafael, 2026-07-08): o sistema faz UMA coisa — a fila.
+// Vistas completas (EugeneView/OwnerView) ficam OCULTAS até segunda ordem
+// (código preservado). Toda rota renderiza a fila somente-leitura (RailView).
+const MVP_QUEUE_ONLY = true;
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -44,7 +49,7 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
     const iso = today.toISOString();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports, techObs, priceAlerts] =
+    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports, techObs, priceAlerts, leadStates] =
       await Promise.all([
         supabase.from("cards").select("*").eq("status", "open")
           .order("layer").order("score", { ascending: false, nullsFirst: false })
@@ -68,6 +73,7 @@ export default function Home() {
           .order("created_at", { ascending: false }).limit(20),
         supabase.from("price_alerts").select("*")
           .order("created_at", { ascending: false }).limit(15),
+        supabase.from("lead_states").select("contact_id,situacao,state"),
       ]);
     setData({
       cards: cards.data || [], snoozed: snoozed.data || [], wrapups: wrapups.data || [],
@@ -80,6 +86,7 @@ export default function Home() {
       reports: reports.data || [],
       techObs: techObs.data || [],
       priceAlerts: priceAlerts.data || [],
+      states: Object.fromEntries((leadStates.data || []).map((s) => [s.contact_id, s])),
     });
   }, [session]);
 
@@ -93,6 +100,12 @@ export default function Home() {
   if (session === undefined) return <div className="center">loading…</div>;
   if (!session) return <Login />;
   if (!data) return <div className="center">loading…</div>;
+
+  // MVP: fila somente-leitura para todos (?layout=rail é o modo do Custom Menu Link
+  // do GHL; sem o parâmetro a mesma fila renderiza em coluna central)
+  if (MVP_QUEUE_ONLY) {
+    return <RailView data={data} />;
+  }
 
   const role =
     session.user.app_metadata?.role ||

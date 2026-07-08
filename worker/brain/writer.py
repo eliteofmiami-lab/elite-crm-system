@@ -18,6 +18,11 @@ import config
 LOG_PATH = Path(config.PROJECT_ROOT) / "out" / "write_log.jsonl"
 DRY_RUN = True  # segurança: só o runner muda isso, e só com gate aprovado
 
+# MVP (ordem do Rafael 2026-07-08): ZERO escrita no GHL/Urable — nem dry-run no
+# write_log ("o write_log não pode ganhar nenhuma entrada nova"). Toda chamada a
+# writer vira no-op silencioso até segunda ordem.
+MVP_READONLY = True
+
 _cfg = config.load()
 H = config.ghl_headers(_cfg["GHL_API_TOKEN"])
 H["Content-Type"] = "application/json"
@@ -38,6 +43,9 @@ def _payload_resumo(payload, limit=400):
 
 
 def _send(method, url, payload, gate, motivo):
+    if MVP_READONLY:
+        print(f"  [MVP-frozen] escrita bloqueada: {method} {url} ({motivo[:60]})")
+        return {"frozen": True}
     entry = {"gate": gate, "motivo": motivo, "method": method, "url": url,
              "payload": _payload_resumo(payload)}
     if DRY_RUN:
@@ -132,6 +140,9 @@ def alert_staff(phone, name, message, gate, motivo):
 
 # ---------- Urable (Customer + Item apenas; sem delete) ----------
 def urable(method, path, payload, gate, motivo):
+    if MVP_READONLY:
+        print(f"  [MVP-frozen] urable bloqueado: {method} {path}")
+        return {"frozen": True}
     url = f"https://app.urable.com/api{path}"
     entry = {"gate": gate, "motivo": motivo, "method": method, "url": url,
              "payload": _payload_resumo(payload)}

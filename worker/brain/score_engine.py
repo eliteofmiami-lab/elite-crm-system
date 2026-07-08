@@ -104,7 +104,33 @@ def compute_for(contact_id, opp=None, analysis=None, contact=None, msgs=None,
     manual = manual_fields(contact_id)
     av = (analysis or {}).get("vehicle") or {}
 
-    # veículo: manual > CF > análise (nome da opp entra como fallback dentro do score)
+    # A16 (Regra Zero): o ESTADO sintetizado do lead vence a análise de call isolada —
+    # momento/intenção do estado carregam a evidência MAIS RECENTE da linha do tempo.
+    from brain import lead_state as _ls
+    st_lead = _ls.state_for(contact_id)
+    if st_lead:
+        ma, ia = st_lead.get("momento_atual") or {}, st_lead.get("intencao_atual") or {}
+        pseudo = {}
+        if ma.get("faixa"):
+            pseudo["momento"] = {"faixa": ma["faixa"],
+                                 "evidencia": f"{ma.get('evidencia', '')} ({ma.get('data', '?')})"[:180]}
+        if ia.get("nivel"):
+            pseudo["intencao"] = {"nivel": ia["nivel"],
+                                  "evidencia": f"{ia.get('evidencia', '')} ({ia.get('data', '?')})"[:180]}
+        if st_lead.get("situacao") == "aguardando_decisao_cliente":
+            # pediu espaço: intenção real atual é "esperar" — não inflar
+            pseudo["intencao"] = {"nivel": "indeciso",
+                                  "evidencia": f"pediu espaço ({st_lead.get('situacao_data', '?')})"}
+        if pseudo:
+            analysis = {**(analysis or {}), **pseudo}
+        sv = st_lead.get("vehicle") or {}
+        if sv.get("make") or sv.get("model"):
+            av = {**av} or {}
+            av.setdefault("make", sv.get("make"))
+            av.setdefault("model", sv.get("model"))
+            av.setdefault("year", (sv.get("year") or "").split(" ")[0])
+
+    # veículo: manual > CF > análise/estado (nome da opp = fallback dentro do score)
     veh_src = None
     make = model = year = None
     for src, m_, mo_, y_ in (("manual", manual.get("make"), manual.get("model"), manual.get("year")),
