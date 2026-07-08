@@ -26,28 +26,47 @@ CAP_USD = 50.0
 S = {"type": "string"}
 B = {"type": "boolean"}
 
-RETRO_SCHEMA = deepcopy(analyze.ANALYSIS_SCHEMA)
-RETRO_SCHEMA["properties"].update({
-    "ponto_de_morte": S,          # preco_sem_defesa|sem_proximo_passo|visita_nao_proposta|followup_nao_feito|objecao_nao_tratada|esfriou_sem_causa|""
-    "visita_proposta": {"type": "object", "additionalProperties": False,
-                        "required": ["houve", "como"],
-                        "properties": {"houve": B, "como": S}},
+# Schema DEDICADO e enxuto — o schema completo da análise + campos retro estourou o
+# limite de gramática do structured output no Batch ("compiled grammar is too large").
+_RETRO_PROPS = {
+    "resumo_3_linhas": S,
+    "servico_interesse": S,
+    "precos_falados": {"type": "array",
+                       "items": {"type": "object", "additionalProperties": False,
+                                 "required": ["servico", "valor"],
+                                 "properties": {"servico": S, "valor": S}}},
+    "sentimento_geral": S,
+    "reacao_preco": S,             # achou_caro|ok|achou_barato|nao_discutido
+    "script_coverage": {"type": "object", "additionalProperties": False,
+                        "required": ["perguntou_carro_novo", "perguntou_garagem",
+                                     "perguntou_keep_or_trade", "perguntou_outros_orcamentos",
+                                     "apresentou_ballpark"],
+                        "properties": {k: B for k in
+                                       ["perguntou_carro_novo", "perguntou_garagem",
+                                        "perguntou_keep_or_trade", "perguntou_outros_orcamentos",
+                                        "apresentou_ballpark"]}},
+    "extras_empurrados": B,
+    "ponto_de_morte": S,           # preco_sem_defesa|sem_proximo_passo|visita_nao_proposta|followup_nao_feito|objecao_nao_tratada|esfriou_sem_causa|""
+    "visita_proposta_houve": B,
+    "visita_proposta_como": S,
     "preco_antes_da_motivacao": B,
-    "proximo_passo_definido": {"type": "object", "additionalProperties": False,
-                               "required": ["houve", "qual"],
-                               "properties": {"houve": B, "qual": S}},
+    "proximo_passo_definido_houve": B,
+    "proximo_passo_definido_qual": S,
     "talk_ratio_operador": {"type": "number"},   # 0-1 fração de fala do operador
     "classificacao_da_perda": S,   # controlavel|incontrolavel|"" (win)
     "justificativa_classificacao": S,
     "nota_da_call": {"type": "integer"},         # 0-10
     "perguntas_do_cliente": {"type": "array", "items": S},
-})
-RETRO_SCHEMA["required"] += ["ponto_de_morte", "visita_proposta", "preco_antes_da_motivacao",
-                             "proximo_passo_definido", "talk_ratio_operador",
-                             "classificacao_da_perda", "justificativa_classificacao",
-                             "nota_da_call", "perguntas_do_cliente"]
+    "resposta_tecnica_improvisada": B,
+}
+RETRO_SCHEMA = {"type": "object", "additionalProperties": False,
+                "required": list(_RETRO_PROPS), "properties": _RETRO_PROPS}
 
-RETRO_SYSTEM = analyze.SYSTEM + """
+RETRO_SYSTEM = """Você analisa retrospectivamente calls de vendas da Elite Premium Detailing
+(detailing automotivo premium em Davie/FL: PPF, ceramic coating, wrap). O atendente é o
+Eugene (assistente) ou o Rafael (dono); o outro falante é o cliente. Transcrição diarizada
+(S0/S1...), em inglês/espanhol/português. Extraia APENAS o que está na transcrição;
+campos de texto sem evidência ficam "".
 
 MODO RETROSPECTIVO: o desfecho REAL deste lead (win/lost + grupo) vem nos metadados.
 Analise a call À LUZ do desfecho:
@@ -205,6 +224,11 @@ def submit():
         if tr:
             text = transcribe.diarized_as_text(tr[0].get("diarized") or []) or tr[0]["full_text"]
         else:
+            # FK: transcripts referencia calls — garantir a linha da call ANTES
+            cards._sb("POST", "calls", headers_extra={"Prefer": "resolution=merge-duplicates"},
+                      json={"id": call["id"], "contact_id": s["contact_id"],
+                            "direction": call["direction"], "duration_sec": call["dur"],
+                            "called_at": call["ts"], "recording_downloaded": True})
             audio = None
             for attempt in range(3):
                 try:
@@ -266,9 +290,10 @@ def harvest():
         if b.processing_status == "ended":
             break
         time.sleep(60)
-    results, in_tok, out_tok = [], 0, 0
+    results, in_tok, out_tok, errored = [], 0, 0, 0
     for entry in client.messages.batches.results(info["batch_id"]):
         if entry.result.type != "succeeded":
+            errored += 1
             continue
         msg = entry.result.message
         in_tok += msg.usage.input_tokens
@@ -285,8 +310,11 @@ def harvest():
     cards._sb("POST", "cost_log", json={"call_id": "retro-batch", "provider": "anthropic",
                                         "model": f"{analyze.MODEL} (batch)",
                                         "units": in_tok + out_tok, "est_usd": usd})
-    log(f"colhidas {len(results)} análises · batch ${usd}")
+    log(f"colhidas {len(results)} análises ({errored} com erro) · batch ${usd}")
     json.dump(results, open(OUT / "retro_results.json", "w"), indent=2, ensure_ascii=False)
+    if len(results) < 20:
+        log("!! poucas análises colhidas — NÃO sintetizar com amostra quebrada. Abortando.")
+        return
     synthesize(results, client)
 
 
@@ -297,11 +325,14 @@ def synthesize(results, client):
 
     def slim(r):
         return {k: r.get(k) for k in
-                ("resumo_3_linhas", "ponto_de_morte", "visita_proposta",
-                 "preco_antes_da_motivacao", "proximo_passo_definido", "talk_ratio_operador",
-                 "classificacao_da_perda", "justificativa_classificacao", "nota_da_call",
-                 "perguntas_do_cliente", "script_coverage", "precos_falados",
-                 "extras_empurrados", "sentimento")} | {"_": r["_retro"]}
+                ("resumo_3_linhas", "ponto_de_morte", "visita_proposta_houve",
+                 "visita_proposta_como", "preco_antes_da_motivacao",
+                 "proximo_passo_definido_houve", "proximo_passo_definido_qual",
+                 "talk_ratio_operador", "classificacao_da_perda",
+                 "justificativa_classificacao", "nota_da_call", "perguntas_do_cliente",
+                 "script_coverage", "precos_falados", "extras_empurrados",
+                 "sentimento_geral", "reacao_preco", "servico_interesse",
+                 "resposta_tecnica_improvisada")} | {"_": r["_retro"]}
 
     prompt = f"""Estudo retrospectivo Elite Premium Detailing (docs/missoes/prompt-retro-eugene.md).
 {len(wins)} calls WIN e {len(losts)} calls LOST analisadas (JSONs abaixo).
