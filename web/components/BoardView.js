@@ -67,9 +67,47 @@ function KCard({ c, conf }) {
 
 export default function BoardView({ session, data, reload, role }) {
   const [tab, setTab] = useState("board");
+  const [live, setLive] = useState(null);
   const beeped = useRef({});
+  const reloadT = useRef(0);
   const email = session.user.email;
   const isOwner = role === "owner";
+
+  // CAMADA 2 — Supabase Realtime: mudança em board_cards chega na tela no segundo
+  // da ingestão (zero F5). Throttle de 1.5s pra rajadas.
+  useEffect(() => {
+    const ch = supabase
+      .channel("board-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "board_cards" }, () => {
+        const t = Date.now();
+        if (t - reloadT.current > 1500) { reloadT.current = t; reload && reload(); }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "config",
+        filter: "key=eq.board_live" }, (payload) => {
+        setLive(payload.new?.value || null);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // CAMADA 3 — delta 60s: o navegador pinga /api/delta (throttle no servidor)
+  useEffect(() => {
+    let stop = false;
+    async function ping() {
+      try {
+        const { data: s } = await supabase.auth.getSession();
+        await fetch("/api/delta", { headers: { Authorization: `Bearer ${s?.session?.access_token || ""}` } });
+      } catch (_) { /* delta é reconciliação — falha silenciosa */ }
+    }
+    ping();
+    const t = setInterval(() => { if (!stop) ping(); }, 60000);
+    return () => { stop = true; clearInterval(t); };
+  }, []);
+
+  const liveVal = live || data.config.board_live || null;
+  const lastEventTs = liveVal?.last_event ? new Date(liveVal.last_event) : null;
+  const liveStale = !lastEventTs || (Date.now() - lastEventTs.getTime()) > 12 * 60000;
   const cfg = data.config.board_config || {};
   const goal = cfg.goal_calls || 100;
   const tiers = cfg.tiers || { t1: 30, t2: 35, t3: 40, rate1: 10, rate2: 20, bonus: 50, cap: 600 };
@@ -169,7 +207,13 @@ export default function BoardView({ session, data, reload, role }) {
     <div className="wrap">
       <div className="topbar">
         <div className="tt"><h1>Daily Board</h1>
-          <span className="d">{now.toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · mirrors GHL every 5 min</span></div>
+          <span className="d">{now.toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            {" · "}
+            <span style={{ color: liveStale ? "var(--amber-text)" : "var(--green-text)", fontWeight: 600 }}>
+              {liveStale ? "⟳ syncing" : "● Live"}
+              {lastEventTs ? ` · last event ${lastEventTs.toLocaleTimeString("en-US", { hour12: false })}` : ""}
+            </span>
+          </span></div>
         {isOwner && (
           <div className="tabs">
             <button className={`tab${tab === "board" ? " on" : ""}`} onClick={() => setTab("board")}>Board</button>
@@ -273,6 +317,14 @@ export default function BoardView({ session, data, reload, role }) {
 
       {tab === "owner" && isOwner && (
         <div>
+          {liveStale && (
+            <div className="banner">⚠ Realtime feed stale — no push/delta event in 12+ min. Check the GHL webhook workflows and the Vercel env vars (GUIA_WEBHOOKS_REALTIME.md).</div>
+          )}
+          {data.config.board_live_error && (
+            <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>
+              ✕ Push handler error at {String(data.config.board_live_error.at || "").slice(11, 19)}: {String(data.config.board_live_error.error || "").slice(0, 120)}
+            </div>
+          )}
           <div className="grid2">
             <div className="ccard">
               <h3>Today by column</h3>

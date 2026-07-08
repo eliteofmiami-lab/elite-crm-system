@@ -37,6 +37,8 @@ URABLE = re.compile(r"go\.urable\.com/\S+", re.I)
 DEFAULT_CFG = {
     "eugene_user_id": "EbVhbGHnGfuvbQurQoga",
     "rafael_user_id": "7dYD2aALTReBpvw0YYCM",
+    # conta antiga do Rafael no mobile app (userId deletado; provado no caso Jamile)
+    "rafael_aliases": ["AiqssnKwfohnWd7KBead"],
     "goal_calls": 100,
     "valid_min_sec": 25, "valid_sms_window_min": 10,
     "resolution_min": 15,
@@ -120,9 +122,15 @@ def user_key(cfg, user_id, source=None):
         return "automation"
     if user_id == cfg["eugene_user_id"]:
         return "eugene"
-    if user_id == cfg["rafael_user_id"]:
+    if user_id == cfg["rafael_user_id"] or user_id in (cfg.get("rafael_aliases") or []):
         return "rafael"
     return "other" if user_id else ("automation" if source == "workflow" else "other")
+
+
+def call_answered(cfg, status, duration):
+    """Atendida DE VERDADE: status completed OU ≥25s. Call de 3-7s = não atendida
+    (bug caso Jamile: duration>0 não é conexão)."""
+    return (status or "").lower() == "completed" or (duration or 0) >= cfg["valid_min_sec"]
 
 
 # -------------------- coleta GHL (somente leitura) --------------------
@@ -315,7 +323,7 @@ def cycle(full_task_pass=False):
             continue
         dur = c.get("duration") or 0
         status = (c.get("status") or "").lower()
-        answered = status == "completed" or (not status and dur >= cfg["valid_min_sec"])
+        answered = call_answered(cfg, status, dur)
         valid = False
         pending = False
         if answered:
@@ -557,10 +565,18 @@ def cycle(full_task_pass=False):
             prev = call_by_contact.get(c["contact_id"])
             if not prev or c["ts"] > prev["ts"]:
                 call_by_contact[c["contact_id"]] = c
+    stage_now = {cid: {s for s, _ in lst} for cid, lst in opps.items()}
     for card in oc:
         cid = card["contact_id"]
         kind = card["kind"]
         created = parse_ts(card["created_at"])
+        # ESPELHO PRIMEIRO (caso Jamile): card de stage cuja opp SAIU do stage fecha
+        # SEMPRE — o card do stage novo assume. Vale com ou sem call no meio.
+        if kind in ("hot", "new_lead", "pipeline") and card.get("stage") \
+                and card["stage"] not in stage_now.get(cid, set()):
+            resolve_card(card, "stage moved", "")
+            resolutions += 1
+            continue
         # SMS card: resposta enviada fecha
         if kind == "sms_reply":
             reply = next((s for s in sms_out if s["contact_id"] == cid
@@ -589,22 +605,17 @@ def cycle(full_task_pass=False):
         # colunas com ligação: call nova → relógio de resolução
         lc = call_by_contact.get(cid)
         if lc and (not card.get("unres_call_ts") or lc["ts"] > parse_ts(card["unres_call_ts"])):
+            answered = call_answered(cfg, lc.get("status"), lc.get("duration"))
             sb._sb("PATCH", f"board_cards?id=eq.{card['id']}", json={
                 "unres_call_ts": iso(lc["ts"]),
                 "unres_call_user": user_key(cfg, lc.get("user_id"), lc.get("source")),
-                "unres_call_answered": bool(lc.get("duration")),
+                "unres_call_answered": answered,
                 "unres_call_dur": lc.get("duration") or 0})
             card["unres_call_ts"] = iso(lc["ts"])
-            card["unres_call_answered"] = bool(lc.get("duration"))
+            card["unres_call_answered"] = answered
         cts = parse_ts(card.get("unres_call_ts"))
         if not cts:
-            # sem call ainda: card espelho segue aberto; stage mudou sem call → resolve
-            cur_stage = next((s for s, o in opps.get(cid, []) if True), None)
-            if card.get("stage") and card["stage"] not in [s for s, _ in opps.get(cid, [])] \
-                    and kind in ("hot", "new_lead", "pipeline"):
-                resolve_card(card, "stage moved", "")
-                resolutions += 1
-            continue
+            continue  # sem call ainda: card espelho segue aberto
         # resoluções válidas após a call
         resolved = None
         res_user = ""

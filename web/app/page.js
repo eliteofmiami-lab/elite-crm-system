@@ -65,7 +65,8 @@ export default function Home() {
         supabase.from("commissions").select("*").gte("booked_at", monthStart),
         supabase.from("config").select("key,value").in("key",
           ["stats_today", "bonus_period", "test_contact_ids", "prices", "bonus_guard",
-           "visit_briefing", "appointments_board"]),
+           "visit_briefing", "appointments_board", "board_config", "board_activity",
+           "board_live", "board_live_error"]),
         supabase.from("lead_flags").select("contact_id,spanish_only,visited_store,visit_probable")
           .or("spanish_only.eq.true,visited_store.eq.true,visit_probable.not.is.null"),
         supabase.from("reports").select("*").order("report_date", { ascending: false }).limit(4),
