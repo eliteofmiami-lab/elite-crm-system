@@ -180,6 +180,8 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
         </div>
       </div>
 
+      <AppointmentsBoard data={data} session={session} />
+
       {briefing.length > 0 && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h3>🏪 Visitas de hoje e amanhã — briefing pré-venda</h3>
@@ -189,8 +191,14 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
                 {v.start ? new Date(v.start).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "—"} · {v.name}
                 {v.vehicle ? ` · ${v.vehicle}` : ""}{v.tier ? ` (${v.tier})` : ""}
                 {v.visited_store ? " · 🏪 já visitou a loja" : ""}
+                {v.repeat_customer ? " · 🔁 cliente repetido" : ""}
                 <a href={v.ghl_link} target="_blank" rel="noreferrer" style={{ marginLeft: 8 }}>GHL ↗</a>
               </div>
+              {v.coupon && (
+                <div className="meta" style={{ color: "#B54708", fontWeight: 600 }}>
+                  🎟️ Carrega $200 prometidos em call de {v.coupon.date}{v.coupon.contexto ? ` — “${v.coupon.contexto}”` : ""}
+                </div>
+              )}
               <div className="meta">
                 {v.interest && v.interest.value ? <>Buscando: <b>{v.interest.value}</b> · </> : null}
                 {v.sentiment ? <>Sentimento: {v.sentiment} · </> : null}
@@ -244,6 +252,58 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
       <Diagnostics testIds={data.config.test_contact_ids || []} />
 
       <p className="footnote">Full daily report generated at 6:30 PM · commissions reconcile with sales at month close.</p>
+    </div>
+  );
+}
+
+function AppointmentsBoard({ data, session }) {
+  // A14 / spec 6.6 — toques gravam em appointment_actions; o worker sincroniza
+  // com o GHL em ≤5 min (escrita iniciada pelo Rafael = autorizada, tudo no write_log)
+  const [acted, setActed] = useState({});
+  const board = (data.config.appointments_board && data.config.appointments_board.items) || [];
+  if (!board.length) return null;
+  async function tap(item, action) {
+    let value = null;
+    if (action === "comprou") {
+      const raw = window.prompt(`Valor da venda de ${item.name} (US$)?`, "");
+      if (raw === null) return;
+      value = parseFloat(String(raw).replace(/[^0-9.]/g, "")) || null;
+    }
+    await supabase.from("appointment_actions").insert({
+      event_id: item.event_id, contact_id: item.contact_id, action,
+      value_usd: value, acted_by: session.user.email,
+    });
+    setActed({ ...acted, [item.event_id]: action });
+  }
+  const fmt = (s) => (s ? new Date(s).toLocaleString("pt-BR",
+    { weekday: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+  return (
+    <div className="panel" style={{ marginTop: 12 }}>
+      <h3>📅 Appointments Board — hoje, amanhã e últimos 7 dias</h3>
+      {board.map((it) => (
+        <div key={it.event_id} style={{ display: "flex", flexWrap: "wrap", gap: 8,
+          alignItems: "center", borderTop: "1px solid var(--line)", padding: "8px 0" }}>
+          <div style={{ flex: "1 1 220px" }}>
+            <b>{fmt(it.start)}</b> · {it.name}
+            {it.repeat_customer ? " 🔁" : ""}{it.coupon ? " 🎟️" : ""}
+            <span className="meta"> · {it.status || "?"} · {it.calendar}</span>
+            <a href={it.ghl_link} target="_blank" rel="noreferrer" style={{ marginLeft: 6 }}>↗</a>
+          </div>
+          {acted[it.event_id] ? (
+            <span className="meta" style={{ color: "#067647", fontWeight: 600 }}>
+              ✓ {acted[it.event_id]} — sincronizando com o GHL (≤5 min)</span>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button className="btn ghost sm" onClick={() => tap(it, "confirmado")}>Confirmado</button>
+              <button className="btn ghost sm" onClick={() => tap(it, "showed")}>Showed</button>
+              <button className="btn ghost sm" onClick={() => tap(it, "noshow")}>No-show</button>
+              <button className="btn primary sm" onClick={() => tap(it, "comprou")}>💰 Comprou</button>
+            </div>
+          )}
+        </div>
+      ))}
+      <p className="meta">Showed = visita comprovada (Intenção 15) · Comprou = Win + valor (fecha cards, confirma comissão)
+        · No-show entra no resgate · Meta/CAPI segue o meta_events_map (config). Repetidos (🔁) nunca geram cards na fila.</p>
     </div>
   );
 }

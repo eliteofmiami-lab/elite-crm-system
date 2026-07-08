@@ -118,8 +118,13 @@ def compute(*, make=None, model=None, year=None, opp_name=None, how_soon=None,
         momento_r = call_analysis["momento"].get("evidencia", "transcrição")
         momento_src = "call"
 
+    # A14: desqualificação na call derruba a Intenção (só o Rafael move pra Lost)
+    desqualificado = bool(call_analysis
+                          and call_analysis.get("resolucao_da_call") == "desqualificou")
     # Intenção — visita à loja é o sinal mais forte do funil (A12-c)
-    if visited_store:
+    if desqualificado:
+        intenc, intenc_r, intenc_src = 3, "desqualificado na call (resolução)", "call"
+    elif visited_store:
         intenc, intenc_r, intenc_src = 15, visit_reason or "visitou a loja", "visita"
     elif call_analysis and call_analysis.get("intencao", {}).get("nivel") in INTENT_FROM_CALL:
         intenc = INTENT_FROM_CALL[call_analysis["intencao"]["nivel"]]

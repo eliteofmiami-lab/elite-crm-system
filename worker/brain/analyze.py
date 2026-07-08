@@ -28,7 +28,7 @@ ANALYSIS_SCHEMA = {
                  "voicemail_left", "resultado", "proxima_acao", "resumo_3_linhas",
                  "advice_en", "advice_pt", "advice_evidencia", "advice_alavanca",
                  "advice_motivo_silencio", "pergunta_tecnica", "visita_loja",
-                 "extras_empurrados"],
+                 "extras_empurrados", "cupom_oferecido", "resolucao_da_call"],
     "properties": {
         "vehicle": {"type": "object", "additionalProperties": False,
                     "required": ["make", "model", "year", "is_new_or_just_bought", "delivery_date_or_window"],
@@ -102,6 +102,12 @@ ANALYSIS_SCHEMA = {
                         "properties": {"ja_visitou_mencionado": B, "evidencia": SN}},
         # A10: extras empurrados sem o cliente pedir (observação, nunca punição)
         "extras_empurrados": B,
+        # A13: cupom de $200 mencionado/oferecido na call
+        "cupom_oferecido": {"type": "object", "additionalProperties": False,
+                            "required": ["houve", "contexto"],
+                            "properties": {"houve": B, "contexto": SN}},
+        # A14: resolução da call — qualificou|avancou|desqualificou|pendente ("" se n/a)
+        "resolucao_da_call": SN,
     },
 }
 
@@ -152,6 +158,12 @@ REGRA Nº 1 — ADVICE COM PORTÃO DE QUALIDADE (A12). Advice só existe se pass
   evidencia. Planejar visita futura NÃO conta.
 - extras_empurrados: true se o operador ofereceu add-ons (paint correction, interior
   coating, wheels) SEM o cliente perguntar. Não oferecer extras NUNCA é erro.
+- cupom_oferecido (A13): houve=true se o operador ofereceu/mencionou um cupom/desconto de
+  $200 para fechar agendamento/visita; contexto = a frase usada.
+- resolucao_da_call (A14): o desfecho REAL da conversa — "qualificou" (interesse+dados
+  confirmados), "avancou" (agendou/pediu quote/aceitou próximo passo), "desqualificou"
+  (sem carro, sem interesse real, fora de perfil, número errado — derruba o lead),
+  "pendente" (nada definido) ou "" se não se aplica (ex.: voicemail).
 - resumo_3_linhas: máx 3 linhas, direto, em inglês (o Eugene lê em inglês).
 A transcrição vem diarizada (S0/S1...) e pode ser em inglês, espanhol ou português.
 O atendente pode ser o Eugene OU o Rafael (dono) — não presuma qual dos dois."""

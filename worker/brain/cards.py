@@ -468,6 +468,16 @@ def flush_manual_logs():
             if cfs:
                 rq.put(f"{config.GHL_BASE_URL}/contacts/{cid}", headers=Hw,
                        json={"customFields": cfs}, timeout=30)
+            # A13: toggle "Offered $200 booking coupon" → registro em coupons
+            if f.get("coupon_offered"):
+                dupc = _sb("GET", f"coupons?contact_id=eq.{cid}&source=eq.manual"
+                                  f"&created_at=gte.{dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d')}"
+                                  "&select=id&limit=1")
+                if not dupc:
+                    _sb("POST", "coupons", json={
+                        "contact_id": cid, "source": "manual",
+                        "contexto": f.get("coupon_context") or "offered via Log call details",
+                        "offered_by": row["logged_by"]})
             nota = ["📋 CALL LOG (manual — painel)"]
             labels = [("outcome", "Outcome"), ("make", "Make"), ("model", "Model"),
                       ("year", "Year"), ("momento", "Car timing"), ("garaged", "Garaged or street"), ("arrival", "Car arrival"),
@@ -477,6 +487,7 @@ def flush_manual_logs():
                       ("other_quotes_detail", "Other quotes detail"),
                       ("lost_reason", "Lost reason"),
                       ("prices", "Prices discussed"), ("hook", "Personal note"),
+                      ("coupon_offered", "⚠️ $200 booking coupon OFFERED"),
                       ("next_step", "Next step"), ("next_date", "When"), ("notes", "Notes")]
             for k, lab in labels:
                 if f.get(k):
@@ -634,6 +645,11 @@ def build_visit_briefing():
                        "garaged": mf.get("garaged"),
                        "momento": mf.get("momento") or (pay.get("momento") or {}).get("faixa"),
                        "interest": intr.get("value")}
+            # A13: cupom prometido aparece OBRIGATORIAMENTE no briefing
+            cps = _sb("GET", f"coupons?contact_id=eq.{cid}&status=eq.offered"
+                             "&order=created_at.desc&limit=1&select=created_at,contexto") or []
+            # A14: cliente repetido (Win anterior) — marcado; nunca gera card (card_eligible)
+            repeat = most_advanced_stage(cid) == "Win"
             visits.append({
                 "start": e.get("startTime"), "calendar": cal_name,
                 "status": e.get("appointmentStatus"),
@@ -650,8 +666,12 @@ def build_visit_briefing():
                     "keep_or_trade": mf.get("keep_or_trade")}.items() if v2},
                 "quote": quote_facts(cid) or None,
                 "visited_store": bool(fl and fl[0].get("visited_store")),
+                "coupon": ({"date": cps[0]["created_at"][:10],
+                            "contexto": cps[0].get("contexto")} if cps else None),
+                "repeat_customer": repeat,
                 "upsells": _upsell_suggestions(profile),
                 "ghl_link": GHL_LINK.format(loc=LOC, cid=cid),
+                "event_id": e.get("id"),
             })
     visits.sort(key=lambda x: str(x.get("start")))
     import requests as rq
@@ -661,6 +681,136 @@ def build_visit_briefing():
                   "value": {"generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                             "visits": visits}}, timeout=15)
     return len(visits)
+
+
+def build_appointments_board():
+    """A14 / spec 6.6 — Appointments Board (visão do Rafael): hoje, amanhã e
+    últimos 7 dias, com estado, cliente repetido e cupom prometido."""
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+    today0 = dt.datetime.now(et).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today0 - dt.timedelta(days=7)
+    end = today0 + dt.timedelta(days=2)
+    items = []
+    for cal_name, cal_id in CALENDARS.items():
+        r = ghl.get("/calendars/events", {"locationId": LOC, "calendarId": cal_id,
+                                          "startTime": int(start.timestamp() * 1000),
+                                          "endTime": int(end.timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            cid = e.get("contactId")
+            if not cid:
+                continue
+            cps = _sb("GET", f"coupons?contact_id=eq.{cid}&status=eq.offered"
+                             "&select=created_at&limit=1") or []
+            items.append({
+                "event_id": e.get("id"), "calendar": cal_name,
+                "start": e.get("startTime"), "status": e.get("appointmentStatus"),
+                "name": (e.get("title") or "").strip() or cid, "contact_id": cid,
+                "repeat_customer": most_advanced_stage(cid) == "Win",
+                "coupon": bool(cps),
+                "ghl_link": GHL_LINK.format(loc=LOC, cid=cid),
+            })
+    items.sort(key=lambda x: str(x.get("start")), reverse=True)
+    import requests as rq
+    rq.post(f"{SB_URL}/rest/v1/config",
+            headers={**H, "Prefer": "resolution=merge-duplicates"},
+            json={"key": "appointments_board",
+                  "value": {"generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                            "items": items}}, timeout=15)
+    return len(items)
+
+
+# A14: toque → status no GHL. Meta/CAPI configurável (meta_events_map).
+_APPT_STATUS = {"confirmado": "confirmed", "showed": "showed", "noshow": "noshow"}
+META_EVENTS_DEFAULT = {"showed": "QualifiedVisit", "comprou": "Purchase", "noshow": None}
+
+
+def flush_appointment_actions():
+    """Toques do Rafael no Appointments Board → write-through no GHL.
+    Escrita INICIADA PELO USUÁRIO (toque) = autorizada; tudo vai pro write_log."""
+    import requests as rq
+    import config
+    import json as _json
+    from pathlib import Path
+    Hw = dict(config.ghl_headers(config.load()["GHL_API_TOKEN"]))
+    Hw["Content-Type"] = "application/json"
+    log_path = Path(config.PROJECT_ROOT) / "out" / "write_log.jsonl"
+
+    def wlog(method, url, payload, motivo, status):
+        with open(log_path, "a") as fh:
+            fh.write(_json.dumps({
+                "ts": dt.datetime.now(dt.timezone.utc).isoformat(),
+                "gate": "user-initiated (Appointments Board)", "motivo": motivo,
+                "method": method, "url": url, "payload": str(payload)[:300],
+                "status": status, "dry_run": False}, ensure_ascii=False) + "\n")
+
+    rows = _sb("GET", "appointment_actions?status=eq.pending&select=*") or []
+    n = 0
+    for row in rows:
+        try:
+            act, cid, eid = row["action"], row.get("contact_id"), row["event_id"]
+            if act in _APPT_STATUS:
+                url = f"{config.GHL_BASE_URL}/calendars/events/appointments/{eid}"
+                pr = rq.put(url, headers=Hw,
+                            json={"appointmentStatus": _APPT_STATUS[act]}, timeout=30)
+                wlog("PUT", url, {"appointmentStatus": _APPT_STATUS[act]},
+                     f"board: {act} por {row.get('acted_by')}", pr.status_code)
+                if act == "showed" and cid:
+                    _sb("POST", "lead_flags?on_conflict=contact_id",
+                        headers_extra={"Prefer": "resolution=merge-duplicates"},
+                        json={"contact_id": cid, "visited_store": True,
+                              "visit_probable": None,
+                              "set_by": f"board showed por {row.get('acted_by')}"})
+            elif act == "comprou" and cid:
+                # opp aberta do contato → Win + valor (fluxo manual do Rafael, atalho)
+                opr = ghl.get("/opportunities/search",
+                              {"location_id": LOC, "contact_id": cid, "limit": 10})
+                opp = next((o for o in (opr.json().get("opportunities", [])
+                                        if opr.status_code == 200 else [])
+                            if o.get("status") == "open"), None)
+                if opp:
+                    url = f"{config.GHL_BASE_URL}/opportunities/{opp['id']}"
+                    payload = {"pipelineId": rules.NEW_PIPELINE_ID,
+                               "pipelineStageId": rules.STAGES["Win"], "status": "won"}
+                    if row.get("value_usd") is not None:
+                        payload["monetaryValue"] = float(row["value_usd"])
+                    pr = rq.put(url, headers=Hw, json=payload, timeout=30)
+                    wlog("PUT", url, payload,
+                         f"board: Comprou (${row.get('value_usd')}) por {row.get('acted_by')}",
+                         pr.status_code)
+                # efeitos: fecha cards + confirma comissão + expira cupom aberto
+                for c in _sb("GET", f"cards?status=eq.open&contact_id=eq.{cid}&select=id") or []:
+                    close_card(c["id"], "won — comprou (board)", {"event_id": eid})
+                confirm_commissions(cid)
+                _sb("PATCH", f"coupons?contact_id=eq.{cid}&status=eq.offered",
+                    json={"status": "converted_sale"})
+            # CAPI conforme meta_events_map (teste-interno nunca reporta)
+            ev_map = {**META_EVENTS_DEFAULT,
+                      **(( _sb("GET", "config?key=eq.meta_events_map&select=value") or
+                          [{}])[0].get("value") or {})}
+            ev = ev_map.get(act)
+            if ev and cid:
+                cr = ghl.get(f"/contacts/{cid}")
+                contact = cr.json().get("contact", {}) if cr.status_code == 200 else {}
+                if "teste-interno" not in (contact.get("tags") or []):
+                    try:
+                        from brain import capi
+                        capi.send_event(ev, contact, f"board-{eid}",
+                                        value=(float(row["value_usd"])
+                                               if act == "comprou" and row.get("value_usd") is not None
+                                               else None))
+                    except Exception as ce:
+                        print(f"  [warn] CAPI board {ev}: {ce}")
+            _sb("PATCH", f"appointment_actions?id=eq.{row['id']}",
+                json={"status": "synced",
+                      "synced_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")})
+            n += 1
+        except Exception as e:
+            _sb("PATCH", f"appointment_actions?id=eq.{row['id']}",
+                json={"status": "error", "error": str(e)[:200]})
+    return n
 
 
 def bonus_guard_check():
@@ -752,8 +902,13 @@ def sync_all():
         vb = build_visit_briefing()
     except Exception as e:
         vb = f"erro: {str(e)[:50]}"
+    try:
+        build_appointments_board()
+        aa = flush_appointment_actions()
+    except Exception as e:
+        aa = f"erro: {str(e)[:50]}"
     from brain import writer as _w
     ob = flush_outbox(dry_run=_w.DRY_RUN)
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
             "fechados": x, "reabertos": r, "manual_logs": ml, "guard": bg,
-            "briefing": vb, "outbox": ob}
+            "briefing": vb, "board_actions": aa, "outbox": ob}

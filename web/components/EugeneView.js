@@ -189,6 +189,12 @@ function LogCall({ card, userEmail, reload }) {
       )}
       <input style={sel} placeholder="Prices discussed (e.g. Full front PPF $2,200)"
         value={f.prices} onChange={set("prices")} />
+      {/* A13: cupom de $200 — alçada do Eugene p/ travar a visita; todo uso registrado */}
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+        <input type="checkbox" checked={!!f.coupon_offered}
+          onChange={(e) => setF({ ...f, coupon_offered: e.target.checked })} />
+        Offered the <b>$200 booking coupon</b> (logged — shows on Rafael&apos;s briefing)
+      </label>
       <input style={sel} placeholder="Personal note / hook (e.g. daughter's birthday trip, back Wednesday)"
         value={f.hook} onChange={set("hook")} />
       <div style={{ display: "flex", gap: 8 }}>
@@ -451,6 +457,12 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
           <div className="dsec">
             <div className="dl">Advice from the last call</div>
             <p>{c.how.advice}</p>
+          </div>
+        )}
+        {(c.type === "quote_followup" || c.type === "warm_call" || c.type === "follow_up") && (
+          <div className="meta" style={{ margin: "4px 0" }}>
+            🎟️ Booking hesitation? You can offer the <b>$200 coupon</b> to lock the visit — log it
+            (checkbox in Log call details). Anything beyond $200: Rafael.
           </div>
         )}
         <PriceHint c={c} prices={prices} />

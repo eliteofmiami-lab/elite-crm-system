@@ -156,6 +156,13 @@ def main():
     r.append(f"**Activity:** {calls_out} calls out · {calls_in} in · {len(done)} tasks closed · {len(transfers)} transfer(s) detected")
     r.append(f"**Eugene money:** ${conf_sum:.0f} confirmed · ${pot_sum:.0f} potential · bonus {period}: {'❌ misses hoje' if misses else '✅ clean day'}")
     r.append(f"**AI cost month-to-date:** ${cost_sum:.2f}" + (" ⚠️ OVER $150 CEILING" if cost_sum > 150 else " (teto $150)"))
+    # A13: uso do cupom de $200 (visibilidade total — sem trava por default)
+    week0 = (today0 - dt.timedelta(days=7)).astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+    cps = q(f"coupons?created_at=gte.{week0}&select=status")
+    if cps:
+        conv = sum(1 for c in cps if c["status"] in ("converted_appt", "converted_sale"))
+        r.append(f"**$200 coupons (7 days):** {len(cps)} offered · {conv} converted"
+                 f" · {sum(1 for c in cps if c['status'] == 'converted_sale')} became sales")
     r.append("\n## Audited goals")
     r.append(f"- Zero-contact new leads at EOD: {'❌ ' + str(len([c for c in open_cards if c['type']=='first_touch'])) if any('new lead' in m for m in misses) else '✅'}")
     r.append(f"- Appointments confirmed: {'❌' if any('appointment' in m for m in misses) else '✅'}")

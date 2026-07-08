@@ -239,3 +239,19 @@ create table if not exists price_alerts (              -- A9.1 validação de ba
   detail text, tier text,
   created_at timestamptz not null default now()
 );
+
+create table if not exists coupons (                   -- A13 cupom $200
+  id uuid primary key default gen_random_uuid(),
+  contact_id text not null, call_id text,
+  source text not null default 'manual',
+  contexto text, offered_by text,
+  status text not null default 'offered',
+  created_at timestamptz not null default now()
+);
+create table if not exists appointment_actions (       -- A14 Appointments Board
+  id uuid primary key default gen_random_uuid(),
+  event_id text not null, contact_id text,
+  action text not null, value_usd numeric, acted_by text,
+  status text not null default 'pending', error text,
+  created_at timestamptz not null default now(), synced_at timestamptz
+);

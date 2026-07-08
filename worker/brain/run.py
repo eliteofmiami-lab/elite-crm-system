@@ -255,6 +255,15 @@ def post_analysis_signals(msg, opp, analysis):
                     "Pergunta técnica com callback prometido na call. Prazo: mesmo dia.",
                     due, rules.RAFAEL_USER_ID, gate="G2",
                     motivo="A11: callback técnico prometido ao cliente")
+    cp = (analysis or {}).get("cupom_oferecido") or {}
+    if cp.get("houve"):
+        dup = _c._sb("GET", f"coupons?call_id=eq.{msg['id']}&select=id&limit=1")
+        if not dup:
+            _c._sb("POST", "coupons", json={
+                "contact_id": cid, "call_id": msg["id"], "source": "call",
+                "contexto": (cp.get("contexto") or "")[:300],
+                "offered_by": "detectado na transcrição"})
+            print(f"  [cupom-$200] registrado p/ {cid}: {str(cp.get('contexto'))[:50]!r}")
     vl = (analysis or {}).get("visita_loja") or {}
     if vl.get("ja_visitou_mencionado"):
         fl = _c._sb("GET", f"lead_flags?contact_id=eq.{cid}&select=visited_store,visit_probable") or []
