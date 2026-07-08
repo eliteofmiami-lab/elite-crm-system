@@ -4,11 +4,11 @@ import { supabase } from "../lib/supabaseClient";
 import EugeneView from "../components/EugeneView";
 import OwnerView from "../components/OwnerView";
 import RailView from "../components/RailView";
+import BoardView from "../components/BoardView";
 
 const EUGENE_EMAIL = "eugenebaruelova@gmail.com";
-// MVP (decisão do Rafael, 2026-07-08): o sistema faz UMA coisa — a fila.
-// Vistas completas (EugeneView/OwnerView) ficam OCULTAS até segunda ordem
-// (código preservado). Toda rota renderiza a fila somente-leitura (RailView).
+// PAINEL DIÁRIO (missão definitiva 2026-07-08): espelho do GHL — visão única.
+// EugeneView/OwnerView/RailView ficam preservadas no código, ocultas da UI.
 const MVP_QUEUE_ONLY = true;
 
 function Login() {
@@ -49,7 +49,7 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
     const iso = today.toISOString();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports, techObs, priceAlerts, leadStates, leadScores, pendencias] =
+    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports, techObs, priceAlerts, leadStates, leadScores, pendencias, boardCards, boardAttempts, boardComms, boardDays, inactivity] =
       await Promise.all([
         supabase.from("cards").select("*").eq("status", "open")
           .order("layer").order("score", { ascending: false, nullsFirst: false })
@@ -76,6 +76,13 @@ export default function Home() {
         supabase.from("lead_states").select("contact_id,situacao,state"),
         supabase.from("lead_scores").select("contact_id,known,max_possible,badge,components"),
         supabase.from("pendencias").select("*").eq("status", "open").limit(300),
+        supabase.from("board_cards").select("*")
+          .or(`status.eq.open,day_created.eq.${new Date().toISOString().slice(0, 10)},resolved_at.gte.${iso}`)
+          .limit(800),
+        supabase.from("board_attempts").select("*").eq("day", new Date().toISOString().slice(0, 10)),
+        supabase.from("board_commissions").select("*").gte("created_at", monthStart),
+        supabase.from("board_days").select("*").gte("day", monthStart.slice(0, 10)),
+        supabase.from("inactivity_blocks").select("*").gte("started_at", iso),
       ]);
     setData({
       cards: cards.data || [], snoozed: snoozed.data || [], wrapups: wrapups.data || [],
@@ -91,6 +98,11 @@ export default function Home() {
       states: Object.fromEntries((leadStates.data || []).map((s) => [s.contact_id, s])),
       scores: Object.fromEntries((leadScores.data || []).map((s) => [s.contact_id, s])),
       pendencias: pendencias.data || [],
+      boardCards: boardCards.data || [],
+      attempts: boardAttempts.data || [],
+      commissions: boardComms.data || [],
+      boardDays: boardDays.data || [],
+      inactivity: inactivity.data || [],
     });
   }, [session]);
 
@@ -105,10 +117,13 @@ export default function Home() {
   if (!session) return <Login />;
   if (!data) return <div className="center">loading…</div>;
 
-  // MVP: fila somente-leitura para todos (?layout=rail é o modo do Custom Menu Link
-  // do GHL; sem o parâmetro a mesma fila renderiza em coluna central)
+  const roleNow =
+    session.user.app_metadata?.role ||
+    ((session.user.email || "").includes("rafael") ? "owner" : "operator");
+
+  // PAINEL DIÁRIO: visão única (Board; aba Owner só para o Rafael)
   if (MVP_QUEUE_ONLY) {
-    return <RailView data={data} reload={load} />;
+    return <BoardView session={session} data={data} reload={load} role={roleNow} />;
   }
 
   const role =

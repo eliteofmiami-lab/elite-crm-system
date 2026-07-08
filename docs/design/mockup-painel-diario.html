@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite — Daily Board (mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F6FA; --card:#FFFFFF; --line:#E4E7EC; --ink:#101828; --sub:#475467; --faint:#98A2B3;
+    --blue:#2970FF; --blue-deep:#1D4ED8; --blue-soft:#EFF4FF;
+    --green:#12B76A; --green-soft:#ECFDF3; --green-text:#067647; --green-border:#ABEFC6;
+    --amber:#F79009; --amber-soft:#FFFAEB; --amber-text:#B54708; --amber-border:#FEDF89;
+    --red:#F04438; --red-soft:#FEF3F2; --red-text:#B42318; --red-border:#FDA29B;
+    --purple-soft:#F4F0FF; --purple-text:#5925DC;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:13.5px;line-height:1.5;padding:18px 16px 40px}
+  .wrap{max-width:1600px;margin:0 auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .tt{display:flex;align-items:baseline;gap:10px}
+  .tt h1{font-size:18px;font-weight:700}
+  .tt .d{font-size:12px;color:var(--faint)}
+  .tabs{display:flex;gap:4px;background:#E9EDF3;border-radius:10px;padding:3px}
+  .tab{border:none;background:transparent;font:600 12.5px 'Inter';color:var(--sub);padding:7px 14px;border-radius:8px;cursor:pointer}
+  .tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+  .pills{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid var(--green-border);background:var(--green-soft);color:var(--green-text)}
+  .pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .btn{appearance:none;cursor:pointer;border-radius:8px;font:600 12px 'Inter';padding:8px 13px;background:var(--card);border:1px solid #D0D5DD;color:#344054}
+  .btn:hover{background:#F9FAFB}
+  .btn.out{color:var(--red-text);border-color:var(--red-border)}
+  .banner{display:flex;align-items:center;gap:10px;background:var(--amber-soft);border:1px solid var(--amber-border);color:var(--amber-text);border-radius:10px;padding:9px 14px;font-weight:500;margin-bottom:12px;font-size:13px}
+  /* SEM RESOLUÇÃO strip */
+  .earn{background:var(--green-soft);border:1px solid var(--green-border);border-radius:12px;padding:16px 20px 14px;margin-bottom:12px}
+  .earnrow{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;align-items:start}
+  @media (max-width:1100px){.earnrow{grid-template-columns:repeat(2,1fr)}}
+  .earnrow .sec{min-width:0}
+  .foot-note{font-size:10.5px;color:var(--sub);line-height:1.5;max-width:62%}
+  .earnfoot{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--green-border)}
+  .earn .big{font-size:20px;font-weight:700;color:var(--green-text)}
+  .earn .lbl{font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--green-text);opacity:.75}
+  .earn .sec{min-width:150px}
+  .earn .sub2{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.5}
+  .earn .sep{width:1px;align-self:stretch;background:var(--green-border)}
+  .earn .day{text-align:right}
+  .pbar{width:100%;height:8px;background:#D7F0E1;border-radius:99px;overflow:hidden;margin-top:5px}
+  .pbar i{display:block;height:100%;width:34%;background:var(--green);border-radius:99px}
+  .gbar{position:relative;width:100%;height:10px;background:#D7F0E1;border-radius:99px;margin-top:8px;margin-bottom:20px}
+  .gbar i{display:block;height:100%;width:34%;background:var(--green);border-radius:99px}
+  .gbar .mk{position:absolute;top:-3px;width:2px;height:16px;background:var(--green-text);opacity:.55}
+  .gbar .mk.m30{left:75%}
+  .gbar .mk.m35{left:87.5%}
+  .gbar .mk span{position:absolute;top:16px;left:-14px;font-size:9.5px;font-weight:700;color:var(--green-text);white-space:nowrap}
+  .earn .ok{font-weight:700;color:var(--green-text);font-size:13px}
+  .nores{background:var(--red-soft);border:1.5px solid var(--red-border);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+  .nores .nh{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--red-text);font-size:13.5px;margin-bottom:8px}
+  .nores .ncard{background:var(--card);border:1px solid var(--red-border);border-left:4px solid var(--red);border-radius:10px;padding:11px 14px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .nores .ncard .t{font-weight:700}
+  .nores .ncard .why{color:var(--sub);font-size:12.5px;margin-top:2px}
+  .nores .tree{font-size:12px;color:var(--ink);background:#FFF7F6;border:1px dashed var(--red-border);border-radius:8px;padding:8px 11px;margin-top:8px;line-height:1.55}
+  .nores .age{margin-left:auto;font-weight:700;color:var(--red-text);white-space:nowrap;font-size:12.5px}
+  /* Board */
+  .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+  .col{background:#EEF1F6;border:1px solid var(--line);border-radius:12px;min-width:285px;max-width:285px;padding:10px;flex:none}
+  .col h2{font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--sub);display:flex;justify-content:space-between;align-items:center;margin:2px 4px 10px}
+  .col h2 .n{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 9px;font-size:11.5px;color:var(--ink)}
+  .col .cap{font-size:10.5px;color:var(--faint);margin:-6px 4px 8px;font-weight:500}
+  .kcard{background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .kcard:hover{border-color:#C7D2E2}
+  .kcard .nm{font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;gap:8px}
+  .kcard .age{font-size:10.5px;font-weight:700;color:var(--faint);white-space:nowrap}
+  .kcard .age.warn{color:var(--amber-text)}
+  .kcard .age.bad{color:var(--red-text)}
+  .kcard .veh{font-size:12px;color:var(--sub);margin-top:1px}
+  .kcard .org{font-size:11px;color:var(--faint);margin-top:5px;display:flex;align-items:center;gap:5px}
+  .kcard .org b{color:var(--sub);font-weight:600}
+  .kx{display:none;border-top:1px solid var(--line);margin-top:9px;padding-top:9px}
+  .kcard.open .kx{display:block}
+  .kx .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+  .kx .ph{font-size:12.5px;color:var(--sub);font-weight:500}
+  .kx a.open{font:600 12px 'Inter';color:#fff;background:var(--blue);border-radius:8px;padding:7px 12px;text-decoration:none}
+  .kx .closes{font-size:11px;color:var(--faint);line-height:1.5;background:#F8FAFC;border-radius:8px;padding:7px 10px}
+  .kx .closes b{color:var(--sub)}
+  .kx details{margin-top:7px;font-size:11.5px}
+  .kx summary{cursor:pointer;color:var(--faint);font-weight:600;list-style:none}
+  .kx summary::-webkit-details-marker{display:none}
+  .kx .fb{margin-top:6px;display:flex;gap:6px}
+  .kx .fb input{flex:1;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font:400 12px 'Inter'}
+  .kx .fb button{font:600 11.5px 'Inter';border:1px solid #D0D5DD;background:var(--card);border-radius:7px;padding:6px 10px;cursor:pointer}
+  /* Controle */
+  #controle{display:none}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr}}
+  .ccard{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px}
+  .ccard h3{font-size:14px;font-weight:600;margin-bottom:10px}
+  table.ct{width:100%;border-collapse:collapse;font-size:12.5px}
+  .ct th,.ct td{padding:7px 8px;border-top:1px solid var(--line);text-align:right}
+  .ct th:first-child,.ct td:first-child{text-align:left}
+  .ct thead th{color:var(--sub);font-weight:600;font-size:11.5px;border-top:none}
+  .ct .bad{color:var(--red-text);font-weight:700}
+  .lrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:baseline}
+  .lrow:last-child{border-bottom:none}
+  .lrow .tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--red-soft);color:var(--red-text);flex:none}
+  .lrow .tag.old{background:var(--amber-soft);color:var(--amber-text)}
+  .lrow .mono{margin-left:auto;color:var(--faint);white-space:nowrap;font-size:11.5px}
+  .kcard.conf{border-left:3px solid var(--green);background:#FBFEFC}
+  .kcard.conf .ok{font-size:10.5px;font-weight:700;color:var(--green-text);letter-spacing:.03em}
+  .note{font-size:11.5px;color:var(--sub);background:#F6F8FA;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-top:7px;line-height:1.5}
+  .note b{color:var(--ink)}
+  .note.empty{color:var(--amber-text);background:var(--amber-soft);border-color:var(--amber-border);font-weight:500}
+  .subhead{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:12px 4px 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="tt"><h1>Daily Board</h1><span class="d">Wednesday, Jul 8 · 11:58 AM · mirrors GHL every 3 min</span></div>
+    <div class="tabs">
+      <button class="tab on" onclick="showTab('board',this)">Board</button>
+      <button class="tab" onclick="showTab('controle',this)">Owner · Rafael</button>
+    </div>
+    <div class="pills">
+      <span class="pill"><span class="dot"></span>Clocked in 9:02 · 2h 56m</span>
+      <button class="btn">Start break</button>
+      <button class="btn out">Clock out</button>
+    </div>
+  </div>
+
+  <div id="board">
+    <div class="banner">⚠ 10 min without activity — the board is waiting</div>
+    <div class="banner">🕐 Midday check: 34/100 valid calls — behind pace. Hit the queue and warm-up list.</div>
+
+    <div class="earn">
+     <div class="earnrow">
+      <div class="sec"><div class="lbl">Calls today · goal 100</div><div class="big">34<span style="font-size:13px;color:var(--sub)">/100 valid</span></div><div class="pbar"><i></i></div><div class="sub2">valid: answered · or 25s+ voicemail + your text ≤10m · yours only</div></div>
+      <div class="sec"><div class="lbl">Sales goal · July · min 30</div><div class="big">12<span style="font-size:13px;color:var(--sub)">/40</span></div>
+        <div class="gbar"><i style="width:30%"></i><span class="mk m30"><span>30</span></span><span class="mk m35"><span>35</span></span></div>
+        <div class="sub2" style="margin-top:0">$10 up to 30 · <b>$20 for sales 31–40</b></div></div>
+      <div class="sec"><div class="lbl">Your wins · July</div><div class="big">$120<span style="font-size:13px;color:var(--sub)"> earned</span></div><div class="sub2">21 booked · 18 confirmed · <b>12 won</b> · 2 expired</div></div>
+      <div class="sec"><div class="lbl">Potential</div><div class="big" style="color:var(--green-text)">$70</div><div class="sub2"><b>7 awaiting</b> · booked &amp; done, waiting to close</div>
+      <div class="sub2" style="color:var(--amber-text);font-weight:600">⚠ 2 to confirm — miss = clean day lost</div></div>
+      <div class="sec"><div class="lbl">Clean-board bonus · Jul 1&ndash;15</div><div class="big">$50 <span style="font-size:13px;color:var(--green-text)">6/6 &middot; on track</span></div><div class="sub2">all days clean → paid on the 15th · one miss = restarts the 16th</div></div>
+      </div>
+     <div class="earnfoot"><div class="foot-note"><b>Ladder:</b> 30 = $300 · 35 = $400 · 40 = $500 &nbsp;·&nbsp; <b>Clean day:</b> 100 valid calls + zero unresolved + confirmations &amp; today's tasks done · fortnight bonus is all-or-nothing</div><div class="day"><div class="lbl">Max this month</div><div class="big" style="font-size:16px">$600</div><div class="sub2">$500 sales + $100 clean-board</div><div class="ok" style="margin-top:4px">Today: ✔ on track — 1 to resolve</div></div></div>
+    </div>
+
+    <div class="nores">
+      <div class="nh">⏱ YOUR CALLS WITHOUT RESOLUTION · 1 <span style="font-weight:500;font-size:11px;opacity:.8">— only calls made by you; Rafael's show on his tab</span></div>
+      <div class="ncard">
+        <div style="flex:1;min-width:240px">
+          <div class="t">Call 11:12 with ROBERT R — answered (6m 40s) · no resolution registered</div>
+          <div class="why">Every finished call needs one outcome in GHL:</div>
+          <div class="tree"><b>Book appointment</b> (calendar) · <b>Create follow-up task</b> (with date) · <b>Send estimate</b> (Urable link + move to Quote Sent) · <b>Not interested → mark Lost with reason</b>. Unanswered call: <b>move to next stage</b>.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <span class="age">open 18 min</span>
+          <a class="open" href="#" style="font:600 12px 'Inter';color:#fff;background:var(--red);border-radius:8px;padding:7px 12px;text-decoration:none">Open ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="board">
+
+      <div class="col">
+        <h2>Return · Reply · Hot <span class="n">4</span></h2>
+        <div class="cap">missed calls, unanswered SMS, HOT LEADS · oldest first</div>
+        <div class="kcard open" onclick="tg(this,event)">
+          <div class="nm">Agie Pee <span class="age bad">2h 10m</span></div>
+          <div class="veh">Tesla · PPF &amp; Coatings</div>
+          <div class="org"><b>Missed inbound</b> · she called 9:48, no answer</div>
+          <div class="kx">
+            <div class="row"><span class="ph">📞 (954) 555-0119</span><a class="open" href="#">Open ↗</a></div>
+            <div class="closes"><b>Closes when:</b> return call made → then one resolution (appointment · task · estimate+stage · Lost). Unanswered: next stage.</div>
+          </div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Carl Casagrande <span class="age">36m</span></div>
+          <div class="veh">— · interest not set</div>
+          <div class="org"><b>SMS awaiting reply</b> · last msg is his, 11:22</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (646) 555-0180</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> reply sent.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Lazaro M. <span class="age">1d</span></div>
+          <div class="veh">Corvette 2025 · Both</div>
+          <div class="org"><b>HOT LEADS</b> · in stage since Jul 7</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (305) 555-0142</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → one resolution (appointment · task · estimate+stage · Lost). Unanswered: next stage.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Coleen Grant <span class="age">4h</span></div>
+          <div class="veh">— · PPF</div>
+          <div class="org"><b>Missed inbound</b> · 7:25 AM (auto-text sent)</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (954) 275-1672</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> return call made → resolution.</div></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>New Leads — Call ASAP <span class="n">3</span></h2>
+        <div class="cap">stage New Lead · oldest first</div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Camila Torres <span class="age warn">42m</span></div>
+          <div class="veh">Tesla Model Y 2026 · Ceramic · ASAP</div>
+          <div class="org"><b>New Lead</b> · came in 11:16 via Meta</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (786) 555-0192</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → appointment · task · estimate+stage · Lost. Unanswered: move to Contact 1.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">D. Whitfield <span class="age">19m</span></div>
+          <div class="veh">Range Rover 2024 · PPF</div>
+          <div class="org"><b>New Lead</b> · came in 11:39 via Meta</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (561) 555-0103</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → resolution.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">M. Okafor <span class="age">6m</span></div>
+          <div class="veh">BMW M4 · Not sure</div>
+          <div class="org"><b>New Lead</b> · came in 11:52 via Google</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (954) 555-0166</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → resolution.</div></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>Tasks &amp; Quote follow-ups <span class="n">3</span></h2>
+        <div class="cap">GHL tasks due · Urable sent, no reply</div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Marlon <span class="age">due 12:30</span></div>
+          <div class="veh">BMW M4 · PPF</div>
+          <div class="org"><b>Task</b> · "follow-up call" · created Jul 5</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (954) 555-0177</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> task completed in GHL after the call + resolution.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">K Washington <span class="age warn">5d</span></div>
+          <div class="veh">Corvette · Vinyl wrap</div>
+          <div class="org"><b>Urable sent Jul 3</b> · no reply since</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (754) 555-0135</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call/SMS made → resolution (appointment · new task · Lost).</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Robert Ulrich <span class="age">2d</span></div>
+          <div class="veh">Rivian R1S · Ceramic Gold</div>
+          <div class="org"><b>Urable sent Jul 6</b> · no reply since</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (305) 555-0128</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call/SMS → resolution.</div></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>Pipeline follow-ups <span class="n">12</span></h2>
+        <div class="cap">Contact 1/2 · Follow Up stages · oldest first</div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Sundeep Pv <span class="age">3d</span></div>
+          <div class="veh">Porsche 911 · PPF</div>
+          <div class="org"><b>Contact 2 (PM)</b> · since Jul 5</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (954) 555-0158</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → resolution. Unanswered: next stage.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">J. Martinez <span class="age">1d</span></div>
+          <div class="veh">Audi RS5 · Ceramic</div>
+          <div class="org"><b>Follow Up</b> · since Jul 7</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (786) 555-0114</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → resolution.</div></div>
+        </div>
+        <div class="kcard" style="opacity:.55;pointer-events:none"><div class="nm">+ 10 more…</div><div class="org">oldest first</div></div>
+      </div>
+
+      <div class="col">
+        <h2>Appointments · next 2 days <span class="n">4</span></h2>
+        <div class="cap">confirm the pending · know who's coming</div>
+        <div class="subhead">To confirm · 2</div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">Shawn <span class="age">tomorrow 9:00</span></div>
+          <div class="veh">BMW M3 2026 · package w/ Rafael</div>
+          <div class="org"><b>Appointment Jul 9, 9:00</b> · not confirmed</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (954) 555-0171</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> confirmation SMS sent OR status "confirmed" in GHL.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">P. Rossi <span class="age">Jul 10, 14:00</span></div>
+          <div class="veh">Cayenne · Ceramic Silver</div>
+          <div class="org"><b>Appointment Jul 10, 14:00</b> · not confirmed</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (561) 555-0187</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> confirmation SMS OR status confirmed.</div></div>
+        </div>
+
+        <div class="subhead">✓ Confirmed — who's coming · 2</div>
+        <div class="kcard conf" onclick="tg(this,event)">
+          <div class="nm">Marisa Erin <span class="ok">✓ TODAY 15:00</span></div>
+          <div class="veh">G63 AMG · Ceramic Gold</div>
+          <div class="note"><b>Last note (Jul 7):</b> "Quoted Gold ceramic $2,349 + wheels off $450. Keeping the car 5+ years, garaged. Wants to see the booth."</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (305) 555-0122</span><a class="open" href="#">Open ↗</a></div></div>
+        </div>
+        <div class="kcard conf" onclick="tg(this,event)">
+          <div class="nm">A. Bellini <span class="ok">✓ TOMORROW 11:00</span></div>
+          <div class="veh">Tesla Model S · PPF full front</div>
+          <div class="note empty">No notes on this contact yet — add the call notes so the visit starts prepared.</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (786) 555-0148</span><a class="open" href="#">Open ↗</a></div></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>Warm up <span class="n">20</span></h2>
+        <div class="cap">daily ration · Lost recoverable + 30d+ idle</div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">G. Fontaine <span class="age">idle 34d</span></div>
+          <div class="veh">Urus 2024 · PPF</div>
+          <div class="org"><b>Lost — price</b> · Jun 2</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (305) 555-0109</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> call made → resolution; unanswered → reactivation SMS sent OR Lost terminal.</div></div>
+        </div>
+        <div class="kcard" onclick="tg(this,event)">
+          <div class="nm">T. Nguyen <span class="age">idle 41d</span></div>
+          <div class="veh">Model 3 · Ceramic</div>
+          <div class="org"><b>NEVER ANSWERED</b> · legacy</div>
+          <div class="kx"><div class="row"><span class="ph">📞 (786) 555-0175</span><a class="open" href="#">Open ↗</a></div><div class="closes"><b>Closes when:</b> attempt → reactivation SMS or Lost terminal.</div></div>
+        </div>
+        <div class="kcard" style="opacity:.55;pointer-events:none"><div class="nm">+ 18 more today…</div><div class="org">by form data: car · year · how soon</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="controle">
+    <div class="grid2">
+      <div class="ccard">
+        <h3>Today by column</h3>
+        <table class="ct">
+          <thead><tr><th>Column</th><th>Created</th><th>Resolved</th><th>Open</th></tr></thead>
+          <tr><td>Return · Reply · Hot</td><td>9</td><td>5</td><td>4</td></tr>
+          <tr><td>New Leads — Call ASAP</td><td>6</td><td>3</td><td>3</td></tr>
+          <tr><td>Tasks &amp; Quote follow-ups</td><td>4</td><td>1</td><td>3</td></tr>
+          <tr><td>Pipeline follow-ups</td><td>15</td><td>3</td><td>12</td></tr>
+          <tr><td>Confirm appointments</td><td>3</td><td>1</td><td>2</td></tr>
+          <tr><td>Warm up (ration 20)</td><td>20</td><td>2</td><td>18</td></tr>
+          <tr><td><b>No resolution (calls)</b></td><td>—</td><td>—</td><td class="bad">1</td></tr>
+        </table>
+      </div>
+      <div class="ccard">
+        <h3>No resolution + aging cards</h3>
+        <div class="lrow"><span class="tag">No resolution</span><span><b>Robert R</b> — call answered 11:12 (6m40s), no action registered · <b>by Eugene</b></span><span class="mono">open 18 min</span></div>
+        <div class="lrow"><span class="tag old">2+ days</span><span><b>K Washington</b> — Urable sent, no reply and no new attempt</span><span class="mono">5 days</span></div>
+        <div class="lrow"><span class="tag old">2+ days</span><span><b>Sundeep Pv</b> — Contact 2 (PM), no attempt yet</span><span class="mono">3 days</span></div>
+      </div>
+    </div>
+    <div class="ccard" style="margin-bottom:14px">
+      <h3>Appointments — next 2 days</h3>
+      <div class="lrow"><span class="tag" style="background:var(--green-soft);color:var(--green-text)">✓ Today 15:00</span><span><b>Marisa Erin</b> · G63 AMG · Ceramic Gold — note: Gold $2,349 + wheels off $450 · keeping 5+ years, garaged</span></div>
+      <div class="lrow"><span class="tag" style="background:var(--green-soft);color:var(--green-text)">✓ Tomorrow 11:00</span><span><b>A. Bellini</b> · Model S · PPF full front — <b style="color:var(--amber-text)">no notes on contact</b></span></div>
+      <div class="lrow"><span class="tag old">To confirm · Tomorrow 9:00</span><span><b>Shawn</b> · BMW M3 2026 · PPF + Ceramic — note: package agreed with Rafael, picked up the M3 on Monday</span></div>
+      <div class="lrow"><span class="tag old">To confirm · Jul 10, 14:00</span><span><b>P. Rossi</b> · Cayenne · Ceramic Silver — note: asked for Silver, comparing with another shop</span></div>
+    </div>
+    <div class="ccard" style="margin-bottom:14px">
+      <h3>Eugene's earnings — July</h3>
+      <p style="font-size:13px;color:var(--sub)"><b>Sales this month: 12 · tiers 30 / 35 / 40</b> ($10 up to 30; $20 for sales 31–40 → 30=$300 · 35=$400 · 40=$500) · confirmed commissions: <b style="color:var(--green-text)">$120</b> · potential: $70 (7 awaiting outcome) · expired: 3 · <b>Fortnight bonus (Jul 1–15): $50 at stake — 6/6 clean days</b> · <b>monthly incentive cap: $600</b>. Rule: ALL days clean = $50; one missed day = bonus lost, restarts next fortnight. Clean day = <b>100 valid attempts</b> + zero unresolved calls + confirmations done + today's tasks completed.</p>
+    </div>
+    <div class="ccard">
+      <h3>Beta feedback <span style="font-weight:500;font-size:11.5px;color:var(--faint)">· owner only — goes to BETA_FEEDBACK.md</span></h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <input placeholder="Lead / card (e.g. K Washington — quote follow-up)" style="flex:1;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:400 12.5px 'Inter'">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input placeholder="What's wrong or missing…" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:400 12.5px 'Inter'">
+        <button class="btn" style="background:var(--blue);border-color:var(--blue);color:#fff">Send</button>
+      </div>
+    </div>
+    <div class="ccard">
+      <h3>Activity by user — today</h3>
+      <p style="font-size:13px;color:var(--sub)"><b>Eugene:</b> 41 dials · 34 valid · 14 SMS · 15 resolutions &nbsp;·&nbsp; <b>Rafael:</b> 6 calls · 2 SMS · 4 resolutions <span style="color:var(--faint)">(not counted in Eugene's goals)</span> &nbsp;·&nbsp; <b>Automation:</b> 22 SMS</p>
+    </div>
+    <div class="ccard" style="margin-top:14px">
+      <h3>Eugene's shift</h3>
+      <p style="font-size:13px;color:var(--sub)">Clock-in <b>9:02</b> · declared breaks: 1 (lunch, 30m) · inactivity outside breaks: <b style="color:var(--amber-text)">1 block — 10:41–11:03 (22 min)</b> · dials today: 41 · <b>valid attempts: 34/100</b> · SMS sent: 14 · resolutions registered: 15</p>
+    </div>
+  </div>
+
+</div>
+<script>
+function tg(el, ev){ if (ev.target.closest('a,button,input,details,summary')) return; el.classList.toggle('open'); }
+function showTab(id, btn){
+  document.getElementById('board').style.display = id==='board' ? 'block' : 'none';
+  document.getElementById('controle').style.display = id==='controle' ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>
