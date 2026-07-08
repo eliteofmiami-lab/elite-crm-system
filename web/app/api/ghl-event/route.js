@@ -124,7 +124,7 @@ async function miniMirrorStage(cid) {
       await sb("POST", "board_cards", {
         coluna: map[0], kind: map[1], contact_id: cid, opportunity_id: o.id,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
-        origem: `${st} · since ${new Date(ots).toLocaleDateString("en-US", { month: "short", day: "numeric" })} (live)`,
+        origem: `${st} · since ${new Date(ots).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })} (live)`,
         origem_ts: ots, closes_when: CLOSES[map[1]], stage: st });
       created++;
     }
@@ -167,7 +167,7 @@ async function handleReply(cid) {
     await sb("POST", "board_cards", {
       coluna: 1, kind: "sms_reply", contact_id: cid,
       nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
-      origem: `SMS awaiting reply · last msg is theirs, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} (live)`,
+      origem: `SMS awaiting reply · last msg is theirs, ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} (live)`,
       origem_ts: new Date().toISOString(), closes_when: CLOSES.sms_reply });
     created++;
   }
@@ -212,7 +212,7 @@ async function handleAppt(cid) {
         coluna: 5, grupo: status === "confirmed" ? "confirmed" : "to_confirm",
         kind, contact_id: cid, event_id: e.id, appt_start: e.startTime,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
-        origem: `Appointment ${new Date(e.startTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · ${status === "confirmed" ? "confirmed" : "not confirmed"} (live)`,
+        origem: `Appointment ${new Date(e.startTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} · ${status === "confirmed" ? "confirmed" : "not confirmed"} (live)`,
         origem_ts: new Date().toISOString(),
         closes_when: kind === "appt_confirm" ? CLOSES.appt_confirm : null });
       created++;
@@ -241,7 +241,7 @@ async function handleCall(cid) {
       await sb("POST", "board_cards", {
         coluna: 1, kind: "missed_inbound", contact_id: cid,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
-        origem: `Missed inbound · called ${new Date(last.dateAdded).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}, no answer (live)`,
+        origem: `Missed inbound · called ${new Date(last.dateAdded).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })}, no answer (live)`,
         origem_ts: last.dateAdded, closes_when: CLOSES.missed_inbound });
       return { created: 1 };
     }
