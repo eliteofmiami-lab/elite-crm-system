@@ -945,10 +945,30 @@ def sync_all():
     x = autoclose()
     r = reopen_snoozed()
     sync_prices()
+    rn = refresh_card_narrativas()
     try:  # MVP item 6: pendências somem sozinhas quando a LEITURA confirma a resolução
         from brain import verificador
         pv = verificador.sweep_resolutions()
     except Exception as e:
         pv = f"erro: {str(e)[:40]}"
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
-            "fechados": x, "reabertos": r, "pendencias_resolvidas": pv}
+            "fechados": x, "reabertos": r, "narrativas": rn, "pendencias_resolvidas": pv}
+
+
+def refresh_card_narrativas():
+    """Regra Zero na fila VIVA: card aberto conta a HISTÓRIA do estado (com datas) —
+    não a foto de quando foi criado. Atualiza why/how.state dos abertos."""
+    n = 0
+    sts = {r["contact_id"]: r for r in
+           (_sb("GET", "lead_states?select=contact_id,situacao,state") or [])}
+    for c in open_cards():
+        st = sts.get(c["contact_id"])
+        if not st:
+            continue
+        narrativa = (st.get("state") or {}).get("narrativa_do_card")
+        if narrativa and narrativa != c.get("why"):
+            how = dict(c.get("how") or {})
+            how["state"] = st.get("situacao")
+            _sb("PATCH", f"cards?id=eq.{c['id']}", json={"why": narrativa, "how": how})
+            n += 1
+    return n

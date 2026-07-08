@@ -16,9 +16,9 @@ const STATE_LABEL = {
 };
 const COMP_LABEL = { car: ["Car", 35], momento: ["Timing", 25], eng: ["Engagement", 25], int: ["Intent", 15] };
 const FEEDBACK_CHIPS = [
-  ["score_errado", "Score errado"], ["estado_errado", "Estado errado"],
-  ["nao_deveria_estar", "Não deveria estar na fila"], ["ordem_errada", "Ordem errada"],
-  ["pendencia_incorreta", "Pendência incorreta"], ["outro", "Outro"],
+  ["score_errado", "Wrong score"], ["estado_errado", "Wrong state"],
+  ["nao_deveria_estar", "Shouldn't be in queue"], ["ordem_errada", "Wrong order"],
+  ["pendencia_incorreta", "Wrong pending item"], ["outro", "Other"],
 ];
 
 function triggerRank(c, hour) {
@@ -173,7 +173,7 @@ export default function RailView({ data }) {
                 {pends.length > 0 && (
                   <div style={{ background: "#FEF3F2", border: "1px solid #FECDCA",
                     borderRadius: 8, padding: "7px 9px", margin: "6px 0", fontSize: 12.3 }}>
-                    <b style={{ color: "#B42318" }}>Pendências ({pends.length})</b>
+                    <b style={{ color: "#B42318" }}>Pending in GHL ({pends.length})</b>
                     {pends.map((p) => (
                       <div key={p.id} style={{ marginTop: 4 }}>
                         {p.fato} <b>→ {p.acao}</b>
@@ -189,7 +189,7 @@ export default function RailView({ data }) {
                   <button onClick={() => setShowFb(showFb === c.id ? null : c.id)}
                     style={{ border: "1px solid #E4E7EC", background: "#fff", borderRadius: 8,
                       padding: "5px 9px", fontSize: 11.5, cursor: "pointer", color: "#475467" }}>
-                    ⚑ Reportar erro
+                    ⚑ Report error
                   </button>
                   <a href={c.ghl_link} target="_blank" rel="noreferrer"
                     style={{ marginLeft: "auto", background: "#2970FF", color: "#fff",

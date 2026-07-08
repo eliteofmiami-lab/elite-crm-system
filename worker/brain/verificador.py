@@ -52,14 +52,15 @@ def check_call(msg, contact, opp, analysis):
     stage = rules.STAGE_BY_ID.get((opp or {}).get("pipelineStageId"))
     n = 0
 
+    # (UI 100% em inglês — ordem do Rafael 2026-07-08: o Eugene é quem lê)
     if analysis and answered:
         v = analysis.get("vehicle") or {}
         veh_txt = " ".join(str(x) for x in (v.get("year"), v.get("make"), v.get("model")) if x)
         # 1) veículo dito na call e ausente no perfil
         if (v.get("make") or v.get("model")) and not (cfs.get(CF_VEH["make"]) or cfs.get(CF_VEH["model"])):
             n += _add(cid, call_id, "veiculo_faltando",
-                      f"Call de {quando} — cliente informou o veículo: {veh_txt}.",
-                      "O veículo não está no perfil → adicione make/model/year no contato.",
+                      f"Call {quando} — customer stated the vehicle: {veh_txt}.",
+                      "Vehicle is not on the profile → add make/model/year to the contact.",
                       [{"tipo": "cf_preenchido", "cf": "vehicle"}],
                       {"stage": stage})
         # 2) interesse dito e ausente
@@ -67,8 +68,8 @@ def check_call(msg, contact, opp, analysis):
         if interesse and not cfs.get(CF_INTERESSE):
             ev = (analysis.get("intencao") or {}).get("evidencia") or interesse
             n += _add(cid, call_id, "interesse_faltando",
-                      f"Call de {quando} — interesse dito: \"{ev[:120]}\".",
-                      f"O interesse não está no contato → preencha o campo de interesse com '{interesse}'.",
+                      f"Call {quando} — interest stated: \"{ev[:120]}\".",
+                      f"Interest is not on the contact → fill the interest field with '{interesse}'.",
                       [{"tipo": "cf_preenchido", "cf": "interesse"}],
                       {"stage": stage})
         # 3) call atendida sem fechamento registrado
@@ -76,15 +77,15 @@ def check_call(msg, contact, opp, analysis):
         ev_des = (analysis.get("intencao") or {}).get("evidencia") or ""
         if desinteresse and ev_des:
             n += _add(cid, call_id, "sem_fechamento",
-                      f"Call de {quando} — cliente disse: \"{ev_des[:120]}\".",
-                      "Marque a oportunidade como Lost com o motivo.",
+                      f"Call {quando} — customer said: \"{ev_des[:120]}\".",
+                      "Mark the opportunity Lost with the reason.",
                       [{"tipo": "stage", "alvo": "Lost"}],
                       {"stage": stage, "call_ts": msg.get("dateAdded")})
         elif not desinteresse:
             n += _add(cid, call_id, "sem_fechamento",
-                      f"Call atendida em {quando} ({meta.get('duration')}s) sem fechamento registrado depois.",
-                      "Envie o follow-up de hoje OU, se o cliente não tem interesse, "
-                      "marque Lost com o motivo.",
+                      f"Call answered {quando} ({meta.get('duration')}s) with no closure logged after.",
+                      "Send today's follow-up OR, if the customer has no interest, "
+                      "mark Lost with the reason.",
                       [{"tipo": "sms_apos", "ts": msg.get("dateAdded")},
                        {"tipo": "stage", "alvo": "Lost"}],
                       {"stage": stage, "call_ts": msg.get("dateAdded")})
@@ -92,9 +93,9 @@ def check_call(msg, contact, opp, analysis):
         # 4) não atendida sem voicemail — só com o fato registrado pela análise
         if analysis.get("voicemail_left") is False:
             n += _add(cid, call_id, "voicemail_nao_deixado",
-                      f"Voicemail não foi deixado (tentativa {quando}).",
-                      "Mova o lead para o próximo stage da cadência para a mensagem "
-                      "de tentativa disparar.",
+                      f"Voicemail was not left (attempt {quando}).",
+                      "Move the lead to the next cadence stage so the attempt "
+                      "message fires.",
                       [{"tipo": "stage_mudou", "de": stage}],
                       {"stage": stage})
     return n
