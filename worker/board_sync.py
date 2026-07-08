@@ -50,7 +50,33 @@ DEFAULT_CFG = {
     "confirm_mode": "either",   # sms OU status confirmed
     "tiers": {"t1": 30, "t2": 35, "t3": 40, "rate1": 10, "rate2": 20,
               "bonus": 50, "cap": 600},
+    # respostas que NÃO exigem ação (regra Greg/Coleen 2026-07-08) — string-match, sem IA
+    "no_action_replies": ["thank you", "thanks", "thank u", "ty!", "ok", "okay", "okk",
+                          "sounds good", "perfect", "great", "got it", "no worries",
+                          "misdial", "miss dial", "wrong number", "by accident",
+                          "dialed by accident", "no thanks", "all set", "👍", "🙏", "❤️"],
 }
+
+
+def no_action_reply(cfg, body):
+    """Cortesia/encerramento: mensagem curta que casa com a lista → nenhuma ação."""
+    t = (body or "").strip().lower()
+    if not t or len(t) > 60:
+        return False
+    return any(p in t for p in cfg.get("no_action_replies", []))
+
+
+def has_upcoming_appt(cid):
+    """Appointment futuro (não cancelado) → o lead vive na coluna 5, não na 1."""
+    r = ghl.get(f"/contacts/{cid}/appointments")
+    if r.status_code != 200:
+        return False
+    lim = now_utc() - dt.timedelta(hours=3)
+    for e in r.json().get("events", []):
+        st = parse_ts(str(e.get("startTime")))
+        if st and st > lim and e.get("appointmentStatus") not in ("cancelled", "invalid", "noshow"):
+            return True
+    return False
 
 CLOSES = {
     "missed_inbound": "Closes when: return call made → then one resolution "
@@ -234,7 +260,8 @@ def scan_conversations(since, max_pages=4):
                 last = max(msgs, key=lambda x: x.get("dateAdded") or "")
                 conv_last[cid] = {"ts": parse_ts(last.get("dateAdded")),
                                   "type": last.get("messageType"),
-                                  "direction": last.get("direction")}
+                                  "direction": last.get("direction"),
+                                  "body": (last.get("body") or "")[:120]}
         if stop or len(convs) < 100:
             break
         page += 1
@@ -475,6 +502,10 @@ def cycle(full_task_pass=False):
     for cid, last in conv_last.items():
         if last["type"] == "TYPE_SMS" and last["direction"] == "inbound" \
                 and last["ts"] and last["ts"] >= col1_win:
+            if no_action_reply(cfg, last.get("body")):
+                continue  # cortesia/misdial → nenhuma ação (regra Greg/Coleen)
+            if (cid, "sms_reply") not in existing and has_upcoming_appt(cid):
+                continue  # já tem appointment → vive na coluna 5
             brief = contact_brief(cid)
             if not ok_contact(cid, brief):
                 continue
@@ -676,7 +707,7 @@ def cycle(full_task_pass=False):
                 resolve_card(card, "task completed", "")
                 resolutions += 1
                 continue
-        # SMS card: resposta enviada fecha
+        # SMS card: resposta enviada fecha · cortesia/appointment também (regra Greg/Coleen)
         if kind == "sms_reply":
             reply = next((s for s in sms_out if s["contact_id"] == cid
                           and s["ts"] > (parse_ts(card["origem_ts"]) or created)
@@ -684,6 +715,16 @@ def cycle(full_task_pass=False):
             if reply:
                 resolve_card(card, "reply sent",
                              user_key(cfg, reply.get("user_id"), reply.get("source")))
+                resolutions += 1
+                continue
+            last = conv_last.get(cid)
+            if last and last.get("direction") == "inbound" \
+                    and no_action_reply(cfg, last.get("body")):
+                resolve_card(card, "courtesy reply — no action needed", "")
+                resolutions += 1
+                continue
+            if has_upcoming_appt(cid):
+                resolve_card(card, "has appointment — lives in Appointments column", "")
                 resolutions += 1
             continue
         # confirmação de appointment

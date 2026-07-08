@@ -133,6 +133,28 @@ async function handleReply(cid) {
   let created = 0, closed = 0;
   await sb("PATCH", `board_cards?contact_id=eq.${cid}&status=eq.open&unres=eq.true`,
     { unres: false, unres_call_ts: null });
+  // regra Greg/Coleen: cortesia/misdial não cobra ação; appointment futuro vence a col 1
+  const NO_ACTION = ["thank you", "thanks", "thank u", "ok", "okay", "sounds good",
+    "perfect", "great", "got it", "no worries", "misdial", "miss dial", "wrong number",
+    "by accident", "no thanks", "all set", "👍", "🙏"];
+  const cs0 = await ghl("/conversations/search", { locationId: LOC, contactId: cid });
+  const conv0 = cs0?.conversations?.[0];
+  if (conv0) {
+    const mj0 = await ghl(`/conversations/${conv0.id}/messages`);
+    const msgs0 = (mj0?.messages?.messages || []).filter((m) => m.messageType === "TYPE_SMS");
+    const last0 = msgs0.sort((a, b) => (a.dateAdded < b.dateAdded ? 1 : -1))[0];
+    const body = ((last0 && last0.direction === "inbound" && last0.body) || "").trim().toLowerCase();
+    if (body && body.length <= 60 && NO_ACTION.some((p) => body.includes(p))) {
+      return { created: 0, closed: 0, skipped: "courtesy reply" };
+    }
+  }
+  const aj = await ghl(`/contacts/${cid}/appointments`);
+  const hasAppt = (aj?.events || []).some((e) => {
+    const st = new Date(e.startTime).getTime();
+    return !isNaN(st) && st > Date.now() - 3 * 3600e3 &&
+      !["cancelled", "invalid", "noshow"].includes(e.appointmentStatus);
+  });
+  if (hasAppt) return { created: 0, closed: 0, skipped: "has upcoming appointment" };
   const dup = await sb("GET",
     `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.sms_reply&select=id&limit=1`);
   if (!dup.length) {
