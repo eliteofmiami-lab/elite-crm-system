@@ -230,3 +230,12 @@ create table if not exists daily_snapshots (           -- baseline análise tota
   payload jsonb not null,
   created_at timestamptz not null default now()
 );
+
+create table if not exists price_alerts (              -- A9.1 validação de ballpark
+  id uuid primary key default gen_random_uuid(),
+  call_id text, contact_id text,
+  servico text, valor_falado text,
+  kind text not null,            -- below_starting | off_table
+  detail text, tier text,
+  created_at timestamptz not null default now()
+);

@@ -217,9 +217,19 @@ def persist_call(msg, meta, opp, analysis, transcript_text=None):
 
 
 def post_analysis_signals(msg, opp, analysis):
-    """A11.1 (observação de pergunta técnica) + A12-c (visita provável)."""
+    """A11.1 (observação de pergunta técnica) + A12-c (visita provável) +
+    A9.1 (validação de ballpark falado vs. tabela/starting)."""
     from brain import cards as _c
     cid = msg["contactId"]
+    try:
+        from brain import pricing
+        v = (analysis or {}).get("vehicle") or {}
+        veh_text = f"{v.get('make', '')} {v.get('model', '')} {(opp or {}).get('name', '')}"
+        n_alerts = pricing.check_ballparks(analysis, cid, msg["id"], vehicle_text=veh_text)
+        if n_alerts:
+            print(f"  [price-alert] {n_alerts} divergência(s) de preço falado")
+    except Exception as e:
+        print(f"  [warn] ballpark check: {e}")
     pt = (analysis or {}).get("pergunta_tecnica") or {}
     if pt.get("houve"):
         dup = _c._sb("GET", f"technical_observations?call_id=eq.{msg['id']}&select=id&limit=1")

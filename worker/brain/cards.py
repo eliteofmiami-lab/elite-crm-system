@@ -192,10 +192,11 @@ def interest_for(contact_id):
 
 
 def build_quote_passos(q):
-    """A9.4 — How to play it SEMPRE dos dados reais da quote."""
+    """A9.4 — How to play it SEMPRE dos dados reais da quote. A10: fecha na VISITA."""
     if not (q.get("items") or q.get("link")):
         return ["Details pending analysis — open the conversation in GHL and read "
-                "the quote before calling. Never quote from the generic table here."]
+                "the quote before calling. Never quote from the generic table here.",
+                "Close the VISIT: \"come by the shop — we lock the exact number here.\""]
     passos = []
     if q.get("items"):
         it = q["items"][0]
@@ -206,6 +207,7 @@ def build_quote_passos(q):
     if q.get("link"):
         passos.append("Reference the quote you sent (link on this card) and ask what they thought.")
     passos.append("Price pushback: smaller package or a call with Rafael — never a straight discount.")
+    passos.append("End on the VISIT: \"come by, see it on your car — final number on the spot.\"")
     return passos
 
 
@@ -286,7 +288,8 @@ def sync_warm_calls(limit=25):
                 f"Score {sc(o) or '?'} — {stage} lead; the sooner you call, the better the odds.",
                 {"passos": ["Open the contact in GHL and read the notes",
                             "Call; if no answer, send a short personal SMS",
-                            "Goal: book a visit or send a quote"]},
+                            "Any price you give is a STARTING price — never final by phone",
+                            "Goal: book the VISIT — final number happens at the shop"]},
                 opportunity_id=o["id"], score=sc(o) or None)
             n += made is not None
     return n
@@ -413,7 +416,8 @@ def sync_first_touch():
                 "Zero contact attempts so far. Untouched lead — always beats scheduled follow-ups.",
                 {"passos": ["Call now — first voice wins the deal",
                             "No answer: voicemail + short intro SMS",
-                            "Goal: qualify the car and book a visit"]},
+                            "Prices by phone = starting prices only",
+                            "Goal: qualify the car and CLOSE THE VISIT"]},
                 opportunity_id=o["id"], score=opp_score(o))
             if made:
                 n += 1
@@ -566,6 +570,99 @@ def sync_prices():
     return 1
 
 
+def _analyses_for(contact_id, limit=5):
+    return _sb("GET", ("analyses?select=payload,created_at,calls!inner(contact_id)"
+                       f"&calls.contact_id=eq.{contact_id}"
+                       f"&order=created_at.desc&limit={limit}")) or []
+
+
+def _upsell_suggestions(profile):
+    """A10.4 — sugestões por perfil (leasing/street/keep/chegando/interesse)."""
+    out = []
+    kt = (profile.get("keep_or_trade") or "").lower()
+    if "leasing" in kt:
+        out.append("Leasing → PPF against lease-return wear fees")
+    if kt.startswith("keeping"):
+        out.append("Keeping the car → Ceramic Gold (lifetime) pays off")
+    if (profile.get("garaged") or "").lower() == "street":
+        out.append("Parks on the street → full protection package")
+    if (profile.get("momento") or "") in ("chegando", "recem_entregue", "Arriving soon",
+                                          "Just delivered / brand new"):
+        out.append("Car just arriving → urgency angle: install slots fill fast")
+    il = (profile.get("interest") or "").lower()
+    if "wrap" in il or "color" in il:
+        out.append("Wrap/color change → show materials in hand; deposit locks material + date")
+    return out
+
+
+def build_visit_briefing():
+    """A10.4 / spec 6.5 — 'Visitas de hoje e amanhã': dossiê por appointment na visão
+    do Rafael. Gerado das análises + Log call details; atualiza a cada ciclo."""
+    from zoneinfo import ZoneInfo
+    from brain import pricing
+    et = ZoneInfo("America/New_York")
+    today0 = dt.datetime.now(et).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = today0 + dt.timedelta(days=2)
+    visits = []
+    for cal_name, cal_id in CALENDARS.items():
+        r = ghl.get("/calendars/events", {"locationId": LOC, "calendarId": cal_id,
+                                          "startTime": int(today0.timestamp() * 1000),
+                                          "endTime": int(end.timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            if e.get("appointmentStatus") in ("cancelled", "invalid", "noshow"):
+                continue
+            cid = e.get("contactId")
+            if not cid:
+                continue
+            ana = _analyses_for(cid)
+            pay = ana[0]["payload"] if ana else {}
+            v = pay.get("vehicle") or {}
+            veh = " ".join(str(x) for x in (v.get("year"), v.get("make"), v.get("model")) if x)
+            manual = (_sb("GET", f"manual_logs?contact_id=eq.{cid}"
+                                 "&order=created_at.desc&limit=1&select=fields") or [{}])
+            mf = manual[0].get("fields", {}) if manual else {}
+            precos = []
+            for a in ana:
+                for it in (a["payload"].get("precos_falados") or []):
+                    precos.append({"servico": it.get("servico"), "valor": it.get("valor"),
+                                   "date": a["created_at"][:10]})
+            intr = interest_for(cid)
+            fl = _sb("GET", f"lead_flags?contact_id=eq.{cid}&select=visited_store") or []
+            profile = {"keep_or_trade": mf.get("keep_or_trade"),
+                       "garaged": mf.get("garaged"),
+                       "momento": mf.get("momento") or (pay.get("momento") or {}).get("faixa"),
+                       "interest": intr.get("value")}
+            visits.append({
+                "start": e.get("startTime"), "calendar": cal_name,
+                "status": e.get("appointmentStatus"),
+                "name": (e.get("title") or "").strip() or cid,
+                "contact_id": cid,
+                "vehicle": veh or None, "tier": pricing.tier_for(veh),
+                "interest": intr or None,
+                "precos_falados": precos,
+                "sentiment": (pay.get("sentimento") or {}).get("geral") or None,
+                "hooks": {k: v2 for k, v2 in {
+                    "gancho": pay.get("gancho_pessoal") or mf.get("hook"),
+                    "motivacao": pay.get("motivacao_principal") or mf.get("motivation"),
+                    "garaged": mf.get("garaged"),
+                    "keep_or_trade": mf.get("keep_or_trade")}.items() if v2},
+                "quote": quote_facts(cid) or None,
+                "visited_store": bool(fl and fl[0].get("visited_store")),
+                "upsells": _upsell_suggestions(profile),
+                "ghl_link": GHL_LINK.format(loc=LOC, cid=cid),
+            })
+    visits.sort(key=lambda x: str(x.get("start")))
+    import requests as rq
+    rq.post(f"{SB_URL}/rest/v1/config",
+            headers={**H, "Prefer": "resolution=merge-duplicates"},
+            json={"key": "visit_briefing",
+                  "value": {"generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                            "visits": visits}}, timeout=15)
+    return len(visits)
+
+
 def bonus_guard_check():
     """A5.1 — lembretes PROATIVOS a favor do bônus (horários em ET):
     10:15 appointment de amanhã não confirmado · 15:00 quote pendente do dia
@@ -651,7 +748,12 @@ def sync_all():
     ml = flush_manual_logs()
     sync_prices()
     bg = bonus_guard_check()
+    try:
+        vb = build_visit_briefing()
+    except Exception as e:
+        vb = f"erro: {str(e)[:50]}"
     from brain import writer as _w
     ob = flush_outbox(dry_run=_w.DRY_RUN)
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
-            "fechados": x, "reabertos": r, "manual_logs": ml, "guard": bg, "outbox": ob}
+            "fechados": x, "reabertos": r, "manual_logs": ml, "guard": bg,
+            "briefing": vb, "outbox": ob}

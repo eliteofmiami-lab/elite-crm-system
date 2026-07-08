@@ -166,6 +166,24 @@ def main():
     if misses:
         r.append("\n## ⚠️ Critical misses today")
         r += [f"- {m}" for m in misses]
+    # A10.4: briefing pré-venda das visitas de AMANHÃ (config.visit_briefing)
+    vb_rows = q("config?key=eq.visit_briefing&select=value")
+    visits = (vb_rows[0]["value"].get("visits", []) if vb_rows else [])
+    tomorrow = f"{(now + dt.timedelta(days=1)):%Y-%m-%d}"
+    tv = [v for v in visits if str(v.get("start", ""))[:10] == tomorrow]
+    if tv:
+        r.append("\n## 🏪 Tomorrow's visits — pre-sale briefing")
+        for v in tv:
+            hh = str(v.get("start", ""))[11:16]
+            precos = "; ".join(f"{p['servico']} {p['valor']} ({p['date']})"
+                               for p in v.get("precos_falados", [])) or "no prices discussed yet"
+            r.append(f"- **{hh} {v.get('name')}** · {v.get('vehicle') or 'car ?'}"
+                     f"{' (' + v['tier'] + ')' if v.get('tier') else ''}"
+                     f"{' · 🏪 visited before' if v.get('visited_store') else ''}")
+            r.append(f"  - Looking for: {(v.get('interest') or {}).get('value', '?')} · "
+                     f"sentiment: {v.get('sentiment') or '—'} · prices said: {precos}")
+            if v.get("upsells"):
+                r.append(f"  - Upsell angle: {' · '.join(v['upsells'])}")
     rafael_md = "\n".join(r)
 
     # grava no banco + exporta .md

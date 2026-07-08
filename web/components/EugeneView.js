@@ -256,15 +256,34 @@ function PriceHint({ c, prices }) {
       if (il.includes(kw)) { keys = ks; break; }
     }
   }
+  // A9.1: classe starting_price (wraps / color change) → "starting at" + jogada da visita
+  const startKeys = keys.filter((k) => (prices.starting || {})[k]);
+  if (startKeys.length) {
+    const k = startKeys[0];
+    const row = prices.starting[k];
+    const v = tier && row[tier] != null ? `$${row[tier].toLocaleString()}`
+      : spanFor(row, prices._tiers);
+    const play = (prices._visit_play && prices._visit_play.wrap) || [];
+    return (
+      <div className="dsec">
+        <div className="dl">{labels[k] || k} — starting price{tier ? ` · ${tier}` : " (tier unknown)"}</div>
+        <p><b>Starting at {v}</b>{row.note ? ` — ${row.note}` : ""}</p>
+        {play.map((s, i) => <p key={i} className="meta">• {s}</p>)}
+      </div>
+    );
+  }
   if (keys.length) {
-    const rows = keys.map((k) => [labels[k] || k,
+    const onlyAsk = new Set(prices.mention_only_if_asked || []);
+    const rows = keys.map((k) => [
+      (labels[k] || k) + (onlyAsk.has(k) ? " (only if asked)" : ""),
       tier ? priceVal(prices.matrix[k] || {}, tier)
            : spanFor(prices.matrix[k] || {}, prices._tiers)]).filter(([, v]) => v);
     if (rows.length) {
       return (
         <div className="dsec">
           <div className="dl">Prices for their interest{tier ? ` · tier: ${tier}` : " (general — tier unknown)"}</div>
-          <p>{rows.map(([s, v]) => `${s} — ${v}`).join(" · ")}</p>
+          <p>{rows.map(([s, v]) => `${s} — ${String(v).startsWith("from") ? v : `starts at ${v}`}`).join(" · ")}</p>
+          <p className="meta">Every number is a <b>starting price</b> — “we lock the exact number when you’re here.” Close the visit.</p>
         </div>
       );
     }
@@ -521,10 +540,27 @@ function PriceSheet({ prices, onClose }) {
         <tbody>
           {Object.entries(prices.matrix).map(([k, row]) => (
             <tr key={k} style={{ borderTop: "1px solid var(--line)" }}>
-              <td style={{ padding: "7px 4px" }}>{labels[k] || k}</td>
+              <td style={{ padding: "7px 4px" }}>
+                {labels[k] || k}
+                {(prices.mention_only_if_asked || []).includes(k) && (
+                  <span className="meta"> · only if asked</span>
+                )}
+              </td>
               {tiers.map((t) => (
                 <td key={t} style={{ textAlign: "right", padding: "7px 4px", fontWeight: 600 }}>
                   {row[t] != null ? `$${row[t]}` : "—"}
+                </td>
+              ))}
+            </tr>
+          ))}
+          {Object.entries(prices.starting || {}).map(([k, row]) => (
+            <tr key={k} style={{ borderTop: "1px solid var(--line)", background: "#FFFAEB" }}>
+              <td style={{ padding: "7px 4px" }}>
+                {labels[k] || k} <span className="meta">· starting at{row.note ? ` — ${row.note}` : ""}</span>
+              </td>
+              {tiers.map((t) => (
+                <td key={t} style={{ textAlign: "right", padding: "7px 4px", fontWeight: 600 }}>
+                  {row[t] != null ? `$${row[t]}+` : "—"}
                 </td>
               ))}
             </tr>

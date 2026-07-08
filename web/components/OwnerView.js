@@ -66,12 +66,17 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
   const rows = [];
   data.cards.filter((c) => c.layer === 1).forEach((c) =>
     rows.push({ tag: "Alert", cls: "alert", text: c.title, cid: c.contact_id }));
+  (data.priceAlerts || []).forEach((p) =>
+    rows.push({ tag: "Alerta", cls: "alert",
+      text: `Preço falado fora da régua — ${p.servico || "serviço"}: ${p.detail}`, cid: p.contact_id }));
   data.analyses.forEach((a) => {
-    const t = a.payload && (a.payload.advice_en || a.payload.advice_pt);
+    const t = a.payload && (a.payload.advice_pt || a.payload.advice_en);
     if (t) rows.push({ tag: "Advice", cls: "", text: t, cid: a.calls && a.calls.contact_id });
   });
   data.snoozed.forEach((c) =>
     rows.push({ tag: "Report", cls: "", text: `Task snoozed: "${c.title}" — reason: ${c.snooze_reason}`, cid: c.contact_id }));
+
+  const briefing = (data.config.visit_briefing && data.config.visit_briefing.visits) || [];
 
   const spanishCount = data.cards.filter((c) => data.spanish.has(c.contact_id)).length;
 
@@ -174,6 +179,59 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
           ))}
         </div>
       </div>
+
+      {briefing.length > 0 && (
+        <div className="panel" style={{ marginTop: 12 }}>
+          <h3>🏪 Visitas de hoje e amanhã — briefing pré-venda</h3>
+          {briefing.map((v, i) => (
+            <div key={i} style={{ borderTop: i ? "1px solid var(--line)" : "none", padding: "10px 0" }}>
+              <div style={{ fontWeight: 600 }}>
+                {v.start ? new Date(v.start).toLocaleString("pt-BR", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "—"} · {v.name}
+                {v.vehicle ? ` · ${v.vehicle}` : ""}{v.tier ? ` (${v.tier})` : ""}
+                {v.visited_store ? " · 🏪 já visitou a loja" : ""}
+                <a href={v.ghl_link} target="_blank" rel="noreferrer" style={{ marginLeft: 8 }}>GHL ↗</a>
+              </div>
+              <div className="meta">
+                {v.interest && v.interest.value ? <>Buscando: <b>{v.interest.value}</b> · </> : null}
+                {v.sentiment ? <>Sentimento: {v.sentiment} · </> : null}
+                {v.quote && v.quote.link ? <>Quote: <a href={v.quote.link} target="_blank" rel="noreferrer">{v.quote.link.replace("https://", "")}</a> · </> : null}
+                {(v.precos_falados || []).length
+                  ? <>Preços falados: {v.precos_falados.map((p) => `${p.servico} ${p.valor} (${p.date})`).join("; ")}</>
+                  : "Nenhum preço falado registrado"}
+              </div>
+              {v.hooks && Object.keys(v.hooks).length > 0 && (
+                <div className="meta">Ganchos: {Object.entries(v.hooks).map(([k, val]) => `${k}: ${val}`).join(" · ")}</div>
+              )}
+              {(v.upsells || []).length > 0 && (
+                <div className="meta" style={{ color: "var(--ink)" }}>💡 Upsell: {v.upsells.join(" · ")}</div>
+              )}
+            </div>
+          ))}
+          <p className="meta">Gerado das análises de call + Log call details · atualiza a cada call nova.</p>
+        </div>
+      )}
+
+      {(data.techObs || []).length > 0 && (
+        <div className="panel" style={{ marginTop: 12 }}>
+          <h3>🔧 Perguntas técnicas — modo observação (A11.1)</h3>
+          <p className="meta">Detecções apenas logadas por 2 semanas — sem advice de lane e sem task automática
+            (exceto callback prometido ao cliente). Revise e me diga os ajustes; a taxonomia aprovada ativa o fluxo completo.</p>
+          {(data.techObs || []).map((o) => (
+            <div className="arow" key={o.id}>
+              <span className={`atag ${o.promised_callback ? "alert" : ""}`}>
+                {o.promised_callback ? "Callback" : "Obs."}</span>
+              <span>
+                {o.contact_name ? `${o.contact_name}: ` : ""}“{o.pergunta}”
+                {o.categoria ? ` · ${o.categoria}` : ""} · tratamento: {o.como_tratou}
+              </span>
+              {o.contact_id && (
+                <a href={`https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/${o.contact_id}`}
+                  target="_blank" rel="noreferrer">View lead ↗</a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {(data.reports || []).filter((r) => r.audience === "rafael").slice(0, 1).map((r) => (
         <div className="panel" style={{ marginTop: 12 }} key={r.id}>

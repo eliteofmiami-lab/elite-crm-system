@@ -1,12 +1,13 @@
 {
-  "_fonte_unica": "TABELA OFICIAL Elite (valores passados pelo Rafael em 2026-07-08). Editar AQUI e só aqui; painel sincroniza em ≤5 min. PROIBIDO adicionar produto composto que não exista na tabela.",
-  "_atualizado": "2026-07-08 (auditoria de preços)",
+  "_fonte_unica": "TABELA OFICIAL Elite (valores do Rafael, 2026-07-08). Editar AQUI e só aqui; painel sincroniza em ≤5 min. PROIBIDO adicionar produto composto que não exista na tabela.",
+  "_atualizado": "2026-07-08 (A9.1 + A10: classes tabela/starting_price/custom_quote)",
   "_tiers": [
     "Compact",
     "Standard",
     "Medium",
     "Large"
   ],
+  "_classes": "tabela = valores fechados (matrix) · starting_price = 'starting at' + nota (starting) · custom_quote = nunca exibir preço",
   "matrix": {
     "ppf_partial_front": {
       "from": 899
@@ -57,6 +58,22 @@
       "flat": 499
     }
   },
+  "starting": {
+    "vinyl_wrap": {
+      "Compact": 3000,
+      "Standard": 3500,
+      "Medium": 3800,
+      "Large": 4000,
+      "note": "final price depends on the material selected"
+    },
+    "color_change_ppf": {
+      "Compact": 4990,
+      "Standard": 5550,
+      "Medium": 5850,
+      "Large": 6450,
+      "note": "price varies by color"
+    }
+  },
   "_labels": {
     "ppf_partial_front": "PPF — Partial front",
     "ppf_full_front": "PPF — Full front",
@@ -66,15 +83,37 @@
     "ceramic_silver": "Ceramic — Silver",
     "ceramic_gold": "Ceramic — Gold",
     "paint_correction_per_step": "Paint correction (per step)",
-    "addon_wheels_off": "Add-on — Wheels off",
-    "addon_leather": "Add-on — Leather protection"
+    "addon_wheels_off": "Add-on — Wheels & calipers",
+    "addon_leather": "Add-on — Interior / leather coating",
+    "vinyl_wrap": "Vinyl wrap",
+    "color_change_ppf": "Color change PPF"
   },
-  "_politica": "No straight discounts. Price pushback → smaller package or a call with Rafael.",
-  "custom_quote_services": [
-    "Color change PPF",
-    "Vinyl wrap"
+  "_politica": "REGRA UNIVERSAL (A10): o telefone não fecha número final — fecha a VISITA. Todo preço é apresentado como starting price ('prices start at X for your size — we lock the exact number when you're here'). No straight discounts: pushback → smaller package or a call with Rafael.",
+  "_visit_play": {
+    "universal": "Close the VISIT, not the number: \"come by the shop — we lock the exact price on the spot.\"",
+    "wrap": [
+      "Give the starting price for their size — never a final number by phone.",
+      "The play: invite them IN — see the materials in hand, final price on the spot.",
+      "A deposit locks the material AND books the install date.",
+      "Goal of this call = the visit, not the wrap price."
+    ]
+  },
+  "mention_only_if_asked": [
+    "paint_correction_per_step",
+    "addon_leather",
+    "addon_wheels_off"
   ],
+  "custom_quote_services": [],
   "_interest_map": {
+    "color change": [
+      "color_change_ppf"
+    ],
+    "vinyl": [
+      "vinyl_wrap"
+    ],
+    "wrap": [
+      "vinyl_wrap"
+    ],
     "full front": [
       "ppf_full_front"
     ],

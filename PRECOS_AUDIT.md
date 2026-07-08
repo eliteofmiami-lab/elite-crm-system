@@ -43,3 +43,33 @@ Backup do arquivo errado: `out/prices_ANTES_auditoria.json`.
   eram renderizados dinamicamente do prices.json — corrigida a fonte, corrigiu-se toda a exibição).
 - Porte desconhecido → agora exibe a **linha completa** rotulada "General price table — car tier
   unknown" (nunca chuta Standard).
+
+---
+
+## 5. A9.1 + A10 (2026-07-08, noite) — três classes de preço + filosofia da visita
+
+### Classes no prices.json (fonte única, editável pelo Rafael)
+| Classe | Itens | Comportamento no card |
+|---|---|---|
+| `tabela` | PPF partial/full front/track/full body · Ceramic Bronze/Silver/Gold · paint correction · wheels · leather | Valor do tier exibido como **"starts at $X"** — regra universal A10: telefone não fecha número final |
+| `starting_price` | **Vinyl wrap: 3.000 / 3.500 / 3.800 / 4.000** (+ "final price depends on the material selected") · **Color change PPF: 4.990 / 5.550 / 5.850 / 6.450** (valores do Full Body, + "price varies by color") | "Starting at $X" + a JOGADA: convidar pra loja → ver materiais → preço final na hora → **depósito trava material e agenda a instalação** |
+| `custom_quote` | (vazia — Rafael adiciona o que quiser) | Nunca exibe preço; manda checar quote do Urable ou escalar |
+
+### Mudanças de classe nesta rodada
+- **Vinyl wrap**: custom_quote → **starting_price** (A9.1) com os 4 tiers acima.
+- **Color change PPF**: custom_quote → **starting_price** (A10.3) herdando os valores do Full Body PPF.
+
+### Regras que acompanham
+- **Feche a visita (A10, universal)**: todo "How to play it" (new lead, warm, quote, first touch)
+  termina no convite/agendamento da visita; venda final e upsell são presenciais (Rafael).
+- **Add-ons "only if asked"** (`mention_only_if_asked`): paint correction, interior/leather
+  coating, wheels & calipers — rotulados no card e no Price sheet; a análise NÃO penaliza não
+  oferecer e registra observação se forem empurrados (`extras_empurrados`).
+- **Análise**: wraps/color change → `proxima_acao = agendar_visita` (nunca enviar_quote por padrão);
+  advice reforça "não feche número por telefone".
+- **Validação de ballpark (viva, tabela `price_alerts`)**: starting_price → falar **ACIMA** do
+  starting do tier é ok (material melhor), **ABAIXO** gera alerta na visão do dono; tabela →
+  divergência ±5% gera alerta. Tier desconhecido → compara com a faixa geral, nunca chuta.
+- **Briefing pré-venda (spec 6.5)**: visão do Rafael ganhou "Visitas de hoje e amanhã" com dossiê
+  por appointment (interesse, preços exatos falados com data, sentimento, ganchos, quote/link,
+  upsell por perfil) + versão no relatório das 18:30 (visitas de amanhã).
