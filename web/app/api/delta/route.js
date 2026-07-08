@@ -5,6 +5,10 @@
 // ZERO escrita no GHL. Requer env: GHL_API_TOKEN · SUPABASE_SERVICE_ROLE_KEY.
 import { NextResponse } from "next/server";
 
+// rota GET dinâmica SEMPRE (sem cache da Vercel — bug pego no teste de aceite:
+// resposta cacheada = delta nunca roda de verdade)
+export const dynamic = "force-dynamic";
+
 const GHL = "https://services.leadconnectorhq.com";
 const LOC = "Ao5ER8XBg3AtCJMccesF";
 const EUGENE = "EbVhbGHnGfuvbQurQoga";
