@@ -14,7 +14,7 @@ from brain import cards, rules, verificador  # noqa: E402
 
 
 def main(days=10):
-    since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).isoformat()
+    since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).isoformat().replace("+00:00", "Z")
     rows = cards._sb("GET", ("analyses?select=call_id,payload,"
                              "calls!inner(contact_id,direction,duration_sec,called_at,dialed_number)"
                              f"&calls.called_at=gte.{since}&limit=600")) or []
