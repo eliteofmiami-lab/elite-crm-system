@@ -100,6 +100,15 @@ async function miniMirrorStage(cid) {
     }
   }
   if (!isWin) {
+    // regra Peter (08/jul): appointment futuro → nenhum card de stage nasce;
+    // o lead vive na coluna 5
+    const aj = await ghl(`/contacts/${cid}/appointments`);
+    const hasApptUp = (aj?.events || []).some((e) => {
+      const stt = new Date(e.startTime).getTime();
+      return !isNaN(stt) && stt > Date.now() - 3 * 3600e3 &&
+        !["cancelled", "invalid", "noshow"].includes(e.appointmentStatus);
+    });
+    if (hasApptUp) return { closed, created };
     // cadência (regra Rafael): 2 mudanças de stage HOJE = completo por hoje —
     // não recria card do pipeline até amanhã
     const today = new Date().toISOString().slice(0, 10);
