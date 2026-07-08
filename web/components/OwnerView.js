@@ -3,11 +3,11 @@ import { useMemo } from "react";
 
 const FUNIL_COLORS = ["#2970FF", "#58A6FF", "#7A5AF8", "#B4A5FC", "#06AED4", "#12B76A"];
 
-export default function OwnerView({ session, data, onViewEugene }) {
+export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) {
   const now = new Date();
-  const dateStr = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 
-  // status do Eugene
+  // Eugene status
   const eugeneShift = data.shifts.find(
     (s) => s.user_email !== session.user.email && !s.clock_out
   );
@@ -28,28 +28,28 @@ export default function OwnerView({ session, data, onViewEugene }) {
   const fDay = day <= 15 ? day : day - 15;
   const fLen = day <= 15 ? 15 : new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - 15;
 
-  // funil (snapshot do worker)
+  // funnel (worker snapshot)
   const st = data.config.stats_today || {};
   const f = st.funil || {};
   const funil = [
-    ["Leads novos", f.novos], ["Hot leads", f.hot], ["Qualificados", f.qualificados],
+    ["New leads", f.novos], ["Hot leads", f.hot], ["Qualified", f.qualificados],
     ["Quotes", f.quotes], ["Appointments", f.appointments], ["Win", f.win],
   ];
   const maxF = Math.max(1, ...funil.map(([, v]) => v || 0));
 
-  // metas auditadas (v1: as verificáveis com dados atuais)
+  // audited goals (v1: the ones measurable today)
   const openConfirm = data.cards.filter((c) => c.type === "confirm_appt").length;
   const openUrgent = data.cards.filter((c) => c.layer === 1).length;
   const goals = [
     ["Speed to lead ≤ 15 min", null, "—"],
-    ["Resposta a lead ≤ 30 min", null, "—"],
-    ["Voicemail em 100% das perdidas", null, "—"],
-    ["Quote enviada no dia", quotesSent > 0 || data.cards.filter((c) => c.type === "quote_followup").length === 0, `${quotesSent} hoje`],
-    ["Confirmações até 11:00", openConfirm === 0, openConfirm === 0 ? "ok" : `${openConfirm} pendentes`],
-    ["Zero lead 80+ órfão", openUrgent === 0, openUrgent === 0 ? "ok" : `${openUrgent} urgentes`],
+    ["Reply to lead ≤ 30 min", null, "—"],
+    ["Voicemail on 100% of missed", null, "—"],
+    ["Quote sent same day", quotesSent > 0 || data.cards.filter((c) => c.type === "quote_followup").length === 0, `${quotesSent} today`],
+    ["Confirmations by 11:00 AM", openConfirm === 0, openConfirm === 0 ? "ok" : `${openConfirm} pending`],
+    ["Zero 80+ lead orphaned", openUrgent === 0, openUrgent === 0 ? "ok" : `${openUrgent} urgent`],
   ];
 
-  // atividade por hora (cards fechados)
+  // activity per hour (closed cards)
   const hours = useMemo(() => {
     const h = {};
     for (let i = 8; i <= 19; i++) h[i] = 0;
@@ -61,16 +61,18 @@ export default function OwnerView({ session, data, onViewEugene }) {
   }, [data.doneToday]);
   const maxH = Math.max(1, ...Object.values(hours));
 
-  // alertas + advice PT + reportes de snooze
+  // alerts + advice + snooze reports
   const rows = [];
   data.cards.filter((c) => c.layer === 1).forEach((c) =>
-    rows.push({ tag: "Alerta", cls: "alert", text: c.title, cid: c.contact_id }));
+    rows.push({ tag: "Alert", cls: "alert", text: c.title, cid: c.contact_id }));
   data.analyses.forEach((a) => {
-    const t = a.payload && (a.payload.advice_pt || a.payload.advice_en);
+    const t = a.payload && (a.payload.advice_en || a.payload.advice_pt);
     if (t) rows.push({ tag: "Advice", cls: "", text: t, cid: a.calls && a.calls.contact_id });
   });
   data.snoozed.forEach((c) =>
-    rows.push({ tag: "Reporte", cls: "", text: `Eugene adiou "${c.title}" — motivo: ${c.snooze_reason}`, cid: c.contact_id }));
+    rows.push({ tag: "Report", cls: "", text: `Task snoozed: "${c.title}" — reason: ${c.snooze_reason}`, cid: c.contact_id }));
+
+  const spanishCount = data.cards.filter((c) => data.spanish.has(c.contact_id)).length;
 
   return (
     <div className="wrap">
@@ -78,37 +80,44 @@ export default function OwnerView({ session, data, onViewEugene }) {
         <div className="brand">
           <div className="logoplate"><img src="/elite-logo.png" alt="Elite Premium Detailing" /></div>
           <div>
-            <div className="t">Visão do dono</div>
+            <div className="t">Owner dashboard</div>
             <div className="d">{dateStr}</div>
           </div>
         </div>
         <div className="pills">
           {eugeneShift ? (
             <span className="pill ok"><span className="dot"></span>
-              Eugene ativo · clock-in {new Date(eugeneShift.clock_in).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              {lastMin !== null ? ` · última ação há ${lastMin} min` : ""}
+              Eugene active · clocked in {new Date(eugeneShift.clock_in).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              {lastMin !== null ? ` · last action ${lastMin} min ago` : ""}
             </span>
           ) : (
-            <span className="pill"><span className="dot"></span>Eugene fora do turno</span>
+            <span className="pill"><span className="dot"></span>Eugene off shift</span>
           )}
-          <button className="btn ghost sm" onClick={onViewEugene}>👁 Ver tela do Eugene</button>
+          <button className="btn primary sm" onClick={onWorkQueue}>🛠 Work the queue</button>
+          <button className="btn ghost sm" onClick={onViewEugene}>👁 View Eugene&apos;s screen</button>
         </div>
       </div>
 
+      {spanishCount > 0 && (
+        <div className="banner">
+          🇪🇸 {spanishCount} Spanish-only lead{spanishCount > 1 ? "s" : ""} in the queue — these are yours until the Spanish-speaking hire
+        </div>
+      )}
+
       <div className="kpis">
-        <div className="kpi"><div className="l">Ligações</div><div className="v">{callsToday}<small> / ~100</small></div></div>
-        <div className="kpi"><div className="l">Quotes enviadas</div><div className="v">{quotesSent}</div></div>
+        <div className="kpi"><div className="l">Calls</div><div className="v">{callsToday}<small> / ~100</small></div></div>
+        <div className="kpi"><div className="l">Quotes sent</div><div className="v">{quotesSent}</div></div>
         <div className="kpi"><div className="l">Appointments</div><div className="v">{appts}</div></div>
         <div className="kpi hl">
-          <div className="l">Comissão Eugene · mês</div>
+          <div className="l">Eugene commission · month</div>
           <div className="v">${confSum}</div>
-          <div className="l" style={{ marginTop: 4 }}>Bônus quinzena $50 · em curso — {fDay}/{fLen} dias, 0 falhas graves</div>
+          <div className="l" style={{ marginTop: 4 }}>$50 fortnight bonus · on track — {fDay}/{fLen} days, 0 critical misses</div>
         </div>
       </div>
 
       <div className="grid2">
         <div className="panel">
-          <h3>Funil de hoje</h3>
+          <h3>Today&apos;s funnel</h3>
           {funil.map(([label, v], i) => (
             <div className="fun" key={label}>
               <span className="fl">{label}</span>
@@ -122,7 +131,7 @@ export default function OwnerView({ session, data, onViewEugene }) {
         </div>
 
         <div className="panel">
-          <h3>Metas de hoje — auditadas</h3>
+          <h3>Today&apos;s goals — audited</h3>
           {goals.map(([label, ok, val]) => (
             <div className="goal" key={label}>
               <span className={`gi ${ok === null ? "na" : ok ? "ok" : "no"}`}>
@@ -135,7 +144,7 @@ export default function OwnerView({ session, data, onViewEugene }) {
         </div>
 
         <div className="panel">
-          <h3>Atividade por hora</h3>
+          <h3>Activity by hour</h3>
           <div className="hours">
             {Object.entries(hours).map(([h, v]) => (
               <div className="hcol" key={h}>
@@ -145,27 +154,27 @@ export default function OwnerView({ session, data, onViewEugene }) {
             ))}
           </div>
           <p className="meta" style={{ marginTop: 8 }}>
-            Barras = ações concluídas por hora · blocos de inatividade aparecem em âmbar quando registrados
+            Bars = completed actions per hour · inactivity blocks show in amber once logged
           </p>
         </div>
 
         <div className="panel">
-          <h3>Alertas e recomendações</h3>
-          {rows.length === 0 && <div className="center" style={{ padding: "10px 0" }}>Nada por enquanto.</div>}
+          <h3>Alerts &amp; recommendations</h3>
+          {rows.length === 0 && <div className="center" style={{ padding: "10px 0" }}>Nothing yet.</div>}
           {rows.slice(0, 8).map((r, i) => (
             <div className="arow" key={i}>
               <span className={`atag ${r.cls}`}>{r.tag}</span>
               <span>{r.text}</span>
               {r.cid && (
                 <a href={`https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/${r.cid}`}
-                  target="_blank" rel="noreferrer">Ver lead ↗</a>
+                  target="_blank" rel="noreferrer">View lead ↗</a>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <p className="footnote">Relatório completo do dia gerado às 18:30 · comissões conciliáveis com as vendas no fechamento do mês.</p>
+      <p className="footnote">Full daily report generated at 6:30 PM · commissions reconcile with sales at month close.</p>
     </div>
   );
 }

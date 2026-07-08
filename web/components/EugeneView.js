@@ -48,10 +48,22 @@ function Snooze({ card, reload }) {
   );
 }
 
-function Task({ c, idx, current, reload, preview = false }) {
+function Task({ c, idx, current, reload, preview = false, spanish = false, sinkSpanish = false, userEmail = "" }) {
   const [showSnooze, setShowSnooze] = useState(false);
-  const chip = chipFor(c);
+  const chip = spanish ? { cls: "appt", label: "🇪🇸 Spanish" } : chipFor(c);
   const how = (c.how && c.how.passos) || [];
+  async function toggleSpanish() {
+    if (preview) return;
+    if (spanish) {
+      await supabase.from("lead_flags").delete().eq("contact_id", c.contact_id);
+    } else {
+      await supabase.from("lead_flags").upsert(
+        { contact_id: c.contact_id, spanish_only: true, set_by: userEmail },
+        { onConflict: "contact_id" }
+      );
+    }
+    reload();
+  }
   if (!current) {
     return (
       <div className="task">
@@ -59,7 +71,9 @@ function Task({ c, idx, current, reload, preview = false }) {
           <span className="num">{idx}</span>
           <div className="grow">
             <div className="ttl">{c.title}</div>
-            <div className="meta">{c.why}</div>
+            <div className="meta">
+              {spanish && sinkSpanish ? "🇪🇸 Spanish-only — Rafael handles this one · " : ""}{c.why}
+            </div>
           </div>
           <span className={`chip ${chip.cls}`}>{chip.label}</span>
           <span className={`score${c.score ? "" : " mid"}`}>{c.score || "—"}</span>
@@ -93,6 +107,11 @@ function Task({ c, idx, current, reload, preview = false }) {
           {!preview && (
             <button className="btn ghost" onClick={() => setShowSnooze(!showSnooze)}>Can&apos;t do now</button>
           )}
+          {!preview && (
+            <button className="btn ghost" onClick={toggleSpanish}>
+              {spanish ? "Remove 🇪🇸 flag" : "🇪🇸 Spanish only"}
+            </button>
+          )}
           {!preview && c.type === "quote_followup" && (
             <button className="btn ghost" onClick={async () => {
               await supabase.from("cards").update({
@@ -109,8 +128,13 @@ function Task({ c, idx, current, reload, preview = false }) {
   );
 }
 
-export default function EugeneView({ session, data, reload, preview = false, previewEmail = null }) {
+export default function EugeneView({ session, data, reload, preview = false, previewEmail = null, sinkSpanish = false }) {
   const email = preview ? previewEmail : session.user.email;
+  // espanhol afunda na fila do Eugene (ele não fala ES); na fila do Rafael fica na ordem normal
+  const orderedCards = sinkSpanish
+    ? [...data.cards.filter((c) => !data.spanish.has(c.contact_id)),
+       ...data.cards.filter((c) => data.spanish.has(c.contact_id))]
+    : data.cards;
   const myShift = data.shifts.find((s) => s.user_email === email && !s.clock_out);
   const myPause = data.pauses.find(
     (p) => !p.ended_at && data.shifts.some((s) => s.id === p.shift_id && s.user_email === email)
@@ -258,8 +282,10 @@ export default function EugeneView({ session, data, reload, preview = false, pre
               <h2>Task queue <span>· {inQueue}</span></h2>
               <span className="cap">Auto-sorted by priority — always take task 1</span>
             </div>
-            {data.cards.map((c, i) => (
-              <Task key={c.id} c={c} idx={i + 1} current={i === 0} reload={reload} preview={preview} />
+            {orderedCards.map((c, i) => (
+              <Task key={c.id} c={c} idx={i + 1} current={i === 0} reload={reload}
+                preview={preview} spanish={data.spanish.has(c.contact_id)}
+                sinkSpanish={sinkSpanish} userEmail={session.user.email} />
             ))}
             {data.snoozed.map((c) => (
               <div className="task snoozed" key={c.id}>

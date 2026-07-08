@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabaseClient";
 import EugeneView from "../components/EugeneView";
 import OwnerView from "../components/OwnerView";
 
+const EUGENE_EMAIL = "eugenebaruelova@gmail.com";
+
 function Login() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -25,12 +27,10 @@ function Login() {
   );
 }
 
-const EUGENE_EMAIL = "eugenebaruelova@gmail.com";
-
 export default function Home() {
   const [session, setSession] = useState(undefined);
   const [data, setData] = useState(null);
-  const [viewAs, setViewAs] = useState(null); // null | "eugene"
+  const [mode, setMode] = useState("dashboard"); // owner: dashboard | queue | spy
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: d }) => setSession(d.session));
@@ -44,7 +44,7 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
     const iso = today.toISOString();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-    const [cards, snoozed, doneToday, calls, analyses, shifts, pauses, comms, cfg] =
+    const [cards, snoozed, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags] =
       await Promise.all([
         supabase.from("cards").select("*").eq("status", "open")
           .order("layer").order("score", { ascending: false, nullsFirst: false })
@@ -58,6 +58,7 @@ export default function Home() {
         supabase.from("pauses").select("*").gte("started_at", iso),
         supabase.from("commissions").select("*").gte("booked_at", monthStart),
         supabase.from("config").select("key,value").in("key", ["stats_today", "bonus_period"]),
+        supabase.from("lead_flags").select("contact_id,spanish_only").eq("spanish_only", true),
       ]);
     setData({
       cards: cards.data || [], snoozed: snoozed.data || [],
@@ -65,6 +66,7 @@ export default function Home() {
       analyses: analyses.data || [], shifts: shifts.data || [],
       pauses: pauses.data || [], commissions: comms.data || [],
       config: Object.fromEntries((cfg.data || []).map((r) => [r.key, r.value])),
+      spanish: new Set((flags.data || []).map((f) => f.contact_id)),
     });
   }, [session]);
 
@@ -83,30 +85,49 @@ export default function Home() {
     session.user.app_metadata?.role ||
     ((session.user.email || "").includes("rafael") ? "owner" : "operator");
 
-  if (role === "owner" && viewAs === "eugene") {
+  if (role !== "owner") {
+    // operador (Eugene): fila normal; cards em espanhol afundam com aviso
+    return <EugeneView session={session} data={data} reload={load} sinkSpanish />;
+  }
+
+  if (mode === "queue") {
     return (
       <>
         <div style={{
           position: "sticky", top: 0, zIndex: 50, display: "flex",
-          justifyContent: "center", padding: "8px 0", background: "#101828",
+          justifyContent: "center", gap: 12, padding: "8px 0", background: "#1D4ED8",
         }}>
-          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginRight: 12, alignSelf: "center" }}>
-            👁 Você está vendo a tela do Eugene (ao vivo, somente leitura)
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, alignSelf: "center" }}>
+            🛠 Working the queue as {session.user.email.split("@")[0]} — your clock-in, your tasks
           </span>
-          <button className="btn primary sm" onClick={() => setViewAs(null)}>
-            ← Voltar à visão do dono
-          </button>
+          <button className="btn ghost sm" onClick={() => setMode("dashboard")}>← Back to dashboard</button>
         </div>
-        <EugeneView session={session} data={data} reload={load}
-          preview previewEmail={EUGENE_EMAIL} />
+        <EugeneView session={session} data={data} reload={load} />
       </>
     );
   }
 
-  return role === "owner" ? (
-    <OwnerView session={session} data={data} reload={load}
-      onViewEugene={() => setViewAs("eugene")} />
-  ) : (
-    <EugeneView session={session} data={data} reload={load} />
+  if (mode === "spy") {
+    return (
+      <>
+        <div style={{
+          position: "sticky", top: 0, zIndex: 50, display: "flex",
+          justifyContent: "center", gap: 12, padding: "8px 0", background: "#101828",
+        }}>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, alignSelf: "center" }}>
+            👁 Viewing Eugene&apos;s screen (live, read-only)
+          </span>
+          <button className="btn primary sm" onClick={() => setMode("dashboard")}>← Back to dashboard</button>
+        </div>
+        <EugeneView session={session} data={data} reload={load}
+          preview previewEmail={EUGENE_EMAIL} sinkSpanish />
+      </>
+    );
+  }
+
+  return (
+    <OwnerView session={session} data={data}
+      onViewEugene={() => setMode("spy")}
+      onWorkQueue={() => setMode("queue")} />
   );
 }

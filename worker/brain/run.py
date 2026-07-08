@@ -155,6 +155,16 @@ def process_call(msg, st):
                     transcribe.diarized_as_text(t["diarized"]) or t["full_text"],
                     {"direction": direction, "duration_sec": meta.get("duration"),
                      "status": msg.get("status")})
+                # cliente falou espanhol? marca o lead (Eugene não fala ES — Rafael assume)
+                if (t.get("language") or "").startswith("es"):
+                    import requests
+                    url, h = _supabase()
+                    if url:
+                        requests.post(f"{url}/rest/v1/lead_flags",
+                                      headers={**h, "Prefer": "resolution=merge-duplicates"},
+                                      json={"contact_id": msg["contactId"],
+                                            "spanish_only": True, "set_by": "auto (call em espanhol)"},
+                                      timeout=15)
         except Exception as e:
             # chave faltando / falha de transcrição não pode derrubar o ciclo
             print(f"  [warn] análise da call {call_id} pulada: {e}")
