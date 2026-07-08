@@ -264,3 +264,18 @@ create table if not exists lead_states (               -- A16 Regra Zero: estado
 );
 
 alter table cards add column if not exists phone text;   -- MVP rail: telefone no card
+
+create table if not exists pendencias (                -- MVP item 6: verificador pós-call
+  id uuid primary key default gen_random_uuid(),
+  contact_id text not null, call_id text,
+  kind text not null, fato text not null, acao text not null,
+  resolucoes jsonb not null, snapshot jsonb,
+  status text not null default 'open', resolved_by text,
+  created_at timestamptz not null default now(), resolved_at timestamptz
+);
+create table if not exists beta_feedback (             -- MVP item 7: erro vira dado
+  id uuid primary key default gen_random_uuid(),
+  contact_id text, card_id uuid,
+  tipo text not null, texto text, snapshot jsonb, reported_by text,
+  created_at timestamptz not null default now()
+);

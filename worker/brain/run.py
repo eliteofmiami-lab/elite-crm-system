@@ -354,6 +354,17 @@ def process_call(msg, st):
         print(f"  estado: {state.get('situacao')} ({str(state.get('situacao_evidencia'))[:50]!r})")
     except Exception as e:
         print(f"  [warn] síntese de estado falhou: {e}")
+    # MVP item 6: verificador pós-call — compara call vs. GHL e APONTA (nunca executa)
+    if analysis:
+        try:
+            from brain import verificador
+            cr2 = ghl.get(f"/contacts/{msg['contactId']}")
+            contact2 = cr2.json().get("contact", {}) if cr2.status_code == 200 else {}
+            np = verificador.check_call(msg, contact2, opp, analysis)
+            if np:
+                print(f"  [verificador] {np} pendência(s) apontada(s)")
+        except Exception as e:
+            print(f"  [warn] verificador: {e}")
     refresh_score(msg["contactId"], opp, analysis)  # score em tempo real (lê o estado)
     # A9: interesse vivo — call analisada atualiza a trilha + o card
     if analysis and analysis.get("servico_interesse"):

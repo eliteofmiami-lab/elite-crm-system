@@ -372,6 +372,7 @@ def card_eligible(contact_id, layer, type_=None):
     """Guard usado na CRIAÇÃO de cards. A16 (Regra Zero): o ESTADO do lead manda —
     pos_venda nunca; aguardando_*/agendado bloqueiam a discagem ativa
     (só confirm_appt e callback passam)."""
+    callback_owed = False
     try:
         from brain import lead_state as _ls
         st_lead = _ls.state_for(contact_id)
@@ -381,12 +382,15 @@ def card_eligible(contact_id, layer, type_=None):
                 return False  # A16.1: o sistema fica inerte
             if sit in _ls.BLOCK_DIAL and type_ not in ("confirm_appt", "callback"):
                 return False
+            callback_owed = sit == "callback_devido"
     except Exception:
         pass
     st = most_advanced_stage(contact_id)
     if st == "Win" or st == "delete":
         return False
-    if st == "Lost" and layer in (1, 2):
+    # REGRAS §4: resposta/retorno do lead puxa de volta pra Camada 1 NA HORA —
+    # callback_devido fura o bloqueio de Lost
+    if st == "Lost" and layer in (1, 2) and not callback_owed:
         return False
     return True
 
@@ -941,5 +945,10 @@ def sync_all():
     x = autoclose()
     r = reopen_snoozed()
     sync_prices()
+    try:  # MVP item 6: pendências somem sozinhas quando a LEITURA confirma a resolução
+        from brain import verificador
+        pv = verificador.sweep_resolutions()
+    except Exception as e:
+        pv = f"erro: {str(e)[:40]}"
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
-            "fechados": x, "reabertos": r}
+            "fechados": x, "reabertos": r, "pendencias_resolvidas": pv}
