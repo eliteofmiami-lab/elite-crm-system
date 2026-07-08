@@ -51,8 +51,10 @@ jobs:
             echo "META_PIXEL_ID=${{ secrets.META_PIXEL_ID }}"
             echo "META_CAPI_TOKEN=${{ secrets.META_CAPI_TOKEN }}"
           } > .env
-      - name: ciclo do cérebro
-        run: python worker/brain/run.py
+      # PAINEL DIÁRIO (missão definitiva 2026-07-08): o ciclo é o ESPELHO do GHL.
+      # Cérebro antigo (run.py) fora do agendamento — congelado, código preservado.
+      - name: ciclo do espelho (board)
+        run: python worker/board_sync.py
       - name: salvar estado p/ o próximo ciclo
         if: always()
         uses: actions/cache/save@v4
