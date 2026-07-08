@@ -230,8 +230,10 @@ def apply_state(contact_id, state):
             existing = cards._sb("GET", f"cards?status=eq.snoozed&contact_id=eq.{contact_id}"
                                         "&type=eq.follow_up&select=id&limit=1")
             if not existing:
+                # nurture leve mora na CAMADA 3 (gabarito: fora da discagem ativa,
+                # visível só como nurture com o estado explícito)
                 cards._sb("POST", "cards", json={
-                    "type": "follow_up", "layer": 2, "contact_id": contact_id,
+                    "type": "follow_up", "layer": 3, "contact_id": contact_id,
                     "title": f"Follow-up ({'client asked for space' if sit == 'aguardando_decisao_cliente' else state.get('evento_externo') or 'external event'})",
                     "why": state.get("narrativa_do_card"),
                     "how": {"passos": [state.get("proxima_acao", {}).get("motivo") or "Re-open gently"],
