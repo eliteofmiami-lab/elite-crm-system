@@ -65,6 +65,15 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
               ? new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit" })
               : ageOf(c.origem_ts)}</span>}
       </div>
+      {c.kind === "warmup" && (c.grupo === "reschedule" || c.grupo === "best_car") && (
+        <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
+          borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
+          ...(c.grupo === "reschedule"
+            ? { background: "#FFF4ED", color: "#B93815", border: "1px solid #F9DBAF" }
+            : { background: "#F5F9FF", color: "#175CD3", border: "1px solid #B2CCFF" }) }}>
+          {c.grupo === "reschedule" ? "① NO-SHOW — RESCHEDULE" : "② TOP CAR"}
+        </div>
+      )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
       <div className="org"><b>{(c.origem || "").split("·")[0]}</b>·{(c.origem || "").split("·").slice(1).join("·")}</div>
       {c.last_note
@@ -309,6 +318,18 @@ export default function BoardView({ session, data, reload, role }) {
       if (n === 3) {
         const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);
         if (kd) return kd;
+      }
+      if (n === 6) {
+        // regra Rafael: cold calls por importância — reschedule → best car → resto
+        const W_RANK = { reschedule: 0, best_car: 1, other: 2 };
+        const wd = (W_RANK[a.grupo] ?? 3) - (W_RANK[b.grupo] ?? 3);
+        if (wd) return wd;
+        if (a.grupo === "best_car") {
+          // dentro de best car: ano mais novo primeiro (do texto do veículo)
+          const yr = (c) => Number(((c.veh || "").match(/\b(19|20)\d{2}\b/) || [0])[0]);
+          const yd = yr(b) - yr(a);
+          if (yd) return yd;
+        }
       }
       const ta = new Date(a.origem_ts || a.created_at);
       const tb = new Date(b.origem_ts || b.created_at);

@@ -114,6 +114,28 @@ CALL_KINDS = {"missed_inbound", "hot", "new_lead", "task", "urable", "pipeline",
 APPT_WINS_KINDS = {"hot", "new_lead", "pipeline", "missed_inbound", "sms_reply",
                    "urable", "warmup", "followup_notask", "quote_notask",
                    "uncategorized"}
+
+# FILA DE COLD CALLS (regra Rafael 08/jul): warm-up ordenado por importância —
+# 1º no-show (reagendar) · 2º melhor/mais novo carro (mesmo sem resposta) · 3º resto.
+# Ranking de carro determinístico, zero IA: exótico > premium > comum; ano novo > velho.
+LUX_MAKES = ("ferrari", "lamborghini", "mclaren", "rolls royce", "rolls-royce",
+             "bentley", "aston martin", "porsche", "maserati", "bugatti", "lotus")
+PREMIUM_MAKES = ("mercedes", "benz", "bmw", "audi", "tesla", "corvette", "cadillac",
+                 "escalade", "land rover", "range rover", "lexus", "rivian", "gmc",
+                 "mustang", "camaro", "dodge", "ram trx", "jeep", "harley", "m2", "m3",
+                 "m4", "m5", "amg")
+
+
+def veh_rank(veh):
+    """(tier_carro, ano): 2=exótico · 1=premium · 0=comum/sem carro."""
+    t = (veh or "").lower()
+    if not t:
+        return 0, 0
+    m = re.search(r"\b(19|20)\d{2}\b", t)
+    yr = int(m.group()) if m else 0
+    tier = 2 if any(mk in t for mk in LUX_MAKES) else \
+        1 if any(mk in t for mk in PREMIUM_MAKES) else 0
+    return tier, yr
 # Regra Rafael 2026-07-08: Contact 1/2/3 = coluna 4 (mais novos primeiro; 2 moves/dia
 # = completo por hoje). Follow Up = coluna 7, AMARRADO a task (sem task = vermelho).
 STAGE_COLS = {"HOT LEADS": (1, "hot"), "New Lead": (2, "new_lead"),
@@ -717,50 +739,104 @@ def cycle(full_task_pass=False):
     need = max(cfg["ration"] - warm_created_today,
                (cfg["goal_calls"] - valid_today) - len(open_call_cards))
     if need > 0:
-        released = 0
-        # fonte 1: cards envelhecidos (aged_out) mais recentes primeiro
-        aged = sb._sb("GET", "board_cards?status=eq.aged_out&select=*"
-                             "&order=origem_ts.desc&limit=80") or []
-        for a in aged:
-            if released >= need:
-                break
-            if a["contact_id"] in appt_cids:
-                continue  # regra Peter: appointment marcado → não precisa de warm-up
-            brief = {"nome": a["nome"], "veh": a["veh"], "interest": a["interest"],
-                     "phone": a["phone"], "tags": []}
-            if not ok_contact(a["contact_id"]):
-                continue
-            made = upsert_card(6, "warmup", a["contact_id"],
-                               f"Aged: {a['origem'][:60]}", parse_ts(a["origem_ts"]) or now,
-                               brief, existing=existing)
-            if made:
-                sb._sb("PATCH", f"board_cards?id=eq.{a['id']}",
-                       json={"resolved_by": "moved to warm-up"})
-                released += 1
-        # fonte 2: Lost recuperável (sem cold_excluded) + parados 30d+, recentes primeiro
-        if released < need:
-            excluded_cold = {r["contact_id"] for r in
-                             (sb._sb("GET", "lead_flags?cold_excluded=eq.true&select=contact_id") or [])}
+        # FILA POR IMPORTÂNCIA (regra Rafael 08/jul): pool montado 1x/dia e consumido
+        # em ordem — tier 0 no-show (RESCHEDULE) · tier 1 melhor/mais novo carro ·
+        # tier 2 resto (mais recente primeiro).
+        excluded_cold = {r["contact_id"] for r in
+                         (sb._sb("GET", "lead_flags?cold_excluded=eq.true&select=contact_id") or [])}
+        pool_rows = sb._sb("GET", "config?key=eq.warmup_pool&select=value") or []
+        pool_cfg = (pool_rows[0].get("value") if pool_rows else None) or {}
+        if pool_cfg.get("day") != today:
+            pool = []
+            seen = set()
+            # tier 0: no-shows dos últimos 90d — reagendar primeiro (mais recente 1º)
+            ns_start = now_utc() - dt.timedelta(days=90)
+            for cal_id in sb.CALENDARS.values():
+                r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID,
+                    "calendarId": cal_id,
+                    "startTime": int(ns_start.timestamp() * 1000),
+                    "endTime": int(now_utc().timestamp() * 1000)})
+                if r.status_code != 200:
+                    continue
+                for e in r.json().get("events", []):
+                    cid = e.get("contactId")
+                    st = parse_ts(str(e.get("startTime")))
+                    if not cid or not st or e.get("appointmentStatus") != "noshow" \
+                            or cid in seen or cid in appt_cids or cid in excluded_cold:
+                        continue
+                    seen.add(cid)
+                    pool.append({"cid": cid, "tier": 0, "score": st.timestamp(),
+                                 "ots": iso(st),
+                                 "origem": f"No-show {st:%b %d} — RESCHEDULE",
+                                 "opp": None})
+            # tiers 1/2: cards envelhecidos + Lost recuperável (cap 400 mais recentes)
+            cands = []
+            for a in sb._sb("GET", "board_cards?status=eq.aged_out"
+                                   "&select=contact_id,veh,origem,origem_ts"
+                                   "&order=origem_ts.desc&limit=150") or []:
+                cands.append((a["contact_id"], a.get("veh"),
+                              f"Aged: {(a.get('origem') or '')[:56]}",
+                              a.get("origem_ts"), None))
             lost = paged_opps(rules.STAGES["Lost"])
             lost.sort(key=lambda o: o.get("updatedAt") or "", reverse=True)
-            for o in lost:
-                if released >= need:
-                    break
-                cid = o["contactId"]
-                if cid in excluded_cold or cid in appt_cids or not ok_contact(cid):
-                    continue
-                brief = contact_brief(cid)
-                if not ok_contact(cid, brief):
-                    continue
-                # dispositions: número inválido / não interessado → fora do warm-up
-                tags_low = {str(t).lower() for t in (brief.get("tags") or [])}
-                if tags_low & set(cfg.get("warmup_excluded_tags", [])):
-                    continue
-                ots = parse_ts(o.get("updatedAt")) or now
-                made = upsert_card(6, "warmup", cid,
-                                   f"Lost (recoverable) · {ots:%b %d}", ots, brief,
-                                   opportunity_id=o["id"], stage="Lost", existing=existing)
-                released += made
+            for o in lost[:400]:
+                cands.append((o["contactId"], None, None, o.get("updatedAt"), o["id"]))
+            # carro conhecido via histórico de cards (barato); busca direta limitada
+            known = {}
+            for row in sb._sb("GET", "board_cards?select=contact_id,veh&veh=not.is.null"
+                                     "&order=created_at.desc&limit=1000") or []:
+                known.setdefault(row["contact_id"], row["veh"])
+            fetches = 0
+            for cid, veh, origem, ots_s, opp_id in cands:
+                if cid in seen or cid in appt_cids or cid in excluded_cold:
+                    continue  # faxina/appointment não ocupa vaga do pool
+                seen.add(cid)
+                veh = veh or known.get(cid)
+                if veh is None and fetches < 250:
+                    veh = contact_brief(cid).get("veh")
+                    fetches += 1
+                car_tier, yr = veh_rank(veh)
+                ots = parse_ts(ots_s) or now
+                base = origem or f"Lost (recoverable) · {ots:%b %d}"
+                if car_tier > 0:
+                    pool.append({"cid": cid, "tier": 1,
+                                 "score": car_tier * 10000 + yr, "ots": iso(ots),
+                                 "origem": base, "opp": opp_id})
+                else:
+                    pool.append({"cid": cid, "tier": 2, "score": ots.timestamp(),
+                                 "ots": iso(ots), "origem": base, "opp": opp_id})
+            pool.sort(key=lambda p: (p["tier"], -p["score"]))
+            pool_cfg = {"day": today, "items": pool[:500]}
+            sb._sb("POST", "config?on_conflict=key",
+                   json={"key": "warmup_pool", "value": pool_cfg},
+                   headers_extra={"Prefer": "resolution=merge-duplicates"})
+            log(f"warm-up pool do dia: {len(pool)} candidatos "
+                f"(no-show {sum(1 for p in pool if p['tier'] == 0)} · "
+                f"carro {sum(1 for p in pool if p['tier'] == 1)}) · {fetches} fetches")
+        released = 0
+        open_cids = {c["contact_id"] for c in open_now}
+        GRUPOS = {0: "reschedule", 1: "best_car", 2: "other"}
+        for p in pool_cfg.get("items", []):
+            if released >= need:
+                break
+            cid = p["cid"]
+            # já tem QUALQUER card aberto → o board já cobra esse lead hoje
+            if cid in open_cids or (cid, "warmup") in existing \
+                    or cid in appt_cids or cid in excluded_cold:
+                continue
+            brief = contact_brief(cid)
+            if not ok_contact(cid, brief):
+                continue
+            tags_low = {str(t).lower() for t in (brief.get("tags") or [])}
+            if tags_low & set(cfg.get("warmup_excluded_tags", [])):
+                continue
+            made = upsert_card(6, "warmup", cid, p["origem"],
+                               parse_ts(p.get("ots")) or now, brief,
+                               grupo=GRUPOS[p["tier"]],
+                               opportunity_id=p.get("opp"), existing=existing)
+            if made:
+                open_cids.add(cid)
+            released += made
         log(f"warm-up liberados: {released} (need {need})")
 
     # ---- 5. RESOLUÇÃO ----
