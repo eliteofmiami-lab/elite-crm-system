@@ -228,7 +228,17 @@ export async function POST(req) {
 
   let result = {};
   try {
-    if (type === "stage") result = await miniMirrorStage(cid);
+    if (type === "stage") {
+      // índice do GHL demora a refletir o stage novo (caso Evangelist/Alejandro):
+      // 1ª tentativa após 2.5s; se nada mudou, 2ª após +4s (total ≤8s)
+      await new Promise((r) => setTimeout(r, 2500));
+      result = await miniMirrorStage(cid);
+      if (!result.closed && !result.created) {
+        await new Promise((r) => setTimeout(r, 4000));
+        result = await miniMirrorStage(cid);
+        result.retried = true;
+      }
+    }
     else if (type === "reply") result = await handleReply(cid);
     else if (type === "appt") result = await handleAppt(cid);
     else if (type === "call") result = await handleCall(cid);

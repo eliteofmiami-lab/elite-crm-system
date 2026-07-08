@@ -301,11 +301,21 @@ def cycle(full_task_pass=False):
         return True
 
     # ---- 1. espelho de stages ----
-    opps = {}
+    # NOTA (caso Evangelist/Alejandro): o índice do GHL pode devolver a MESMA opp em
+    # dois stages durante a atualização — dedupe por opp_id ficando com o
+    # lastStageChangeAt mais NOVO (a verdade mais recente vence).
+    by_opp = {}
     for stage, (col, kind) in STAGE_COLS.items():
         for o in paged_opps(rules.STAGES[stage]):
-            opps.setdefault(o["contactId"], []).append((stage, o))
-    log(f"stages espelhados: {sum(len(v) for v in opps.values())} opps")
+            oid = o["id"]
+            prev = by_opp.get(oid)
+            ots = o.get("lastStageChangeAt") or o.get("updatedAt") or ""
+            if not prev or ots > (prev[1].get("lastStageChangeAt") or prev[1].get("updatedAt") or ""):
+                by_opp[oid] = (stage, o)
+    opps = {}
+    for stage, o in by_opp.values():
+        opps.setdefault(o["contactId"], []).append((stage, o))
+    log(f"stages espelhados: {len(by_opp)} opps ({sum(len(v) for v in opps.values())} após dedupe)")
 
     # ---- 2. varredura de conversas ----
     calls, sms_out, sms_in, conv_last = scan_conversations(lookback)
