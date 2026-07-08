@@ -13,6 +13,9 @@ concurrency:
   group: elite-brain
   cancel-in-progress: false        # nunca matar um ciclo no meio de escritas
 
+permissions:
+  contents: write   # commit dos relatórios diários em docs/reports/
+
 jobs:
   cycle:
     runs-on: ubuntu-latest
@@ -56,4 +59,8 @@ jobs:
           key: worker-state-${{ github.run_id }}
       - name: relatório de fim de dia (só na rodada 22:30 UTC)
         if: github.event.schedule == '30 22 * * 1-6'
-        run: python worker/brain/eod_report.py || echo "eod_report ainda não implementado (M4)"
+        run: |
+          python worker/brain/eod_report.py
+          git config user.name "elite-brain" && git config user.email "bot@elite"
+          git add docs/reports/ && git diff --cached --quiet || \
+            (git commit -m "relatório diário $(date +%F)" && git push)

@@ -7,6 +7,11 @@ import anthropic
 import config
 
 MODEL = "claude-sonnet-5"
+MODEL_CHEAP = "claude-haiku-4-5"   # A8: calls curtas/simples → Haiku (5x mais barato)
+ROUTE_THRESHOLD_SEC = 150          # <150s = call curta
+
+# preço por 1M tokens (in, out) — para o cost_log
+PRICING = {"claude-sonnet-5": (3.0, 15.0), "claude-haiku-4-5": (1.0, 5.0)}
 
 _cfg = config.load()
 
@@ -105,12 +110,16 @@ def get_client():
 
 
 def analyze_call(transcript_text, call_meta, client=None):
-    """transcript_text: transcrição diarizada. call_meta: dict direction/duration/lead name etc."""
+    """transcript_text: transcrição diarizada. call_meta: dict direction/duration/lead name etc.
+    A8: roteia Haiku (curtas) / Sonnet (longas); cache no system prompt; anexa _meta de custo."""
     client = client or get_client()
+    dur = call_meta.get("duration_sec") or 0
+    model = MODEL_CHEAP if dur and dur < ROUTE_THRESHOLD_SEC else MODEL
     response = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=8000,
-        system=SYSTEM,
+        system=[{"type": "text", "text": SYSTEM,
+                 "cache_control": {"type": "ephemeral"}}],
         output_config={"format": {"type": "json_schema", "schema": ANALYSIS_SCHEMA}},
         messages=[{
             "role": "user",
@@ -123,4 +132,12 @@ def analyze_call(transcript_text, call_meta, client=None):
     if response.stop_reason == "refusal":
         raise RuntimeError("análise recusada pelo modelo")
     text = next(b.text for b in response.content if b.type == "text")
-    return json.loads(text)
+    result = json.loads(text)
+    pin, pout = PRICING[model]
+    u = response.usage
+    result["_meta"] = {
+        "model": model,
+        "in_tokens": u.input_tokens, "out_tokens": u.output_tokens,
+        "est_usd": round(u.input_tokens / 1e6 * pin + u.output_tokens / 1e6 * pout, 5),
+    }
+    return result

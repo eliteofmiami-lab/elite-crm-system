@@ -322,6 +322,10 @@ def flush_manual_logs():
             nota = ["📋 CALL LOG (manual — painel)"]
             labels = [("outcome", "Outcome"), ("make", "Make"), ("model", "Model"),
                       ("year", "Year"), ("momento", "Car timing"), ("interest", "Interest"),
+                      ("keep_or_trade", "Keep or trade"),
+                      ("seen_other_quotes", "Seen other quotes"),
+                      ("other_quotes_detail", "Other quotes detail"),
+                      ("lost_reason", "Lost reason"),
                       ("prices", "Prices discussed"), ("hook", "Personal note"),
                       ("next_step", "Next step"), ("next_date", "When"), ("notes", "Notes")]
             for k, lab in labels:
@@ -381,6 +385,86 @@ def autoclose():
     return n
 
 
+def sync_prices():
+    """prices.json (repo) = fonte única → config.prices (painel lê do banco)."""
+    import json as _json
+    from pathlib import Path
+    p = Path(__file__).resolve().parent.parent.parent / "config" / "prices.json"
+    if not p.exists():
+        return 0
+    import requests as rq
+    rq.post(f"{SB_URL}/rest/v1/config",
+            headers={**H, "Prefer": "resolution=merge-duplicates"},
+            json={"key": "prices", "value": _json.load(open(p))}, timeout=15)
+    return 1
+
+
+def bonus_guard_check():
+    """A5.1 — lembretes PROATIVOS a favor do bônus (horários em ET):
+    10:15 appointment de amanhã não confirmado · 15:00 quote pendente do dia
+    (16:30 vira card urgente) · lead 80+ chegando nas 24h órfão → card urgente."""
+    from zoneinfo import ZoneInfo
+    now_et = dt.datetime.now(ZoneInfo("America/New_York"))
+    items = []
+    oc = open_cards()
+    hhmm = now_et.hour * 60 + now_et.minute
+
+    appts = [c for c in oc if c["type"] == "confirm_appt"]
+    quotes = [c for c in oc if c["type"] == "quote_followup"]
+    if hhmm >= 615 and appts:   # 10:15
+        items.append(f"{len(appts)} appointment(s) still unconfirmed — confirm before 11 AM")
+    if hhmm >= 900 and quotes:  # 15:00
+        items.append(f"{len(quotes)} quote(s) pending follow-up today")
+    if hhmm >= 990:             # 16:30 → urgência de verdade
+        for c in quotes:
+            create_card("callback", 1, c["contact_id"],
+                        f"⏰ BONUS GUARD — quote day closing: {c['title'].replace('Quote follow-up: ','')}",
+                        "Quote pending and the day is ending. This protects your $50 bonus.",
+                        {"passos": ["Call or text about the quote NOW",
+                                    "Log the outcome after"]},
+                        opportunity_id=c.get("opportunity_id"), score=c.get("score"))
+    # 80+ órfão chegando nas 24h (card aberto há 20h+ sem fechamento)
+    for c in oc:
+        if (c.get("score") or 0) >= 80:
+            age_h = (dt.datetime.now(dt.timezone.utc)
+                     - dt.datetime.fromisoformat(c["created_at"].replace("Z", "+00:00"))
+                     ).total_seconds() / 3600
+            if age_h >= 20:
+                items.append(f"Score-{c['score']} lead approaching the 24h orphan limit: {c['title'][:40]}")
+                create_card("callback", 1, c["contact_id"],
+                            f"🚨 80+ lead about to orphan: {c['title'][:44]}",
+                            "High-score lead with no closure in ~24h — critical miss territory.",
+                            {"passos": ["Contact NOW by any channel", "Log the attempt"]},
+                            opportunity_id=c.get("opportunity_id"), score=c.get("score"))
+    import requests as rq
+    rq.post(f"{SB_URL}/rest/v1/config",
+            headers={**H, "Prefer": "resolution=merge-duplicates"},
+            json={"key": "bonus_guard",
+                  "value": {"items": items, "at": now_et.isoformat()}}, timeout=15)
+    return len(items)
+
+
+def flush_outbox(dry_run=True):
+    """Nice-to-talk aprovados no painel → SMS via GHL. SÓ com G2 ativo."""
+    rows = _sb("GET", "outbox?status=eq.approved&select=*") or []
+    if dry_run or not rows:
+        return 0
+    from brain import writer
+    n = 0
+    for row in rows:
+        try:
+            writer.send_sms(row["contact_id"], row["message"], gate="G2",
+                            motivo=f"nice-to-talk aprovado por {row['approved_by']}")
+            _sb("PATCH", f"outbox?id=eq.{row['id']}",
+                json={"status": "sent",
+                      "sent_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")})
+            n += 1
+        except Exception as e:
+            _sb("PATCH", f"outbox?id=eq.{row['id']}",
+                json={"status": "error", "error": str(e)[:200]})
+    return n
+
+
 def sync_all():
     el = len(eligibility_sync())
     ft = sync_first_touch()
@@ -390,5 +474,9 @@ def sync_all():
     x = autoclose()
     r = reopen_snoozed()
     ml = flush_manual_logs()
+    sync_prices()
+    bg = bonus_guard_check()
+    from brain import writer as _w
+    ob = flush_outbox(dry_run=_w.DRY_RUN)
     return {"expurgados": el, "first_touch": ft, "appt": a, "quotes": q, "warm": w,
-            "fechados": x, "reabertos": r, "manual_logs": ml}
+            "fechados": x, "reabertos": r, "manual_logs": ml, "guard": bg, "outbox": ob}

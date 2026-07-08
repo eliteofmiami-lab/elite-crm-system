@@ -175,6 +175,14 @@ export default function OwnerView({ session, data, onViewEugene, onWorkQueue }) 
         </div>
       </div>
 
+      {(data.reports || []).filter((r) => r.audience === "rafael").slice(0, 1).map((r) => (
+        <div className="panel" style={{ marginTop: 12 }} key={r.id}>
+          <h3>📄 Daily report · {r.report_date}</h3>
+          <pre style={{ whiteSpace: "pre-wrap", font: "400 13px Inter,system-ui,sans-serif",
+            color: "var(--ink)" }}>{r.content_md}</pre>
+        </div>
+      ))}
+
       <Diagnostics testIds={data.config.test_contact_ids || []} />
 
       <p className="footnote">Full daily report generated at 6:30 PM · commissions reconcile with sales at month close.</p>

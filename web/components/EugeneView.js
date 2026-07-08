@@ -53,7 +53,8 @@ function Snooze({ card, reload }) {
 
 function LogCall({ card, userEmail, reload }) {
   const [f, setF] = useState({ outcome: "", make: "", model: "", year: "", momento: "",
-    interest: "", prices: "", hook: "", next_step: "", next_date: "", notes: "" });
+    interest: "", keep_or_trade: "", seen_other_quotes: "", other_quotes_detail: "",
+    lost_reason: "", prices: "", hook: "", next_step: "", next_date: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -80,6 +81,17 @@ function LogCall({ card, userEmail, reload }) {
           status: "synced", synced_at: new Date().toISOString() }).eq("id", row.id);
       }
     } catch (_) { /* fallback: worker sincroniza em ≤5 min */ }
+    // spec 8.1 (wrap-up): call atendida → card só conclui após o nice-to-talk
+    if ((f.outcome || "").startsWith("Answered — good")) {
+      const nome = (card.title || "").split("—").pop().split("(")[0].trim().split(" ")[0] || "there";
+      const draft = `Great talking to you, ${nome}!` +
+        (f.hook ? ` ${f.hook.replace(/\.$/, "")} — noted!` : "") +
+        (f.next_step === "Send quote" ? " I'll get your quote over shortly as promised."
+          : f.next_step === "Book appointment" ? " Looking forward to seeing you at the shop."
+          : f.next_date ? ` I'll follow up as we discussed.` : "") +
+        " — Elite Premium Detailing";
+      await supabase.from("cards").update({ status: "wrapup", draft_message: draft }).eq("id", card.id);
+    }
     setSaving(false);
     setSaved(instant ? "Saved to GHL ✓" : "Saved — syncing to GHL (≤5 min)");
     reload();
@@ -111,6 +123,28 @@ function LogCall({ card, userEmail, reload }) {
         <option>Hot — ready to move</option><option>Warm — interested, needs follow-up</option>
         <option>Just exploring</option><option>Not interested</option>
       </select>
+      <select style={sel} value={f.keep_or_trade} onChange={set("keep_or_trade")}>
+        <option value="">Keeping or trading the car?…</option>
+        <option>Keeping long term</option><option>Trading / selling soon</option>
+        <option>Lease — ending soon</option><option>Unsure</option>
+      </select>
+      <select style={sel} value={f.seen_other_quotes} onChange={set("seen_other_quotes")}>
+        <option value="">Seen other quotes?…</option>
+        <option>No — we are the first</option><option>Yes — shopping around</option>
+      </select>
+      {f.seen_other_quotes.startsWith("Yes") && (
+        <textarea style={{ ...sel, minHeight: 60 }} value={f.other_quotes_detail}
+          onChange={set("other_quotes_detail")}
+          placeholder="What did they quote? Shop, service, exact price and what was included — full sentences help the next call." />
+      )}
+      {f.interest === "Not interested" && (
+        <select style={sel} value={f.lost_reason} onChange={set("lost_reason")}>
+          <option value="">Lost reason…</option>
+          <option>Price too high</option><option>Went with competitor</option>
+          <option>Bad timing — try later</option><option>Sold / returned the car</option>
+          <option>No real intent</option><option>Other</option>
+        </select>
+      )}
       <input style={sel} placeholder="Prices discussed (e.g. Full front PPF $2,200)"
         value={f.prices} onChange={set("prices")} />
       <input style={sel} placeholder="Personal note / hook (e.g. daughter's birthday trip, back Wednesday)"
@@ -133,7 +167,24 @@ function LogCall({ card, userEmail, reload }) {
   );
 }
 
-function Task({ c, idx, current, reload, preview = false, spanish = false, sinkSpanish = false, userEmail = "" }) {
+function PriceHint({ c, prices }) {
+  if (!prices) return null;
+  const t = ((c.title || "") + " " + (c.why || "")).toLowerCase();
+  const keys = [["tint", "window_tint"], ["ppf", "ppf"], ["ceramic", "ceramic"],
+                ["coating", "ceramic"], ["wrap", "wrap"], ["quote", "ppf"]];
+  const cat = keys.find(([k]) => t.includes(k));
+  const items = cat ? prices[cat[1]] : null;
+  if (!items || !Array.isArray(items)) return null;
+  return (
+    <div className="dsec">
+      <div className="dl">Prices (source: price sheet)</div>
+      <p>{items.slice(0, 4).map((p) => `${p.service} — $${p.price}`).join(" · ")}</p>
+    </div>
+  );
+}
+
+function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = false,
+                sinkSpanish = false, userEmail = "", prices = null }) {
   const [showSnooze, setShowSnooze] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const chip = spanish ? { cls: "appt", label: "🇪🇸 Spanish" } : chipFor(c);
@@ -150,10 +201,10 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
     }
     reload();
   }
-  if (!current) {
+  if (!expanded) {
     return (
       <div className="task">
-        <div className="row">
+        <div className="row" onClick={onToggle}>
           <span className="num">{idx}</span>
           <div className="grow">
             <div className="ttl">{c.title}</div>
@@ -169,9 +220,9 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
     );
   }
   return (
-    <div className="task current">
-      <div className="row">
-        <span className="num">1</span>
+    <div className={`task${idx === 1 ? " current" : ""}`}>
+      <div className="row" onClick={idx === 1 ? undefined : onToggle}>
+        <span className="num">{idx}</span>
         <div className="grow"><div className="ttl">{c.title}</div></div>
         <span className={`chip ${chip.cls}`}>{chip.label}</span>
         {c.score ? <span className="score">Score {c.score}</span> : null}
@@ -188,6 +239,7 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
             <p>{how.join(" · ")}</p>
           </div>
         )}
+        <PriceHint c={c} prices={prices} />
         <div className="actions">
           <a className="btn primary" href={c.ghl_link} target="_blank" rel="noreferrer">Open in GHL ↗</a>
           {!preview && (
@@ -218,8 +270,69 @@ function Task({ c, idx, current, reload, preview = false, spanish = false, sinkS
   );
 }
 
+function WrapUp({ c, userEmail, reload, preview }) {
+  // spec 8.1: a task só conclui depois do nice-to-talk aprovado
+  const [editing, setEditing] = useState(false);
+  const [msg, setMsg] = useState(c.draft_message || "");
+  async function approve() {
+    if (preview) return;
+    await supabase.from("outbox").insert({
+      contact_id: c.contact_id, card_id: c.id, message: msg, approved_by: userEmail });
+    await supabase.from("cards").update({
+      status: "done", result: "wrap-up aprovado (nice-to-talk na fila de envio)",
+      closed_by: "manual-quote", closed_at: new Date().toISOString(),
+      draft_message: msg }).eq("id", c.id);
+    reload();
+  }
+  return (
+    <div className="approve">
+      <div className="ic">✓</div>
+      <div className="msg">
+        <div className="t">Wrap-up — approve &amp; send: {c.title.replace(/^[^—]*— /, "")}</div>
+        {editing ? (
+          <textarea style={{ width: "100%", minHeight: 70, border: "1px solid var(--line)",
+            borderRadius: 8, padding: 8, font: "400 13px Inter,system-ui,sans-serif" }}
+            value={msg} onChange={(e) => setMsg(e.target.value)} />
+        ) : (
+          <div className="p">&ldquo;{msg}&rdquo;</div>
+        )}
+      </div>
+      <button className="btn ghost" onClick={() => setEditing(!editing)}>{editing ? "Done" : "Edit"}</button>
+      <button className="btn primary" onClick={approve}>Approve &amp; send</button>
+    </div>
+  );
+}
+
+function PriceSheet({ prices, onClose }) {
+  if (!prices) return null;
+  const cats = Object.entries(prices).filter(([k, v]) => Array.isArray(v));
+  return (
+    <div className="qcard" style={{ padding: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600 }}>💲 Price sheet (single source: config/prices.json)</h3>
+        <button className="btn ghost sm" onClick={onClose}>close</button>
+      </div>
+      {cats.map(([cat, items]) => (
+        <div key={cat} style={{ marginBottom: 10 }}>
+          <div className="dl" style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase",
+            color: "var(--faint)", letterSpacing: ".04em" }}>{cat.replace("_", " ")}</div>
+          {items.map((p, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between",
+              padding: "6px 0", borderBottom: "1px solid var(--line)", fontSize: 13.5 }}>
+              <span>{p.service}</span><b>${p.price}</b>
+            </div>
+          ))}
+        </div>
+      ))}
+      {prices._politica && <p className="meta" style={{ marginTop: 8 }}>⚠ {prices._politica}</p>}
+    </div>
+  );
+}
+
 export default function EugeneView({ session, data, reload, preview = false, previewEmail = null, sinkSpanish = false }) {
   const email = preview ? previewEmail : session.user.email;
+  const [openId, setOpenId] = useState(null);       // acordeão (spec 6.1)
+  const [showPrices, setShowPrices] = useState(false);
   // ordenação: camada → first_touch acima na L2 → score desc → mais recente primeiro
   const ranked = [...data.cards].sort((a, b) =>
     (a.layer - b.layer) ||
@@ -259,8 +372,9 @@ export default function EugeneView({ session, data, reload, preview = false, pre
   const fortnightDay = day <= 15 ? day : day - 15;
   const fortnightLen = day <= 15 ? 15 : new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - 15;
 
-  // bonus guard
+  // bonus guard: cards urgentes + lembretes proativos do worker (A5.1)
   const guardItems = data.cards.filter((c) => c.type === "confirm_appt" || c.layer === 1);
+  const guardMsgs = ((data.config.bonus_guard || {}).items) || [];
   const monthName = now.toLocaleDateString("en-US", { month: "long" });
 
   // inactivity (visual): minutes since last event today
@@ -312,6 +426,7 @@ export default function EugeneView({ session, data, reload, preview = false, pre
           </div>
         </div>
         <div className="pills">
+          <button className="btn ghost sm" onClick={() => setShowPrices(!showPrices)}>💲 Price sheet</button>
           {myShift ? (
             <>
               <span className="pill ok"><span className="dot"></span>
@@ -342,6 +457,8 @@ export default function EugeneView({ session, data, reload, preview = false, pre
           <button className="btn primary big" onClick={clockIn}>▶ Clock in</button>
         </div>
       ) : null}
+      {showPrices && <PriceSheet prices={data.config.prices} onClose={() => setShowPrices(false)} />}
+
       {(myShift || preview) && (
         <>
           <div className="kpis">
@@ -361,8 +478,8 @@ export default function EugeneView({ session, data, reload, preview = false, pre
             <div className="mini">+${bookedToday}<small>booked today</small></div>
             <div className="mini" style={{ color: "#067647" }}>$50<small>rule bonus · on track {fortnightDay}/{fortnightLen}</small></div>
             <div className="note">$10 per booked appointment that closes · +$50 every 2 weeks with zero critical misses</div>
-            {guardItems.length > 0 ? (
-              <div className="guard"><b>Bonus guard</b> · {guardItems.length} item{guardItems.length > 1 ? "s" : ""} need attention today: {guardItems[0].title}</div>
+            {guardItems.length + guardMsgs.length > 0 ? (
+              <div className="guard"><b>Bonus guard</b> · {guardMsgs[0] || `${guardItems.length} item(s) need attention today: ${guardItems[0].title}`}</div>
             ) : (
               <div className="guard clear"><b>Bonus guard</b> · all clear — nothing threatens your bonus today</div>
             )}
@@ -380,9 +497,13 @@ export default function EugeneView({ session, data, reload, preview = false, pre
               <span className="cap">Auto-sorted by priority — always take task 1</span>
             </div>
             {orderedCards.map((c, i) => (
-              <Task key={c.id} c={c} idx={i + 1} current={i === 0} reload={reload}
-                preview={preview} spanish={data.spanish.has(c.contact_id)}
-                sinkSpanish={sinkSpanish} userEmail={session.user.email} />
+              <Task key={c.id} c={c} idx={i + 1}
+                expanded={i === 0 || c.id === openId}
+                onToggle={() => setOpenId(openId === c.id ? null : c.id)}
+                reload={reload} preview={preview}
+                spanish={data.spanish.has(c.contact_id)}
+                sinkSpanish={sinkSpanish} userEmail={session.user.email}
+                prices={data.config.prices} />
             ))}
             {data.snoozed.map((c) => (
               <div className="task snoozed" key={c.id}>
@@ -404,16 +525,9 @@ export default function EugeneView({ session, data, reload, preview = false, pre
             )}
           </div>
 
-          {data.cards.filter((c) => c.type === "nice_to_talk").map((c) => (
-            <div className="approve" key={`ap-${c.id}`}>
-              <div className="ic">✓</div>
-              <div className="msg">
-                <div className="t">{c.title}</div>
-                <div className="p">{c.draft_message}</div>
-              </div>
-              <button className="btn ghost">Edit</button>
-              <button className="btn primary">Approve &amp; send</button>
-            </div>
+          {(data.wrapups || []).map((c) => (
+            <WrapUp key={`wr-${c.id}`} c={c} userEmail={session.user.email}
+              reload={reload} preview={preview} />
           ))}
 
           <div className="advice">

@@ -190,6 +190,20 @@ def refresh_score(contact_id, opp, analysis=None):
         return None
 
 
+def _log_cost(call_id, provider, model, units, est_usd):
+    """A8: cada centavo de IA registrado (cost_log)."""
+    import requests
+    url, h = _supabase()
+    if not url:
+        return
+    try:
+        requests.post(f"{url}/rest/v1/cost_log", headers=h, json={
+            "call_id": call_id, "provider": provider, "model": model,
+            "units": units, "est_usd": est_usd}, timeout=10)
+    except Exception:
+        pass
+
+
 def persist_call(msg, meta, opp, analysis):
     """Grava call + análise no Supabase (alimenta Advice e KPIs do painel)."""
     import requests
@@ -226,16 +240,31 @@ def process_call(msg, st):
     opp = opportunity_for_contact(msg["contactId"])
 
     analysis = None
-    if answered and meta.get("duration", 0) > 20:
+    if answered and meta.get("duration", 0) > 20:   # A8: skip <20s
         try:
             audio = transcribe.download_recording(call_id)
-            if audio:
+            if not audio:
+                # gravação ainda indisponível → retry (até 3 ciclos) + flag
+                att = st.setdefault("rec_attempts", {})
+                att[call_id] = att.get(call_id, 0) + 1
+                if att[call_id] < 3:
+                    print(f"  [retry] gravação indisponível ({att[call_id]}/3): {call_id}")
+                    return None  # NÃO marca processado → tenta de novo no próximo ciclo
+                print(f"  [flag] gravação nunca disponível p/ {call_id}")
+            else:
                 t = transcribe.transcribe(audio)
+                _log_cost(call_id, "deepgram", "nova-2",
+                          round(meta["duration"] / 60, 2),
+                          round(meta["duration"] / 60 * 0.0043, 5))
                 from brain import analyze
                 analysis = analyze.analyze_call(
                     transcribe.diarized_as_text(t["diarized"]) or t["full_text"],
                     {"direction": direction, "duration_sec": meta.get("duration"),
                      "status": msg.get("status")})
+                m = analysis.get("_meta", {})
+                if m:
+                    _log_cost(call_id, "anthropic", m["model"],
+                              m["in_tokens"] + m["out_tokens"], m["est_usd"])
                 # (decisão do Rafael: NÃO marcar espanhol automaticamente —
                 #  ele/Eugene tentam em inglês primeiro e marcam manual no painel)
         except Exception as e:
@@ -330,6 +359,14 @@ def main():
     except Exception as e:
         stats = {"erro": str(e)[:80]}
 
+    # M5: pool frio (refresh semanal) + manter a fila abastecida
+    try:
+        from brain import cold
+        cold.maybe_weekly_refresh()
+        stats["cold"] = cold.top_up_queue()
+    except Exception as e:
+        stats["cold_erro"] = str(e)[:60]
+
     # snapshot do funil de HOJE p/ a vista do dono (config key stats_today)
     try:
         import requests
@@ -340,8 +377,7 @@ def main():
             for label, stage in (("novos", None), ("qualificados", "Great Cars"),
                                  ("quotes", "Quote Sent"), ("appointments", "Appointment Booked"),
                                  ("win", "Win"), ("hot", "HOT LEADS")):
-                p = {"location_id": LOC, "pipeline_id": rules.NEW_PIPELINE_ID, "limit": 1,
-                     "date": today}
+                p = {"location_id": LOC, "pipeline_id": rules.NEW_PIPELINE_ID, "limit": 1}
                 if stage:
                     p["pipeline_stage_id"] = rules.STAGES[stage]
                 r = ghl.get("/opportunities/search", p)

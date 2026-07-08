@@ -1,0 +1,27 @@
+{
+  "_fonte_unica": "Editar AQUI (e só aqui). O robô sincroniza pro painel em até 5 min após o commit. Valores iniciais extraídos das planilhas 2024-2026 e chamadas reais — REVISAR com o Rafael.",
+  "_atualizado": "2026-07-08",
+  "window_tint": [
+    { "service": "Ceramic tint — windshield", "price": 350 },
+    { "service": "Ceramic tint — each side window", "price": 100 },
+    { "service": "Ceramic tint — rear windshield", "price": 300 },
+    { "service": "Ceramic tint — front two windows", "price": 200 }
+  ],
+  "ceramic": [
+    { "service": "Silver Pack (ceramic coating)", "price": 799 },
+    { "service": "Silver Pack + 1-step paint correction", "price": 1100 },
+    { "service": "Silver Pack + paint correction + tints", "price": 2499 },
+    { "service": "Interior ceramic coating (add-on)", "price": 600 }
+  ],
+  "ppf": [
+    { "service": "Partial front PPF", "price": 1500 },
+    { "service": "Full front PPF", "price": 2200 },
+    { "service": "Full front PPF + gold pack", "price": 5849 },
+    { "service": "Full body PPF (from)", "price": 6500 },
+    { "service": "Full colored/matte PPF (from)", "price": 5350 }
+  ],
+  "wrap": [
+    { "service": "Wrap color change (from)", "price": 5000 }
+  ],
+  "_politica": "Sem desconto direto autorizado. Preço apertado → oferecer pacote menor ou call com o Rafael."
+}

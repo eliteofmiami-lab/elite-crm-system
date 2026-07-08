@@ -44,12 +44,13 @@ export default function Home() {
     today.setHours(0, 0, 0, 0);
     const iso = today.toISOString();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
-    const [cards, snoozed, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags] =
+    const [cards, snoozed, wrapups, doneToday, calls, analyses, shifts, pauses, comms, cfg, flags, reports] =
       await Promise.all([
         supabase.from("cards").select("*").eq("status", "open")
           .order("layer").order("score", { ascending: false, nullsFirst: false })
           .order("created_at").limit(40),
         supabase.from("cards").select("*").eq("status", "snoozed").limit(10),
+        supabase.from("cards").select("*").eq("status", "wrapup").limit(10),
         supabase.from("cards").select("*").eq("status", "done").gte("closed_at", iso),
         supabase.from("calls").select("id,direction,called_at,contact_id").gte("called_at", iso),
         supabase.from("analyses").select("payload,created_at,calls(contact_id)")
@@ -57,16 +58,19 @@ export default function Home() {
         supabase.from("shifts").select("*").gte("clock_in", iso),
         supabase.from("pauses").select("*").gte("started_at", iso),
         supabase.from("commissions").select("*").gte("booked_at", monthStart),
-        supabase.from("config").select("key,value").in("key", ["stats_today", "bonus_period", "test_contact_ids"]),
+        supabase.from("config").select("key,value").in("key",
+          ["stats_today", "bonus_period", "test_contact_ids", "prices", "bonus_guard"]),
         supabase.from("lead_flags").select("contact_id,spanish_only").eq("spanish_only", true),
+        supabase.from("reports").select("*").order("report_date", { ascending: false }).limit(4),
       ]);
     setData({
-      cards: cards.data || [], snoozed: snoozed.data || [],
+      cards: cards.data || [], snoozed: snoozed.data || [], wrapups: wrapups.data || [],
       doneToday: doneToday.data || [], calls: calls.data || [],
       analyses: analyses.data || [], shifts: shifts.data || [],
       pauses: pauses.data || [], commissions: comms.data || [],
       config: Object.fromEntries((cfg.data || []).map((r) => [r.key, r.value])),
       spanish: new Set((flags.data || []).map((f) => f.contact_id)),
+      reports: reports.data || [],
     });
   }, [session]);
 
