@@ -128,8 +128,11 @@ async function miniMirrorStage(cid) {
 
 async function handleReply(cid) {
   // Customer Replied → card col 1 (sms_reply) + fecha urable "no reply"
+  // + REGRA CARL: resposta do cliente LIMPA o vermelho SEM RESOLUÇÃO na hora
   const b = await contactBrief(cid);
   let created = 0, closed = 0;
+  await sb("PATCH", `board_cards?contact_id=eq.${cid}&status=eq.open&unres=eq.true`,
+    { unres: false, unres_call_ts: null });
   const dup = await sb("GET",
     `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.sms_reply&select=id&limit=1`);
   if (!dup.length) {

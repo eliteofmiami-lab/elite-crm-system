@@ -715,6 +715,14 @@ def cycle(full_task_pass=False):
         cts = parse_ts(card.get("unres_call_ts"))
         if not cts:
             continue  # sem call ainda: card espelho segue aberto
+        # REGRA CARL (2026-07-08): cliente respondeu por SMS depois da call → a conversa
+        # aconteceu — o vermelho some (se faltar responder, o card sms_reply da col 1 assume)
+        replied = any(s["contact_id"] == cid and s["ts"] > cts for s in sms_in)
+        if replied:
+            sb._sb("PATCH", f"board_cards?id=eq.{card['id']}",
+                   json={"unres": False, "unres_call_ts": None})
+            card["unres"] = False
+            continue
         # resoluções válidas após a call
         resolved = None
         res_user = ""
