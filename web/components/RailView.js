@@ -22,6 +22,7 @@ const FEEDBACK_CHIPS = [
 ];
 
 function triggerRank(c, hour) {
+  // BONUS GUARD: congelado nesta etapa (não aparece); quote_rescue = foco do dia
   const t = c.title || "";
   if (c.layer === 1) {
     if (t.includes("CALLBACK OWED")) return 0;
@@ -30,7 +31,8 @@ function triggerRank(c, hour) {
     return 3;
   }
   if (c.layer === 2) {
-    return { confirm_appt: hour < 11 ? 0 : 2.5, first_touch: 1, follow_up: 2, quote_followup: 3 }[c.type] ?? 4;
+    return { confirm_appt: hour < 11 ? 0 : 2.5, first_touch: 1, follow_up: 2,
+      quote_followup: 3, quote_rescue: 3.5 }[c.type] ?? 4;
   }
   return 0;
 }

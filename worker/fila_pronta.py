@@ -33,14 +33,14 @@ def trigger_rank(c, hour):
     if c["layer"] == 1:
         if "CALLBACK OWED" in t:
             return 0
-        if "BONUS GUARD" in t or "NEW LEAD" in t:
+        if "NEW LEAD" in t:
             return 1
         if "MISSED CALL" in t:
             return 2
         return 3
     if c["layer"] == 2:
         return {"confirm_appt": 0 if hour < 11 else 2.5, "first_touch": 1,
-                "follow_up": 2, "quote_followup": 3}.get(c["type"], 4)
+                "follow_up": 2, "quote_followup": 3, "quote_rescue": 3.5}.get(c["type"], 4)
     return 0
 
 
