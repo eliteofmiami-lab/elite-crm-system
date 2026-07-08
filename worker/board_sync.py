@@ -293,8 +293,11 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
     key = (contact_id, kind)
     if existing is not None and key in existing:
         return False
-    dup = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{contact_id}"
-                        f"&kind=eq.{kind}&select=id&limit=1")
+    # dedupe: aberto OU reportado p/ análise (⚑ report & close suprime a recriação
+    # até a revisão — senão o espelho ressuscitaria o card no ciclo seguinte)
+    dup = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
+                        "&or=(status.eq.open,resolved_by.like.*reported*)"
+                        "&select=id&limit=1")
     if dup:
         return False
     sb._sb("POST", "board_cards", json={

@@ -46,8 +46,10 @@ function beep() {
   } catch (_) { /* sem som, sem drama */ }
 }
 
-function KCard({ c, conf, isSpanish, isOwner, onSpanish }) {
+function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport }) {
   const [open, setOpen] = useState(false);
+  const [fb, setFb] = useState("");
+  const [showFb, setShowFb] = useState(false);
   const red = RED_KINDS.has(c.kind);
   const style = red
     ? { border: "1.5px solid var(--red-border)", borderLeft: "4px solid var(--red)", background: "#FFFBFA" }
@@ -84,6 +86,30 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish }) {
         {c.closes_when && <div className="closes"><b>Closes when:</b>{c.closes_when.replace("Closes when:", "")}</div>}
         {isSpanish && <div style={{ fontSize: 11, color: "var(--purple-text)", marginTop: 6, fontWeight: 600 }}>
           Spanish speaker — lives on Rafael&apos;s board, off Eugene&apos;s.</div>}
+        {onReport && (
+          <div style={{ marginTop: 7 }}>
+            {!showFb ? (
+              <button onClick={() => setShowFb(true)}
+                style={{ border: "none", background: "transparent", color: "var(--faint)",
+                  font: "600 11px Inter", cursor: "pointer", padding: 0 }}>
+                ⚑ Wrong card? Report &amp; close
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: 6 }}>
+                <input value={fb} onChange={(e) => setFb(e.target.value)}
+                  placeholder="Why is this card wrong? (goes to review)"
+                  style={{ flex: 1, border: "1px solid var(--amber-border)", borderRadius: 7,
+                    padding: "6px 9px", font: "400 12px Inter", background: "var(--amber-soft)" }} />
+                <button onClick={() => onReport(c, fb)}
+                  style={{ border: "1px solid var(--amber-border)", background: "var(--amber-soft)",
+                    color: "var(--amber-text)", borderRadius: 7, padding: "6px 10px",
+                    font: "600 11.5px Inter", cursor: "pointer", whiteSpace: "nowrap" }}>
+                  ⚑ Report &amp; close
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -221,6 +247,21 @@ export default function BoardView({ session, data, reload, role }) {
     );
   }
 
+  // ⚑ Report & close: reporta o problema (beta_feedback) e fecha o card p/ análise;
+  // o espelho NÃO recria enquanto não for revisado (supressão via resolved_by)
+  async function reportClose(c, texto) {
+    await supabase.from("beta_feedback").insert({
+      contact_id: c.contact_id, card_id: c.id, tipo: "card_indevido",
+      texto: texto || "(no reason given)",
+      snapshot: { title: `${c.nome} · ${c.origem}`, kind: c.kind, coluna: c.coluna,
+        veh: c.veh, interest: c.interest, unres: c.unres },
+      reported_by: email });
+    await supabase.from("board_cards").update({
+      status: "resolved", resolved_by: "⚑ reported — closed for review",
+      resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
+    reload && reload();
+  }
+
   // 🇪🇸 Spanish-only: sai do board do Eugene, vive no do Rafael (lead_flags — Supabase)
   const spanishSet = data.spanish || new Set();
   async function flagSpanish(c, on) {
@@ -356,13 +397,16 @@ export default function BoardView({ session, data, reload, role }) {
                     <>
                       <div className="subhead">To confirm · {toConf.length}</div>
                       {toConf.map((c) => <KCard key={c.id} c={c}
-                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
+                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
+                        onSpanish={flagSpanish} onReport={reportClose} />)}
                       <div className="subhead">✓ Confirmed — who&apos;s coming · {confd.length}</div>
                       {confd.map((c) => <KCard key={c.id} c={c} conf
-                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
+                        isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
+                        onSpanish={flagSpanish} onReport={reportClose} />)}
                     </>
                   ) : items.map((c) => <KCard key={c.id} c={c}
-                    isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner} onSpanish={flagSpanish} />)}
+                    isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
+                    onSpanish={flagSpanish} onReport={reportClose} />)}
                   {items.length === 0 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
                 </div>
               );

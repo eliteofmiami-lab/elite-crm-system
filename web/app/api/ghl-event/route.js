@@ -111,7 +111,7 @@ async function miniMirrorStage(cid) {
       if (!map) continue;
       if (map[1] === "pipeline" && (movedToday || []).length >= 2) continue;
       const dup = await sb("GET",
-        `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.${map[1]}&select=id&limit=1`);
+        `board_cards?contact_id=eq.${cid}&kind=eq.${map[1]}&or=(status.eq.open,resolved_by.like.*reported*)&select=id&limit=1`);
       if (dup.length) continue;
       const b = await contactBrief(cid);
       if ((b.tags || []).includes("teste-interno")) continue; // exceto durante aceite (config)
@@ -156,7 +156,7 @@ async function handleReply(cid) {
   });
   if (hasAppt) return { created: 0, closed: 0, skipped: "has upcoming appointment" };
   const dup = await sb("GET",
-    `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.sms_reply&select=id&limit=1`);
+    `board_cards?contact_id=eq.${cid}&kind=eq.sms_reply&or=(status.eq.open,resolved_by.like.*reported*)&select=id&limit=1`);
   if (!dup.length) {
     await sb("POST", "board_cards", {
       coluna: 1, kind: "sms_reply", contact_id: cid,
