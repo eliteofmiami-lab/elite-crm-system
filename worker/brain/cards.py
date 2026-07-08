@@ -378,8 +378,8 @@ def card_eligible(contact_id, layer, type_=None):
         st_lead = _ls.state_for(contact_id)
         if st_lead:
             sit = st_lead.get("situacao")
-            if sit == "pos_venda":
-                return False  # A16.1: o sistema fica inerte
+            if sit in ("pos_venda", "spam_nao_lead"):
+                return False  # A16.1 / spam de vendedor: o sistema fica inerte
             if sit in _ls.BLOCK_DIAL and type_ not in ("confirm_appt", "callback"):
                 return False
             callback_owed = sit == "callback_devido"

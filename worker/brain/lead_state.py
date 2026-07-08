@@ -76,6 +76,11 @@ A unidade é o LEAD, não uma call isolada. Regras:
      restante da história (esfriou / ativo_venda / aguardando_*).
    - pos_venda: cliente JÁ COMPROU; call de garantia/pós-venda/suporte → o sistema fica
      INERTE (nada é criado). Reentrada só com conversa de venda NOVA.
+   - spam_nao_lead: NÃO É CLIENTE — vendedor/solicitador ligando PARA a loja
+     ("can I speak to the owner", oferta de serviços/marketing/seguro, robocall,
+     screener automático sem interesse em serviço automotivo). Sem veículo, sem
+     serviço buscado, nunca. O sistema silencia: fora de TODAS as filas, para sempre.
+     Callback perdida de spam NÃO é callback_devido.
    - esfriou: sem resposta a múltiplas tentativas, sem pedido de espaço → fila fria.
 3. tipo_ultima_call: venda | pos_venda_garantia | suporte | engano | "".
 3b. Vocabulário fixo: momento_atual.faixa ∈ recem_entregue|chegando|menos_3m|mais_3m|
@@ -191,22 +196,25 @@ def state_for(contact_id):
 
 # situações que tiram o lead da DISCAGEM ATIVA (cards de venda não nascem)
 BLOCK_DIAL = {"aguardando_decisao_cliente", "aguardando_evento_externo",
-              "agendado", "pos_venda"}
+              "agendado", "pos_venda", "spam_nao_lead"}
 
 
 def apply_state(contact_id, state):
     """Efeitos do estado na fila (Supabase apenas — G2 fechado)."""
     sit = state.get("situacao")
     n = {"closed": 0, "created": 0}
-    if sit == "pos_venda":
-        # A16.1: NADA nasce; cards de venda abertos morrem em silêncio; fora do cold
+    if sit in ("pos_venda", "spam_nao_lead"):
+        # A16.1 (pós-venda) e spam de vendedor (Rafael 2026-07-08): NADA nasce;
+        # cards abertos morrem em silêncio; fora do cold para sempre.
+        motivo = ("pos_venda — fora do sistema (A16.1)" if sit == "pos_venda"
+                  else "spam/vendedor — não é lead (fora de todas as filas)")
         for c in cards._sb("GET", f"cards?status=in.(open,snoozed,wrapup)&contact_id=eq.{contact_id}&select=id") or []:
-            cards.close_card(c["id"], "pos_venda — fora do sistema (A16.1)", {"state": sit})
+            cards.close_card(c["id"], motivo, {"state": sit})
             n["closed"] += 1
         cards._sb("POST", "lead_flags?on_conflict=contact_id",
                   headers_extra={"Prefer": "resolution=merge-duplicates"},
                   json={"contact_id": contact_id, "cold_excluded": True,
-                        "set_by": "pos_venda (A16.1) — gestão pessoal do Rafael"})
+                        "set_by": motivo})
         return n
     if sit == "callback_devido":
         # trava de validade (defesa em profundidade): perdida >4 dias não fura a fila
