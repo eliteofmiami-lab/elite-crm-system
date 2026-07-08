@@ -93,7 +93,10 @@ def parse_ts(s):
     if not s:
         return None
     try:
-        return dt.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        t = dt.datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        if t.tzinfo is None:  # GHL às vezes manda sem fuso → assumir UTC
+            t = t.replace(tzinfo=dt.timezone.utc)
+        return t
     except Exception:
         return None
 
@@ -345,6 +348,22 @@ def cycle(full_task_pass=False):
                    json={"pending_sms": False})
 
     oc = open_cards()
+    # envelhecimento (PLANO §A): card aberto que saiu da janela viva → aged_out (vira
+    # ração do warm-up); nada é deletado nem esquecido — só muda de coluna.
+    AGE_WIN = {"missed_inbound": W["col1_days"], "sms_reply": W["col1_days"],
+               "hot": W["col1_days"], "new_lead": W["col2_days"],
+               "task": W["task_overdue_days"], "urable": W["urable_days"],
+               "pipeline": W["pipeline_days"]}
+    aged_n = 0
+    for c in list(oc):
+        win_d = AGE_WIN.get(c["kind"])
+        ots = parse_ts(c.get("origem_ts"))
+        if win_d and ots and (now_utc() - ots).days > win_d and not c.get("unres"):
+            age_out(c, f"aged out of window ({win_d}d) → warm-up ration")
+            oc.remove(c)
+            aged_n += 1
+    if aged_n:
+        log(f"envelhecidos → ração: {aged_n}")
     existing = {(c["contact_id"], c["kind"]) for c in oc}
     by_contact = {}
     for c in oc:
@@ -358,12 +377,13 @@ def cycle(full_task_pass=False):
             col, kind = STAGE_COLS[stage]
             ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt") or o.get("createdAt")) or now
             age_days = (now - ots).days
-            win = (W["col2_days"] if kind == "new_lead" else
-                   W["pipeline_days"] if kind == "pipeline" else W["col1_days"] * 100)
+            # PLANO §A: fora da janela viva → não vira card do dia (vira ração do warm-up)
             if kind == "pipeline" and age_days > W["pipeline_days"]:
-                continue  # envelhecido → warm pool (coletado lá)
+                continue
             if kind == "new_lead" and age_days > W["col2_days"]:
                 continue
+            if kind == "hot" and age_days > W["col1_days"]:
+                continue  # HOT envelhecido (ex.: legado migrado) → ração do warm-up
             brief = contact_brief(cid)
             if not ok_contact(cid, brief):
                 continue
