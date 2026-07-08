@@ -109,6 +109,32 @@ def send_capi(event_name, contact_id, opportunity_id, value=None):
         print(f"  [warn] CAPI {event_name} falhou: {e}")
 
 
+def persist_call(msg, meta, opp, analysis):
+    """Grava call + análise no Supabase (alimenta Advice e KPIs do painel)."""
+    import requests
+    url, h = _supabase()
+    if not url:
+        return
+    h2 = {**h, "Prefer": "resolution=merge-duplicates"}
+    try:
+        requests.post(f"{url}/rest/v1/calls", headers=h2, json={
+            "id": msg["id"], "contact_id": msg["contactId"],
+            "conversation_id": msg.get("conversationId"),
+            "opportunity_id": (opp or {}).get("id"),
+            "direction": msg.get("direction"), "status": msg.get("status"),
+            "duration_sec": meta.get("duration"), "dialed_number": msg.get("to"),
+            "user_id": msg.get("userId"), "called_at": msg.get("dateAdded"),
+            "recording_downloaded": analysis is not None,
+        }, timeout=15)
+        if analysis:
+            requests.post(f"{url}/rest/v1/analyses", headers=h2, json={
+                "call_id": msg["id"], "model": "claude-sonnet-5",
+                "payload": analysis,
+            }, timeout=15)
+    except Exception as e:
+        print(f"  [warn] persistência da call falhou: {e}")
+
+
 def process_call(msg, st):
     call_id = msg["id"]
     if call_id in st["processed_call_ids"]:
@@ -159,6 +185,7 @@ def process_call(msg, st):
         elif not answered:
             actions += rules.on_no_answer(opp)
     apply_actions(actions)
+    persist_call(msg, meta, opp, analysis)
 
     st["processed_call_ids"] = (st["processed_call_ids"] + [call_id])[-2000:]
     return analysis
@@ -211,6 +238,31 @@ def main():
         stats = cards.sync_all()
     except Exception as e:
         stats = {"erro": str(e)[:80]}
+
+    # snapshot do funil de HOJE p/ a vista do dono (config key stats_today)
+    try:
+        import requests
+        url, h = _supabase()
+        if url:
+            today = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+            funil = {}
+            for label, stage in (("novos", None), ("qualificados", "Great Cars"),
+                                 ("quotes", "Quote Sent"), ("appointments", "Appointment Booked"),
+                                 ("win", "Win"), ("hot", "HOT LEADS")):
+                p = {"location_id": LOC, "pipeline_id": rules.NEW_PIPELINE_ID, "limit": 1,
+                     "date": today}
+                if stage:
+                    p["pipeline_stage_id"] = rules.STAGES[stage]
+                r = ghl.get("/opportunities/search", p)
+                funil[label] = (r.json().get("meta", {}) or {}).get("total") if r.status_code == 200 else None
+            requests.post(f"{url}/rest/v1/config",
+                          headers={**h, "Prefer": "resolution=merge-duplicates"},
+                          json={"key": "stats_today",
+                                "value": {"date": today, "funil": funil,
+                                          "atualizado": cycle_start.isoformat()}},
+                          timeout=15)
+    except Exception as e:
+        print(f"  [warn] stats_today: {e}")
 
     st["last_scan_iso"] = cycle_start.isoformat()
     save_state(st)

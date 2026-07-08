@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elite — Eugene work queue</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4F6FA; --card:#FFFFFF; --line:#E4E7EC; --ink:#101828; --sub:#475467; --faint:#98A2B3;
+    --blue:#2970FF; --blue-deep:#1D4ED8; --blue-soft:#EFF4FF; --blue-border:#B2CCFF;
+    --green:#12B76A; --green-soft:#ECFDF3; --amber:#F79009; --amber-soft:#FFFAEB;
+    --red:#F04438; --red-soft:#FEF3F2; --purple:#7A5AF8; --purple-soft:#F4F0FF;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.55;padding:24px 16px 56px}
+  .wrap{max-width:880px;margin:0 auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logoplate{display:flex;align-items:center}
+  .logoplate img{height:38px;display:block}
+  .logofb{display:none;color:#fff;font-weight:700;font-size:15px;letter-spacing:.18em}
+  .logofb i{color:#E11D2E;font-style:normal}
+  .brand .t{font-size:19px;font-weight:600}
+  .brand .d{font-size:12.5px;color:var(--faint)}
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;padding:7px 13px;border-radius:999px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+  .pill .dot{width:8px;height:8px;border-radius:50%}
+  .pill.ok{color:#067647;background:var(--green-soft);border-color:#ABEFC6}
+  .pill.ok .dot{background:var(--green)}
+  .pill.money{color:var(--blue-deep);background:var(--blue-soft);border-color:var(--blue-border)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .l{font-size:12px;color:var(--sub);font-weight:500}
+  .kpi .v{font-size:26px;font-weight:700;margin-top:4px;letter-spacing:-.02em}
+  .kpi .v small{font-size:13px;color:var(--faint);font-weight:500}
+  .earn{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:linear-gradient(180deg,var(--green-soft),var(--card));border:1px solid #ABEFC6;border-radius:12px;padding:14px 18px;box-shadow:var(--shadow);margin-bottom:12px}
+  .earn .lbl{font-size:12px;color:var(--sub);font-weight:600}
+  .earn .big{font-size:26px;font-weight:700;color:#067647;letter-spacing:-.02em;line-height:1.1}
+  .earn .big small{font-size:13px;color:var(--sub);font-weight:500}
+  .earn .mini{font-size:15px;font-weight:700;color:var(--ink);line-height:1.1}
+  .earn .mini small{display:block;font-size:11.5px;color:var(--sub);font-weight:500;margin-top:2px}
+  .earn .note{margin-left:auto;font-size:12px;color:#067647;font-weight:500;max-width:210px;text-align:right}
+  .earn .guard{flex-basis:100%;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:#B54708;background:var(--amber-soft);border:1px solid #FEDF89;border-radius:8px;padding:8px 12px;margin-top:4px}
+  .earn .guard b{font-weight:700}
+  .banner{display:flex;align-items:center;gap:10px;background:var(--amber-soft);border:1px solid #FEDF89;color:#B54708;border-radius:10px;padding:11px 14px;font-weight:500;margin-bottom:18px;font-size:13.5px}
+  .qcard{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+  .qhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .qhead h2{font-size:16px;font-weight:600}
+  .qhead h2 span{color:var(--faint);font-weight:500}
+  .qhead .cap{font-size:12.5px;color:var(--faint)}
+  .task{border-bottom:1px solid var(--line)}
+  .task:last-child{border-bottom:none}
+  .task .row{display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer}
+  .task .row:hover{background:#FAFBFF}
+  .num{width:28px;height:28px;border-radius:50%;background:#F2F4F7;color:var(--sub);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none}
+  .task.current .num{background:var(--blue);color:#fff}
+  .ttl{font-weight:600;font-size:14.5px}
+  .meta{font-size:12.5px;color:var(--sub);margin-top:1px}
+  .grow{flex:1;min-width:0}
+  .chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;flex:none}
+  .chip.hot{background:var(--red-soft);color:#B42318}
+  .chip.new{background:var(--blue-soft);color:var(--blue-deep)}
+  .chip.appt{background:var(--purple-soft);color:#5925DC}
+  .chip.quote{background:var(--green-soft);color:#067647}
+  .chip.cold{background:#F2F4F7;color:var(--sub)}
+  .score{font-weight:700;font-size:13.5px;color:#067647;flex:none}
+  .score.mid{color:var(--sub)}
+  .chev{color:var(--faint);flex:none}
+  .task.current{background:var(--blue-soft);border-left:3px solid var(--blue)}
+  .task.current .row{cursor:default}
+  .detail{padding:2px 20px 18px 62px}
+  .dsec{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .dsec .dl{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+  .dsec p{font-size:13.5px;color:var(--ink)}
+  .exh{display:inline-flex;gap:8px;align-items:center;background:var(--green-soft);border:1px solid #ABEFC6;color:#067647;border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:500;margin-top:8px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
+  .btn{appearance:none;cursor:pointer;border-radius:8px;font:600 13.5px 'Inter';padding:10px 16px;transition:filter .15s,transform .05s}
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--blue);border:1px solid var(--blue);color:#fff}
+  .btn.primary:hover{filter:brightness(.95)}
+  .btn.ghost{background:var(--card);border:1px solid #D0D5DD;color:#344054}
+  .btn.ghost:hover{background:#F9FAFB}
+  .btn.sm{padding:8px 13px;font-size:12.5px;border-radius:999px}
+  .btn.out{color:#B42318;border-color:#FDA29B}
+  .btn.out:hover{background:var(--red-soft)}
+  .snooze{background:var(--card);border:1px dashed #D0D5DD;border-radius:10px;padding:12px 14px;margin-top:10px}
+  .snooze .sl{font-size:12.5px;color:var(--sub);margin-bottom:8px}
+  .rchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .rchip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--sub);cursor:pointer;background:var(--card)}
+  .rchip:hover{border-color:var(--blue);color:var(--blue-deep)}
+  .snooze input{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:400 13px 'Inter';margin-bottom:9px;color:var(--ink)}
+  .snooze input::placeholder{color:var(--faint)}
+  .task.snoozed .row{opacity:.62}
+  .chip.snz{background:#F2F4F7;color:var(--sub)}
+  .phone{margin-left:auto;color:var(--sub);font-size:13px;font-weight:500}
+  .approve{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .approve .ic{width:38px;height:38px;border-radius:10px;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;flex:none}
+  .approve .msg{flex:1;min-width:220px}
+  .approve .t{font-weight:600;font-size:14px}
+  .approve .p{color:var(--sub);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:430px}
+  .footnote{color:var(--faint);font-size:12.5px;margin-top:18px;text-align:center}
+  .advice{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;margin-top:16px}
+  .advice h3{font-size:14.5px;font-weight:600;margin-bottom:8px}
+  .arow{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;align-items:flex-start;color:var(--ink)}
+  .arow:last-of-type{border-bottom:none}
+  .atag{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:999px;background:var(--blue-soft);color:var(--blue-deep);flex:none;margin-top:1px}
+  .arow a{margin-left:auto;flex:none;font-size:12px;color:var(--blue-deep);font-weight:600;text-decoration:none;white-space:nowrap;align-self:center}
+  .advice .afoot{font-size:12.5px;color:var(--sub);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .rules{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;margin-top:16px}
+  .rules h3{font-size:14.5px;font-weight:600;margin-bottom:12px}
+  .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:640px){.rgrid{grid-template-columns:1fr}}
+  .rcol .rt{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:7px}
+  .rcol.earnc .rt{color:#067647}
+  .rcol.missc .rt{color:#B42318}
+  .rcol ul{margin:0;padding-left:18px;font-size:13px;color:var(--sub)}
+  .rcol li{margin:5px 0}
+  .rcol li b{color:var(--ink);font-weight:600}
+  .rules .rfoot{font-size:12.5px;color:var(--sub);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logoplate">
+        <img src="data:image/png;base64,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" alt="Elite Premium Detailing" style="height:38px;display:block">
+      </div>
+      <div>
+        <div class="t">Work queue</div>
+        <div class="d">Tuesday, Jul 7 · 11:52 AM</div>
+      </div>
+    </div>
+    <div class="pills">
+      <span class="pill ok"><span class="dot"></span>Clocked in 9:04 AM · 2h 48m</span>
+      <span class="pill money">$ Today +$30</span>
+      <button class="btn ghost sm">Start break</button>
+      <button class="btn ghost sm out">Clock out</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Calls today</div><div class="v">47<small> / ~100</small></div></div>
+    <div class="kpi"><div class="l">In queue</div><div class="v">12</div></div>
+    <div class="kpi"><div class="l">Quotes pending</div><div class="v">2</div></div>
+    <div class="kpi"><div class="l">Avg response</div><div class="v">6<small> min</small></div></div>
+  </div>
+
+  <div class="earn">
+    <div>
+      <div class="lbl">My commissions — July</div>
+      <div class="big">$140 <small>confirmed</small></div>
+    </div>
+    <div class="mini">$180<small>potential</small></div>
+    <div class="mini">4<small>awaiting sale</small></div>
+    <div class="mini">+$30<small>booked today</small></div>
+    <div class="mini" style="color:#067647">$50<small>rule bonus · on track 9/14</small></div>
+    <div class="note">$10 per booked appointment that closes · +$50 every 2 weeks with zero critical misses</div>
+    <div class="guard"><b>Bonus guard</b> · 1 item needs attention today: confirm Adam’s appointment before 11:00 AM to stay on track</div>
+  </div>
+
+  <div class="banner">⚠ 10 min without activity — 12 leads are waiting in your queue</div>
+
+  <div class="qcard">
+    <div class="qhead">
+      <h2>Task queue <span>· 12</span></h2>
+      <span class="cap">Auto-sorted by priority — always take task 1</span>
+    </div>
+
+    <div class="task current">
+      <div class="row">
+        <span class="num">1</span>
+        <div class="grow">
+          <div class="ttl">Call John Miller — quote follow-up</div>
+          <div class="meta">Porsche 911 Carrera 2026 · car arrives next week</div>
+        </div>
+        <span class="chip hot">Hot</span>
+        <span class="score">Score 88</span>
+      </div>
+      <div class="detail">
+        <div class="dsec">
+          <div class="dl">Why now</div>
+          <p>Replied to your text 40 min ago. Quote sent 2 days ago, no answer since. On the last call he hesitated on price and mentioned another shop.</p>
+          <span class="exh">Quote — Full front PPF · $2,200 · sent Jul 5 · go.urable.com/5aWeqD</span>
+        </div>
+        <div class="dsec">
+          <div class="dl">How to play it</div>
+          <p>Open with the delivery date, not the price. Defend value: lifetime warranty, Carfax record, certified install. <b>No discount authorized</b> — if he pushes, offer a call with Rafael.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary">Open in GHL ↗</button>
+          <button class="btn ghost">Call script</button>
+          <button class="btn ghost">Can't do now</button>
+          <span class="phone">+1 (954) 555-0148</span>
+        </div>
+        <div class="snooze">
+          <div class="sl">Tell the system why — it will reschedule this task and learn from the reason:</div>
+          <div class="rchips">
+            <span class="rchip">Client asked for later</span>
+            <span class="rchip">Waiting on info</span>
+            <span class="rchip">Line busy / no channel</span>
+            <span class="rchip">Other</span>
+          </div>
+          <input type="text" placeholder="e.g. John texted asking me to call after 3 PM">
+          <button class="btn primary sm">Send &amp; reschedule</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="row">
+        <span class="num">2</span>
+        <div class="grow">
+          <div class="ttl">Call Camila Torres — new lead</div>
+          <div class="meta">Tesla Model Y 2026 · came in 4 min ago — call within 15 min</div>
+        </div>
+        <span class="chip new">New lead</span>
+        <span class="score">72</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="row">
+        <span class="num">3</span>
+        <div class="grow">
+          <div class="ttl">Review &amp; send quote — Robert Ulrich</div>
+          <div class="meta">Rivian R1S · Gold ceramic + wheels off · prices from today's call ready in Urable</div>
+        </div>
+        <span class="chip quote">Quote</span>
+        <span class="score">70</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="row">
+        <span class="num">4</span>
+        <div class="grow">
+          <div class="ttl">Confirm appointment — Adam Sendzischew</div>
+          <div class="meta">Tomorrow 9:00 AM · EQE AMG · mention the trip he told you about</div>
+        </div>
+        <span class="chip appt">Appointment</span>
+        <span class="score mid">—</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="row">
+        <span class="num">5</span>
+        <div class="grow">
+          <div class="ttl">Call Marlon — follow-up 12:30</div>
+          <div class="meta">BMW M4 · no-show recovery · asked to be called</div>
+        </div>
+        <span class="chip hot">Hot</span>
+        <span class="score">60</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="row">
+        <span class="num">6</span>
+        <div class="grow">
+          <div class="ttl">Cold call — Sundeep Pv</div>
+          <div class="meta">Porsche 911 · went quiet after 4 calls · reopen via timing</div>
+        </div>
+        <span class="chip cold">Cold</span>
+        <span class="score mid">50</span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+    <div class="task snoozed">
+      <div class="row">
+        <span class="num">&#8631;</span>
+        <div class="grow">
+          <div class="ttl">Call Jamie Banks &mdash; quote follow-up</div>
+          <div class="meta">Snoozed to 3:00 PM &mdash; &ldquo;client asked to call after 3&rdquo; &middot; reason accepted, back in queue at 2:55</div>
+        </div>
+        <span class="chip snz">Snoozed</span>
+        <span class="score mid">50</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="approve">
+    <div class="ic">✓</div>
+    <div class="msg">
+      <div class="t">Approve &amp; send: "Nice to talk to you" — Maria Lopez</div>
+      <div class="p">"Great talking to you, Maria! Enjoy the birthday trip — I'll hold Thursday for the Cayenne like we discussed…"</div>
+    </div>
+    <button class="btn ghost">Edit</button>
+    <button class="btn primary">Approve &amp; send</button>
+  </div>
+
+  <div class="advice">
+    <h3>Advice from today's calls</h3>
+    <div class="arow"><span class="atag">Advice</span><span>On the <b>John Miller</b> call, price came before motivation &mdash; he said twice that he parks on the street. Next time, open with full protection.</span><a href="#">View lead &#8599;</a></div>
+    <div class="arow"><span class="atag">Advice</span><span><b>Marisa Erin</b> asked how long ceramic lasts and you answered warranty only &mdash; mention the 9H layers and the lifetime Carfax record; that's what closes Gold.</span><a href="#">View lead &#8599;</a></div>
+    <div class="afoot">Advice never affects your pay &mdash; it exists to help you close more. Each note also reappears on that lead's card the next time you call.</div>
+  </div>
+
+  <div class="rules">
+    <h3>The rules — read once, live by them</h3>
+    <div class="rgrid">
+      <div class="rcol earnc">
+        <div class="rt">How you earn</div>
+        <ul>
+          <li><b>$10</b> for every appointment you book that turns into a <b>closed sale</b> — shows as potential when booked, confirmed when it closes.</li>
+          <li><b>+$50 rule bonus</b> every fortnight (1–15 and 16–end of month) with <b>zero critical misses</b>.</li>
+          <li>No-shows that never rebook and lost deals expire the potential — confirmations and connection protect your money.</li>
+        </ul>
+      </div>
+      <div class="rcol missc">
+        <div class="rt">Critical misses — these cost the $50</div>
+        <ul>
+          <li>A new lead (business hours) with <b>no contact attempt</b> all day</li>
+          <li>A quote discussed on a call <b>not sent</b> by end of next business day</li>
+          <li>An appointment in the next 2 days <b>left unconfirmed</b></li>
+          <li>A score-80+ lead <b>orphaned 24h+</b> (no contact, no dated task)</li>
+          <li>Inactivity over <b>45 min</b> with no break or reason</li>
+          <li><b>3+ postponements</b> with rejected reasons in the period</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rfoot">Minor slips — one late call, one missed voicemail — do <b>not</b> take the bonus; they show up as advice notes. If a critical miss happens, the panel tells you the same day. Next fortnight always starts clean.</div>
+  </div>
+
+  <p class="footnote">Tasks complete themselves when the call or text is detected in GHL — nothing to mark as done.</p>
+
+</div>
+</body>
+</html>

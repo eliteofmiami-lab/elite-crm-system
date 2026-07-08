@@ -151,6 +151,14 @@ def sync_warm_calls(limit=25):
     return n
 
 
+def reopen_snoozed():
+    """Snoozed com due_at vencido volta pra fila (5 min antes já reabre)."""
+    now = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=5)).isoformat()
+    rows = _sb("PATCH", f"cards?status=eq.snoozed&due_at=lt.{now}",
+               json={"status": "open"}) or []
+    return len(rows)
+
+
 # ---------- fechamento por evidência ----------
 def autoclose():
     """Fecha cards quando há call/SMS outbound pro contato após a criação do card."""
@@ -189,4 +197,5 @@ def sync_all():
     q = sync_quote_followups()
     w = sync_warm_calls()
     x = autoclose()
-    return {"appt": a, "quotes": q, "warm": w, "fechados": x}
+    r = reopen_snoozed()
+    return {"appt": a, "quotes": q, "warm": w, "fechados": x, "reabertos": r}

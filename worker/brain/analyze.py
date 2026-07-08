@@ -19,7 +19,7 @@ ANALYSIS_SCHEMA = {
     "additionalProperties": False,
     "required": ["vehicle", "momento", "intencao", "sentimento", "motivacao_principal",
                  "gancho_pessoal", "precos_falados", "script_coverage", "voicemail_left",
-                 "resultado", "proxima_acao", "resumo_3_linhas", "coaching"],
+                 "resultado", "proxima_acao", "resumo_3_linhas", "advice_en", "advice_pt"],
     "properties": {
         "vehicle": {"type": "object", "additionalProperties": False,
                     "required": ["make", "model", "year", "is_new_or_just_bought", "delivery_date_or_window"],
@@ -71,7 +71,8 @@ ANALYSIS_SCHEMA = {
                                                           "transferir_rafael", "descartar"]},
                                         "data_sugerida": SN, "motivo": S}},
         "resumo_3_linhas": S,
-        "coaching": S,
+        "advice_en": S,
+        "advice_pt": S,
     },
 }
 
@@ -83,12 +84,14 @@ Extraia APENAS o que está na transcrição — não invente. Campos sem evidên
 - gancho_pessoal: detalhe pessoal reutilizável no follow-up (ex.: "aniversário da filha, volta quarta").
 - precos_falados: TODOS os valores citados, com serviço e escopo exatos.
 - voicemail_left: se a call não foi atendida, o operador deixou recado?
-- coaching: julgue PRIMEIRO pelo resultado. Se o cliente conseguiu o que queria (ex.: agendou,
-  recebeu o preço que pediu), a call foi um SUCESSO — diga isso e sugira no máximo UMA melhoria
-  proporcional ao contexto. NÃO cobre o checklist completo de qualificação (orçamento, garagem,
-  concorrência, keep-or-trade) em chamadas simples/transacionais que converteram — esses itens
-  são para conversas de venda consultiva (PPF/ceramic de alto valor) que NÃO fecharam.
-  script_coverage continua sendo registrado como fato, mas ausência de item ≠ erro.
+- advice_en / advice_pt: o MESMO insight de venda em dois idiomas (advice_en em inglês pro
+  operador, advice_pt em português pro dono). Julgue PRIMEIRO pelo resultado. Se o cliente
+  conseguiu o que queria (ex.: agendou, recebeu o preço que pediu), a call foi um SUCESSO —
+  diga isso e sugira no máximo UMA melhoria proporcional ao contexto. NÃO cobre o checklist
+  completo de qualificação (orçamento, garagem, concorrência, keep-or-trade) em chamadas
+  simples/transacionais que converteram — esses itens são para venda consultiva (PPF/ceramic
+  de alto valor) que NÃO fechou. script_coverage é fato registrado; ausência de item ≠ erro.
+  Advice é ajuda de venda, nunca punição — tom construtivo, 1-2 frases, acionável.
 - resumo_3_linhas: máx 3 linhas, direto, em inglês (o Eugene lê em inglês).
 A transcrição vem diarizada (S0/S1...) e pode ser em inglês, espanhol ou português.
 O atendente pode ser o Eugene OU o Rafael (dono) — não presuma qual dos dois."""
