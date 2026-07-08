@@ -591,6 +591,9 @@ def cycle(full_task_pass=False):
             if (c["contact_id"], "missed_inbound") not in existing \
                     and (c["contact_id"] in appt_cids or has_upcoming_appt(c["contact_id"])):
                 continue  # report Rafael 08/jul: já tem appointment → coluna 5 governa
+            if any(s["contact_id"] == c["contact_id"] and s["ts"] > c["ts"]
+                   and no_action_reply(cfg, s.get("body")) for s in sms_in):
+                continue  # regra Coleen: cliente já disse misdial/cortesia → sem card
             brief = contact_brief(c["contact_id"])
             if not ok_contact(c["contact_id"], brief):
                 continue
@@ -824,6 +827,13 @@ def cycle(full_task_pass=False):
                 resolutions += 1
                 continue
             org = parse_ts(card.get("origem_ts")) or created
+            # REGRA COLEEN (report 08/jul): o PRÓPRIO cliente respondeu cortesia/misdial
+            # depois da perdida → mistério resolvido, retorno desnecessário
+            if any(s["contact_id"] == cid and s["ts"] > org
+                   and no_action_reply(cfg, s.get("body")) for s in sms_in):
+                resolve_card(card, "client replied — misdial/courtesy, no action needed", "")
+                resolutions += 1
+                continue
             ret = next((c for c in calls if c["contact_id"] == cid
                         and c["direction"] == "outbound" and c["ts"] > org), None)
             if ret:

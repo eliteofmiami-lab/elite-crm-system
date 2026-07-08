@@ -160,7 +160,17 @@ async function handleReply(cid) {
     const last0 = msgs0.sort((a, b) => (a.dateAdded < b.dateAdded ? 1 : -1))[0];
     const body = ((last0 && last0.direction === "inbound" && last0.body) || "").trim().toLowerCase();
     if (body && body.length <= 60 && NO_ACTION.some((p) => body.includes(p))) {
-      return { created: 0, closed: 0, skipped: "courtesy reply" };
+      // regra Coleen (report 08/jul): cortesia/misdial TAMBÉM resolve a chamada
+      // perdida — o próprio cliente explicou, não precisa retornar
+      const mi = await sb("GET",
+        `board_cards?status=eq.open&contact_id=eq.${cid}&kind=in.(missed_inbound,sms_reply)&select=id`);
+      for (const m of mi) {
+        await sb("PATCH", `board_cards?id=eq.${m.id}`, {
+          status: "resolved", resolved_by: "client replied — misdial/courtesy, no action needed (webhook)",
+          resolved_at: new Date().toISOString(), unres: false });
+        closed++;
+      }
+      return { created: 0, closed, skipped: "courtesy reply" };
     }
   }
   const aj = await ghl(`/contacts/${cid}/appointments`);
