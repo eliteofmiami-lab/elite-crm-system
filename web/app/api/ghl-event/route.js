@@ -189,6 +189,25 @@ async function handleAppt(cid) {
   const now = Date.now();
   const b = await contactBrief(cid);
   let created = 0, closed = 0;
+  // regra Peter (08/jul): appointment futuro fecha NA HORA os cards de prioridade
+  // do contato — o lead vive na coluna 5 (Hot/New/Pipeline/perdida/SMS somem).
+  const hasUpcoming = evs.some((e) => {
+    const st = new Date(e.startTime).getTime();
+    return !isNaN(st) && st > now - 3 * 3600e3 &&
+      !["cancelled", "invalid", "noshow"].includes(e.appointmentStatus);
+  });
+  if (hasUpcoming) {
+    const pri = await sb("GET",
+      `board_cards?status=eq.open&contact_id=eq.${cid}` +
+      `&kind=in.(hot,new_lead,pipeline,missed_inbound,sms_reply,urable,warmup,` +
+      `followup_notask,quote_notask,uncategorized)&select=id`);
+    for (const p of pri) {
+      await sb("PATCH", `board_cards?id=eq.${p.id}`, {
+        status: "resolved", resolved_by: "appointment booked — lives in Appointments (webhook)",
+        resolved_at: new Date().toISOString(), unres: false });
+      closed++;
+    }
+  }
   for (const e of evs) {
     const st = new Date(e.startTime).getTime();
     if (isNaN(st) || st < now - 3 * 3600e3 || st > now + 2 * 86400e3) continue;

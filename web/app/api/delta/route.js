@@ -43,7 +43,8 @@ export async function GET() {
   const liveRows = await sb("GET", "config?key=eq.board_live&select=value");
   const live = liveRows?.[0]?.value || {};
   if (live.last_delta && Date.now() - new Date(live.last_delta).getTime() < 45000) {
-    return NextResponse.json({ ok: true, skipped: "throttled" });
+    return NextResponse.json({ ok: true, skipped: "throttled",
+      build: process.env.NEXT_PUBLIC_BUILD || null });
   }
   const sinceMs = live.last_delta
     ? new Date(live.last_delta).getTime() - 120000 : Date.now() - 10 * 60000;
@@ -102,5 +103,6 @@ export async function GET() {
     value: { ...live, last_delta: new Date().toISOString(),
       last_event: new Date().toISOString(), source: "delta", delta_ms: latency } },
     { Prefer: "resolution=merge-duplicates" });
-  return NextResponse.json({ ok: true, convs: convs.length, closed, validated, latency_ms: latency });
+  return NextResponse.json({ ok: true, convs: convs.length, closed, validated,
+    latency_ms: latency, build: process.env.NEXT_PUBLIC_BUILD || null });
 }

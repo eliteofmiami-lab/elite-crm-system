@@ -46,6 +46,8 @@ DEFAULT_CFG = {
     "windows": {"col1_days": 3, "col2_days": 7, "task_overdue_days": 7,
                 "urable_days": 14, "pipeline_days": 30, "stalled_days": 30},
     "ration": 20,
+    # dispositions (tags criadas pelos workflows do Rafael): fora do warm-up pra sempre
+    "warmup_excluded_tags": ["lost-invalid-number", "lost-not-interested"],
     "confirm_window_h": 48,
     "confirm_mode": "either",   # sms OU status confirmed
     "tiers": {"t1": 30, "t2": 35, "t3": 40, "rate1": 10, "rate2": 20,
@@ -104,6 +106,12 @@ CLOSES = {
 }
 CALL_KINDS = {"missed_inbound", "hot", "new_lead", "task", "urable", "pipeline",
               "warmup", "followup", "quote_task"}
+# Regra Peter (report 08/jul): appointment futuro vence QUALQUER card de prioridade
+# de contato — o lead vive na coluna 5. Tasks explícitas do GHL ficam de fora
+# (podem ser preparação da própria visita).
+APPT_WINS_KINDS = {"hot", "new_lead", "pipeline", "missed_inbound", "sms_reply",
+                   "urable", "warmup", "followup_notask", "quote_notask",
+                   "uncategorized"}
 # Regra Rafael 2026-07-08: Contact 1/2/3 = coluna 4 (mais novos primeiro; 2 moves/dia
 # = completo por hoje). Follow Up = coluna 7, AMARRADO a task (sem task = vermelho).
 STAGE_COLS = {"HOT LEADS": (1, "hot"), "New Lead": (2, "new_lead"),
@@ -485,6 +493,24 @@ def cycle(full_task_pass=False):
     for c in oc:
         by_contact.setdefault(c["contact_id"], []).append(c)
 
+    # Regra Peter: appointments futuros (todos os calendários, 90d) em UMA passada →
+    # set de contatos que vivem na coluna 5 e não podem ter card de prioridade.
+    appt_cids = set()
+    a_start = dt.datetime.now(ET).replace(hour=0, minute=0, second=0, microsecond=0)
+    for cal_id in sb.CALENDARS.values():
+        r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID, "calendarId": cal_id,
+                                          "startTime": int(a_start.timestamp() * 1000),
+                                          "endTime": int((a_start + dt.timedelta(days=90)).timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            if e.get("appointmentStatus") in ("cancelled", "invalid", "noshow") \
+                    or not e.get("contactId"):
+                continue
+            st = parse_ts(str(e.get("startTime")))
+            if st and st > now_utc() - dt.timedelta(hours=3):
+                appt_cids.add(e["contactId"])
+
     # ---- 4. colunas 1/2/4 (espelho com janelas) ----
     n_new = 0
     now = now_utc()
@@ -497,6 +523,8 @@ def cycle(full_task_pass=False):
         return len(rows)
 
     for cid, lst in opps.items():
+        if cid in appt_cids:
+            continue  # regra Peter: appointment marcado → coluna 5 governa
         for stage, o in lst:
             col, kind = STAGE_COLS[stage]
             ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt") or o.get("createdAt")) or now
@@ -530,6 +558,8 @@ def cycle(full_task_pass=False):
     for fu_stage, notask_kind, stage_opps in (("Follow Up", "followup_notask", fu_opps),
                                               ("Quote Sent", "quote_notask", qs_opps)):
         for cid, o in stage_opps.items():
+            if cid in appt_cids:
+                continue  # regra Peter: appointment marcado → coluna 5 governa
             ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt")) or now
             if (now - ots).days > W["pipeline_days"]:
                 continue  # envelhecido → warm-up cuida
@@ -557,7 +587,7 @@ def cycle(full_task_pass=False):
             if returned:
                 continue
             if (c["contact_id"], "missed_inbound") not in existing \
-                    and has_upcoming_appt(c["contact_id"]):
+                    and (c["contact_id"] in appt_cids or has_upcoming_appt(c["contact_id"])):
                 continue  # report Rafael 08/jul: já tem appointment → coluna 5 governa
             brief = contact_brief(c["contact_id"])
             if not ok_contact(c["contact_id"], brief):
@@ -570,7 +600,8 @@ def cycle(full_task_pass=False):
                 and last["ts"] and last["ts"] >= col1_win:
             if no_action_reply(cfg, last.get("body")):
                 continue  # cortesia/misdial → nenhuma ação (regra Greg/Coleen)
-            if (cid, "sms_reply") not in existing and has_upcoming_appt(cid):
+            if (cid, "sms_reply") not in existing \
+                    and (cid in appt_cids or has_upcoming_appt(cid)):
                 continue  # já tem appointment → vive na coluna 5
             brief = contact_brief(cid)
             if not ok_contact(cid, brief):
@@ -622,6 +653,8 @@ def cycle(full_task_pass=False):
                           for si in sms_in)
             if replied:
                 continue
+            if s["contact_id"] in appt_cids:
+                continue  # regra Peter: appointment marcado → coluna 5 governa
             brief = contact_brief(s["contact_id"])
             if not ok_contact(s["contact_id"], brief):
                 continue
@@ -686,6 +719,8 @@ def cycle(full_task_pass=False):
         for a in aged:
             if released >= need:
                 break
+            if a["contact_id"] in appt_cids:
+                continue  # regra Peter: appointment marcado → não precisa de warm-up
             brief = {"nome": a["nome"], "veh": a["veh"], "interest": a["interest"],
                      "phone": a["phone"], "tags": []}
             if not ok_contact(a["contact_id"]):
@@ -707,10 +742,14 @@ def cycle(full_task_pass=False):
                 if released >= need:
                     break
                 cid = o["contactId"]
-                if cid in excluded_cold or not ok_contact(cid):
+                if cid in excluded_cold or cid in appt_cids or not ok_contact(cid):
                     continue
                 brief = contact_brief(cid)
                 if not ok_contact(cid, brief):
+                    continue
+                # dispositions: número inválido / não interessado → fora do warm-up
+                tags_low = {str(t).lower() for t in (brief.get("tags") or [])}
+                if tags_low & set(cfg.get("warmup_excluded_tags", [])):
                     continue
                 ots = parse_ts(o.get("updatedAt")) or now
                 made = upsert_card(6, "warmup", cid,
@@ -733,6 +772,12 @@ def cycle(full_task_pass=False):
         cid = card["contact_id"]
         kind = card["kind"]
         created = parse_ts(card["created_at"])
+        # REGRA PETER (report 08/jul): appointment futuro fecha qualquer card de
+        # prioridade de contato — o lead já vive na coluna 5.
+        if kind in APPT_WINS_KINDS and cid in appt_cids:
+            resolve_card(card, "appointment booked — lives in Appointments column", "")
+            resolutions += 1
+            continue
         # ESPELHO PRIMEIRO (caso Jamile): card de stage cuja opp SAIU do stage fecha
         # SEMPRE — o card do stage novo assume. Vale com ou sem call no meio.
         # (Follow Up/Quote Sent: stage_now não os pagina — checar direto na opp.)

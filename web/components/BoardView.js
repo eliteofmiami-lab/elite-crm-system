@@ -156,9 +156,17 @@ export default function BoardView({ session, data, reload, role }) {
       try {
         const { data: s } = await supabase.auth.getSession();
         // cache-buster: URL única por chamada — CDN nunca serve HIT do delta
-        await fetch(`/api/delta?t=${Date.now()}`, {
+        const r = await fetch(`/api/delta?t=${Date.now()}`, {
           cache: "no-store",
           headers: { Authorization: `Bearer ${s?.session?.access_token || ""}` } });
+        // aba com bundle antigo (deploy novo no ar) → recarrega sozinha, 1x por build
+        const j = await r.json().catch(() => null);
+        const mine = process.env.NEXT_PUBLIC_BUILD;
+        if (j?.build && mine && j.build !== mine &&
+            !sessionStorage.getItem(`reloaded_${j.build}`)) {
+          sessionStorage.setItem(`reloaded_${j.build}`, "1");
+          window.location.reload();
+        }
       } catch (_) { /* delta é reconciliação — falha silenciosa */ }
     }
     ping();
