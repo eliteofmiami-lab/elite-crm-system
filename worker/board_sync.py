@@ -466,6 +466,13 @@ def cycle(full_task_pass=False):
             n_new += upsert_card(col, kind, cid, origem, ots, brief,
                                  opportunity_id=o["id"], stage=stage, existing=existing)
 
+    # (definições usadas pelas colunas 7 e 3 — Follow Up/Quote Sent + tasks por contato)
+    fu_opps = {o["contactId"]: o for o in paged_opps(rules.STAGES["Follow Up"])
+               if o.get("status") == "open"}
+    qs_opps = {o["contactId"]: o for o in paged_opps(rules.STAGES["Quote Sent"])
+               if o.get("status") == "open"}
+    tasks_by_contact = {}
+
     # ---- col7: SÓ VERMELHOS — Follow Up e Quote Sent SEM task (atenção imediata) ----
     for fu_stage, notask_kind, stage_opps in (("Follow Up", "followup_notask", fu_opps),
                                               ("Quote Sent", "quote_notask", qs_opps)):
@@ -518,13 +525,8 @@ def cycle(full_task_pass=False):
 
     # ---- col3: tasks POR IMPORTÂNCIA (regra Rafael): verde=Quote Sent c/ task ·
     # azul=Follow Up c/ task · amarelo=task avulsa. + urable sem resposta. ----
-    fu_opps = {o["contactId"]: o for o in paged_opps(rules.STAGES["Follow Up"])
-               if o.get("status") == "open"}
-    qs_opps = {o["contactId"]: o for o in paged_opps(rules.STAGES["Quote Sent"])
-               if o.get("status") == "open"}
     task_universe = set(opps.keys()) | {c["contact_id"] for c in oc} \
         | set(fu_opps) | set(qs_opps)
-    tasks_by_contact = {}
     for cid in list(task_universe)[:450]:
         brief = None
         r = ghl.get(f"/contacts/{cid}/tasks")
