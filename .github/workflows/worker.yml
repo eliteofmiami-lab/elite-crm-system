@@ -6,6 +6,7 @@ name: elite-brain
 on:
   schedule:
     - cron: "*/5 12-22 * * 1-6"   # ciclos de 5 min (8:00am–6:55pm EDT, seg–sáb)
+    - cron: "0 23 * * 1-6"        # MVP item 7: BETA_FEEDBACK.md diário (19:00 EDT)
     # CONGELADO (MVP 2026-07-08): relatório 18:30 fora do ar — reativar com ordem
     # - cron: "30 22 * * 1-6"
   workflow_dispatch: {}            # rodada manual p/ testes
@@ -62,3 +63,11 @@ jobs:
       - name: relatório de fim de dia (CONGELADO)
         if: ${{ false }}
         run: python worker/brain/eod_report.py
+      # MVP item 7: consolidação diária do feedback do beta (só leitura + arquivo)
+      - name: BETA_FEEDBACK.md diário (rodada 23:00 UTC)
+        if: github.event.schedule == '0 23 * * 1-6'
+        run: |
+          python worker/beta_feedback_md.py
+          git config user.name "elite-brain" && git config user.email "bot@elite"
+          git add BETA_FEEDBACK.md && git diff --cached --quiet || \
+            (git commit -m "beta feedback $(date +%F)" && git push)

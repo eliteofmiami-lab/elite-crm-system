@@ -138,8 +138,23 @@ def main():
           "pós-venda invisível, aguardando/agendado dormindo até a janela.", "",
           "## Como abrir dentro do GHL",
           "- [INSTRUCOES_MENU_LINK.md](INSTRUCOES_MENU_LINK.md) — Custom Menu Link (3 min). "
-          "URL: `https://elite-crm-panel.vercel.app/?layout=rail`", "",
-          "## Top 30 da fila (posição · estado · por quê · score)", ""]
+          "URL: `https://elite-crm-panel.vercel.app/?layout=rail`", ""]
+
+    # item 6: pendências abertas + amostra de 10 p/ validação do formato
+    pends = cards._sb("GET", "pendencias?status=eq.open&select=*"
+                             "&order=created_at.desc&limit=300") or []
+    m += ["## Verificador pós-call — Pendências (item 6)",
+          f"- **{len(pends)} pendências abertas** (somem sozinhas quando a LEITURA "
+          "confirma qualquer resolução válida; o sistema só aponta, nunca executa).",
+          "", "### Amostra de 10 (validação do formato)", ""]
+    for p in pends[:10]:
+        m.append(f"- **[{p['kind']}]** {p['fato']} **→ {p['acao']}**")
+    if not pends:
+        m.append("- (nenhuma pendência aberta no momento)")
+
+    scores_full = {r["contact_id"]: r for r in (cards._sb(
+        "GET", "lead_scores?select=contact_id,components") or [])}
+    m += ["", "## Top 30 da fila (posição · estado · por quê · score com breakdown)", ""]
     for i, c in enumerate(queue[:30], 1):
         st = states.get(c["contact_id"], {})
         sit = st.get("situacao") or "—"
@@ -148,6 +163,18 @@ def main():
                  f"{c.get('score_max') or '?'} "
                  f"{'✓' if c.get('score_badge') == 'call-verified' else '(partial)'}"
                  f"{' · ' + c.get('phone') if c.get('phone') else ''}  ")
+        comps = (scores_full.get(c["contact_id"]) or {}).get("components") or {}
+        if comps:
+            partes = []
+            for k, lab in (("car", "Carro"), ("momento", "Momento"),
+                           ("eng", "Engaj."), ("int", "Intenção")):
+                comp = comps.get(k) or {}
+                val = comp.get("value")
+                val = "?" if val is None else val
+                razao = (comp.get("reason") or "sem dado")[:60]
+                fonte = f" · {comp['source']}" if comp.get("source") else ""
+                partes.append(f"{lab} {val} ({razao}{fonte})")
+            m.append("_" + " · ".join(partes) + "_  ")
         m.append(f"{(c.get('why') or '')[:220]}  ")
         m.append(f"[Abrir contato]({c.get('ghl_link')})")
         m.append("")
