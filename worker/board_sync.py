@@ -556,6 +556,9 @@ def cycle(full_task_pass=False):
                            and cc["ts"] > c["ts"] for cc in calls)
             if returned:
                 continue
+            if (c["contact_id"], "missed_inbound") not in existing \
+                    and has_upcoming_appt(c["contact_id"]):
+                continue  # report Rafael 08/jul: já tem appointment → coluna 5 governa
             brief = contact_brief(c["contact_id"])
             if not ok_contact(c["contact_id"], brief):
                 continue
@@ -769,6 +772,10 @@ def cycle(full_task_pass=False):
         # Se o retorno foi ATENDIDO e o lead ficou sem categoria → rastreador
         # "needs categorization" na faixa vermelha (coluna 0 = só na faixa).
         if kind == "missed_inbound":
+            if has_upcoming_appt(cid):
+                resolve_card(card, "has appointment — lives in Appointments column", "")
+                resolutions += 1
+                continue
             org = parse_ts(card.get("origem_ts")) or created
             ret = next((c for c in calls if c["contact_id"] == cid
                         and c["direction"] == "outbound" and c["ts"] > org), None)

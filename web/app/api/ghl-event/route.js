@@ -234,6 +234,14 @@ async function handleCall(cid) {
   if (!last) return { created: 0 };
   const dur = last.meta?.call?.duration || 0;
   if (last.direction === "inbound" && dur < 20) {
+    // report Rafael 08/jul: appointment futuro vence a chamada perdida
+    const aj2 = await ghl(`/contacts/${cid}/appointments`);
+    const hasAppt2 = (aj2?.events || []).some((e) => {
+      const st2 = new Date(e.startTime).getTime();
+      return !isNaN(st2) && st2 > Date.now() - 3 * 3600e3 &&
+        !["cancelled", "invalid", "noshow"].includes(e.appointmentStatus);
+    });
+    if (hasAppt2) return { created: 0, skipped: "has upcoming appointment" };
     const dup = await sb("GET",
       `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.missed_inbound&select=id&limit=1`);
     if (!dup.length) {
