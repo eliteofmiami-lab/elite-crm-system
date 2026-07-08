@@ -117,6 +117,11 @@ def top_up_queue(min_open=12, batch=5):
     if len(oc) >= min_open:
         return 0
     carded = {c["contact_id"] for c in oc}
+    # A7.1c: motivos de perda terminais ficam fora das cold calls
+    ex = requests.get(f"{SB_URL}/rest/v1/lead_flags?cold_excluded=eq.true&select=contact_id",
+                      headers={k: v for k, v in H.items() if k != "Prefer"}, timeout=15)
+    excluded = {r_["contact_id"] for r_ in (ex.json() if ex.status_code == 200 else [])}
+    carded |= excluded
     r = requests.get(f"{SB_URL}/rest/v1/cold_pool?select=*&order=rank.desc&limit=60",
                      headers={k: v for k, v in H.items() if k != "Prefer"}, timeout=15)
     n = 0

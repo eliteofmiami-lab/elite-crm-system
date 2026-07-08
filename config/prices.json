@@ -1,27 +1,30 @@
 {
-  "_fonte_unica": "Editar AQUI (e só aqui). O robô sincroniza pro painel em até 5 min após o commit. Valores iniciais extraídos das planilhas 2024-2026 e chamadas reais — REVISAR com o Rafael.",
+  "_fonte_unica": "A7.3 — Matriz oficial de preços por PORTE do veículo. Editar AQUI (e só aqui); o robô sincroniza pro painel em ≤5 min após o commit. VALORES INICIAIS = estimativas das planilhas/chamadas reais — RAFAEL DEVE REVISAR CADA CÉLULA.",
   "_atualizado": "2026-07-08",
-  "window_tint": [
-    { "service": "Ceramic tint — windshield", "price": 350 },
-    { "service": "Ceramic tint — each side window", "price": 100 },
-    { "service": "Ceramic tint — rear windshield", "price": 300 },
-    { "service": "Ceramic tint — front two windows", "price": 200 }
-  ],
-  "ceramic": [
-    { "service": "Silver Pack (ceramic coating)", "price": 799 },
-    { "service": "Silver Pack + 1-step paint correction", "price": 1100 },
-    { "service": "Silver Pack + paint correction + tints", "price": 2499 },
-    { "service": "Interior ceramic coating (add-on)", "price": 600 }
-  ],
-  "ppf": [
-    { "service": "Partial front PPF", "price": 1500 },
-    { "service": "Full front PPF", "price": 2200 },
-    { "service": "Full front PPF + gold pack", "price": 5849 },
-    { "service": "Full body PPF (from)", "price": 6500 },
-    { "service": "Full colored/matte PPF (from)", "price": 5350 }
-  ],
-  "wrap": [
-    { "service": "Wrap color change (from)", "price": 5000 }
-  ],
-  "_politica": "Sem desconto direto autorizado. Preço apertado → oferecer pacote menor ou call com o Rafael."
+  "_tiers": ["Compact", "Standard", "Medium", "Large"],
+  "matrix": {
+    "ppf_full_front": { "Compact": 1900, "Standard": 2200, "Medium": 2500, "Large": 2900 },
+    "ppf_partial_front": { "Compact": 1200, "Standard": 1500, "Medium": 1700, "Large": 1900 },
+    "ppf_full_body": { "Compact": 5500, "Standard": 6500, "Medium": 7500, "Large": 8500 },
+    "ceramic_silver_pack": { "Compact": 799, "Standard": 799, "Medium": 999, "Large": 1199 },
+    "ceramic_gold_pack": { "Compact": 1400, "Standard": 1600, "Medium": 1800, "Large": 2100 },
+    "addon_interior_ceramic": { "Compact": 500, "Standard": 600, "Medium": 700, "Large": 800 },
+    "addon_paint_correction_1step": { "Compact": 300, "Standard": 350, "Medium": 400, "Large": 500 },
+    "tint_full": { "Compact": 550, "Standard": 650, "Medium": 750, "Large": 850 },
+    "tint_front_two": { "Compact": 200, "Standard": 200, "Medium": 220, "Large": 240 },
+    "tint_windshield": { "Compact": 350, "Standard": 350, "Medium": 380, "Large": 400 }
+  },
+  "_labels": {
+    "ppf_full_front": "PPF — Full front",
+    "ppf_partial_front": "PPF — Partial front",
+    "ppf_full_body": "PPF — Full body (from)",
+    "ceramic_silver_pack": "Ceramic — Silver Pack",
+    "ceramic_gold_pack": "Ceramic — Gold Pack",
+    "addon_interior_ceramic": "Add-on — Interior ceramic",
+    "addon_paint_correction_1step": "Add-on — 1-step paint correction",
+    "tint_full": "Tint — Full car",
+    "tint_front_two": "Tint — Front two windows",
+    "tint_windshield": "Tint — Windshield"
+  },
+  "_politica": "No straight discounts. Price pushback → smaller package or a call with Rafael."
 }

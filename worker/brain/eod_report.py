@@ -111,6 +111,14 @@ def main():
     requests.post(f"{SB}/rest/v1/config",
                   headers={**H, "Prefer": "resolution=merge-duplicates"},
                   json={"key": key, "value": hist}, timeout=15)
+    # estado do bônus p/ o painel (on track / lost this period)
+    bonus_state = ({"status": "lost", "motivo": hist[0]["misses"][0][:80],
+                    "date": hist[0]["date"], "period": period,
+                    "next_start": "day 16" if period.endswith("A") else "day 1 next month"}
+                   if hist else {"status": "on_track", "period": period})
+    requests.post(f"{SB}/rest/v1/config",
+                  headers={**H, "Prefer": "resolution=merge-duplicates"},
+                  json={"key": "bonus_state", "value": bonus_state}, timeout=15)
 
     # ---- payout no dia 15 e no último dia ----
     last_day = calendar.monthrange(now.year, now.month)[1]

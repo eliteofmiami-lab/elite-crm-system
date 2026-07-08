@@ -11,7 +11,8 @@ const CF_VEH = {
 };
 const LABELS = [
   ["outcome", "Outcome"], ["make", "Make"], ["model", "Model"], ["year", "Year"],
-  ["momento", "Car timing"], ["interest", "Interest"],
+  ["momento", "Car timing"], ["garaged", "Garaged or street"], ["arrival", "Car arrival"],
+  ["motivation", "Main motivation"], ["interest", "Interest"],
   ["keep_or_trade", "Keep or trade"], ["seen_other_quotes", "Seen other quotes"],
   ["other_quotes_detail", "Other quotes detail"], ["lost_reason", "Lost reason"],
   ["prices", "Prices discussed"],

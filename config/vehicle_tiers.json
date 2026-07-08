@@ -1,0 +1,17 @@
+{
+  "_regra": "A7.3 — classificação determinística make/model → porte. Palavra-chave encontrada no nome do veículo/opp decide o tier. Override manual do Eugene no card vence tudo (registrado). Fora da tabela → fallback IA (Haiku) → marcar como 'estimated'.",
+  "Large": ["escalade", "suburban", "tahoe", "yukon", "expedition", "navigator", "silverado",
+            "sierra", "f150", "f-150", "f250", "f350", "f450", "ram", "tundra", "titan",
+            "sprinter", "g63", "g-wagon", "g wagon", "gle", "gls", "x7", "range rover",
+            "grand wagoneer", "hummer", "cybertruck", "r1s", "r1t", "palisade", "telluride",
+            "pilot", "sequoia", "armada", "raptor", "denali"],
+  "Medium": ["cayenne", "model y", "model x", "macan", "x5", "x6", "q7", "q8", "rsq8",
+             "urus", "levante", "gv80", "gv70", "xt5", "xt6", "lyriq", "highlander",
+             "4runner", "grand cherokee", "wrangler", "explorer", "bronco", "traverse",
+             "cx-9", "santa fe", "sorento", "rx350", "rx 350", "gx550", "gx 550", "defender",
+             "aviator", "purosangue", "dbx", "bentayga", "cullinan"],
+  "Compact": ["miata", "mini", "golf", "gti", "civic", "corolla", "elantra", "jetta",
+              "kona", "venue", "cx-30", "hr-v", "hrv", "crosstrek", "veloster", "fiat",
+              "500", "smart", "spark", "sonic", "rio", "yaris", "bolt"],
+  "_default": "Standard"
+}

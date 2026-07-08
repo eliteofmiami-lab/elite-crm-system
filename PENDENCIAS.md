@@ -1,7 +1,13 @@
 # PENDENCIAS — verificação item a item (Missão Final, Etapa 1)
-*2026-07-08. Nota: os arquivos com adendos A5–A8 e spec itens 6.x/8.x NUNCA chegaram à pasta
-(verificado por hash — idênticos aos v4 originais). Itens marcados ⚠️ foram implementados
-pela DESCRIÇÃO da missão; ajusto rótulos/layout quando o spec real chegar.*
+*2026-07-08 (rev 2). Os adendos completos A5–A8 chegaram VIA CHAT — deltas fechados nesta revisão:
+enum exato keep_or_trade (Leasing→ângulo PPF lease) · campos garaged/chegada/motivação ·
+Lost reasons c/ terminais fora das cold calls + opp→Lost no save · wrap-up SÓ na 1ª call
+atendida · advice do lead injetado no próximo card (A6.3) · bonus_guard_events + estado
+"lost this period" no painel · análise completa SEMPRE Sonnet (A8) · matriz de preços
+por porte + classificador de tier + Price sheet em tabela (A7.3).
+AINDA DEPENDEM DE INSUMO: valores oficiais da matriz (Rafael revisa config/prices.json) ·
+frases integrais do playbook (docx não lido — hints atuais são aproximações) ·
+lost reasons oficiais do GHL (usando lista padrão) · override manual de tier no card (v2).*
 
 | Item | Estado | Evidência |
 |---|---|---|

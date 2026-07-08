@@ -55,6 +55,17 @@ def create_card(type_, layer, contact_id, title, why, how, opportunity_id=None,
         return None  # já tem card aberto igual
     if not card_eligible(contact_id, layer):
         return None  # regra dura: Win/delete nunca; Lost só camada 3
+    # A6(3): advice mais recente do lead entra no "How to play it" (insight vira ação)
+    try:
+        adv = _sb("GET", ("analyses?select=payload,calls!inner(contact_id)"
+                          f"&calls.contact_id=eq.{contact_id}"
+                          "&order=created_at.desc&limit=1")) or []
+        tip = adv and (adv[0]["payload"].get("advice_en") or "")
+        if tip:
+            how = dict(how or {})
+            how["advice"] = tip
+    except Exception:
+        pass
     return _sb("POST", "cards", json={
         "type": type_, "layer": layer, "contact_id": contact_id,
         "opportunity_id": opportunity_id, "title": title, "why": why,
@@ -321,7 +332,8 @@ def flush_manual_logs():
                        json={"customFields": cfs}, timeout=30)
             nota = ["📋 CALL LOG (manual — painel)"]
             labels = [("outcome", "Outcome"), ("make", "Make"), ("model", "Model"),
-                      ("year", "Year"), ("momento", "Car timing"), ("interest", "Interest"),
+                      ("year", "Year"), ("momento", "Car timing"), ("garaged", "Garaged or street"), ("arrival", "Car arrival"),
+                      ("motivation", "Main motivation"), ("interest", "Interest"),
                       ("keep_or_trade", "Keep or trade"),
                       ("seen_other_quotes", "Seen other quotes"),
                       ("other_quotes_detail", "Other quotes detail"),
@@ -334,6 +346,27 @@ def flush_manual_logs():
             nota.append(f"— logged by {row['logged_by']} via panel")
             rq.post(f"{config.GHL_BASE_URL}/contacts/{cid}/notes", headers=Hw,
                     json={"body": "\n".join(nota)}, timeout=30)
+            # A7.1c: Not interested + lost reason → opp vai pra Lost (ação do usuário)
+            TERMINAL = ("Bought elsewhere", "Sold / returned the car", "Spam", "Wrong number")
+            if f.get("lost_reason"):
+                opp_r = ghl.get("/opportunities/search",
+                                {"location_id": LOC, "contact_id": cid, "limit": 5})
+                for o in (opp_r.json().get("opportunities", []) if opp_r.status_code == 200 else []):
+                    if o.get("status") == "open":
+                        rq.put(f"{config.GHL_BASE_URL}/opportunities/{o['id']}", headers=Hw,
+                               json={"pipelineId": rules.NEW_PIPELINE_ID,
+                                     "pipelineStageId": rules.STAGES["Lost"]}, timeout=30)
+                        break
+                if f["lost_reason"] in TERMINAL:
+                    rq.post(f"{SB_URL}/rest/v1/lead_flags",
+                            headers={**H, "Prefer": "resolution=merge-duplicates"},
+                            json={"contact_id": cid, "cold_excluded": True,
+                                  "spanish_only": False,
+                                  "set_by": f"lost terminal: {f['lost_reason']}"}, timeout=15)
+                # fecha cards abertos do lead (foi trabalhado e perdido)
+                _sb("PATCH", f"cards?status=eq.open&contact_id=eq.{cid}",
+                    json={"status": "done", "result": f"lost — {f['lost_reason']}",
+                          "closed_by": "manual"})
             _sb("PATCH", f"manual_logs?id=eq.{row['id']}",
                 json={"status": "synced",
                       "synced_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")})
@@ -441,6 +474,14 @@ def bonus_guard_check():
             headers={**H, "Prefer": "resolution=merge-duplicates"},
             json={"key": "bonus_guard",
                   "value": {"items": items, "at": now_et.isoformat()}}, timeout=15)
+    # A5.1: trilha dos lembretes (evita duplicar o mesmo lembrete no mesmo dia)
+    for it in items:
+        kind = ("appt_reminder" if "appointment" in it else
+                "orphan80" if "orphan" in it else "quote_reminder")
+        dup = _sb("GET", f"bonus_guard_events?kind=eq.{kind}"
+                         f"&created_at=gte.{now_et.strftime('%Y-%m-%d')}&select=id&limit=1")
+        if not dup:
+            _sb("POST", "bonus_guard_events", json={"kind": kind, "detail": it})
     return len(items)
 
 

@@ -113,8 +113,9 @@ def analyze_call(transcript_text, call_meta, client=None):
     """transcript_text: transcrição diarizada. call_meta: dict direction/duration/lead name etc.
     A8: roteia Haiku (curtas) / Sonnet (longas); cache no system prompt; anexa _meta de custo."""
     client = client or get_client()
-    dur = call_meta.get("duration_sec") or 0
-    model = MODEL_CHEAP if dur and dur < ROUTE_THRESHOLD_SEC else MODEL
+    # A8 (spec integral): análise COMPLETA de call atendida é SEMPRE Sonnet.
+    # Haiku fica para tarefas leves (voicemail check, triagens, classificação de porte).
+    model = MODEL
     response = client.messages.create(
         model=model,
         max_tokens=8000,

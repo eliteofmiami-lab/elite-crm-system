@@ -53,8 +53,9 @@ function Snooze({ card, reload }) {
 
 function LogCall({ card, userEmail, reload }) {
   const [f, setF] = useState({ outcome: "", make: "", model: "", year: "", momento: "",
-    interest: "", keep_or_trade: "", seen_other_quotes: "", other_quotes_detail: "",
-    lost_reason: "", prices: "", hook: "", next_step: "", next_date: "", notes: "" });
+    arrival: "", garaged: "", interest: "", keep_or_trade: "", seen_other_quotes: "",
+    other_quotes_detail: "", lost_reason: "", motivation: "", prices: "", hook: "",
+    next_step: "", next_date: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -81,8 +82,12 @@ function LogCall({ card, userEmail, reload }) {
           status: "synced", synced_at: new Date().toISOString() }).eq("id", row.id);
       }
     } catch (_) { /* fallback: worker sincroniza em ≤5 min */ }
-    // spec 8.1 (wrap-up): call atendida → card só conclui após o nice-to-talk
-    if ((f.outcome || "").startsWith("Answered — good")) {
+    // spec 8.1/A7.2: wrap-up SÓ na PRIMEIRA call atendida do lead
+    const { data: prevWrap } = await supabase.from("cards").select("id")
+      .eq("contact_id", card.contact_id).in("status", ["done"])
+      .eq("closed_by", "manual-quote").not("draft_message", "is", null).limit(1);
+    const firstAnswered = !(prevWrap && prevWrap.length);
+    if ((f.outcome || "").startsWith("Answered — good") && firstAnswered) {
       const nome = (card.title || "").split("—").pop().split("(")[0].trim().split(" ")[0] || "there";
       const draft = `Great talking to you, ${nome}!` +
         (f.hook ? ` ${f.hook.replace(/\.$/, "")} — noted!` : "") +
@@ -118,16 +123,32 @@ function LogCall({ card, userEmail, reload }) {
         <option>Bought under 3 months ago</option><option>3–6 months</option>
         <option>6–12 months</option><option>Over a year</option><option>Unknown</option>
       </select>
+      {f.momento === "Arriving soon" && (
+        <input style={sel} placeholder="When does the car arrive? (date or window)"
+          value={f.arrival} onChange={set("arrival")} />
+      )}
+      <select style={sel} value={f.garaged} onChange={set("garaged")}>
+        <option value="">Garaged or street?…</option>
+        <option>Garage</option><option>Street</option><option>Covered / carport</option>
+      </select>
       <select style={sel} value={f.interest} onChange={set("interest")}>
         <option value="">Interest level…</option>
         <option>Hot — ready to move</option><option>Warm — interested, needs follow-up</option>
         <option>Just exploring</option><option>Not interested</option>
       </select>
+      {/* A7.1b: enum FIXO — Leasing alimenta o ângulo de PPF vs. taxas de devolução */}
       <select style={sel} value={f.keep_or_trade} onChange={set("keep_or_trade")}>
         <option value="">Keeping or trading the car?…</option>
-        <option>Keeping long term</option><option>Trading / selling soon</option>
-        <option>Lease — ending soon</option><option>Unsure</option>
+        <option>Leasing</option><option>Trade in 2–3 years</option>
+        <option>Keeping for about 5 years</option><option>Keeping for more than 5 years</option>
       </select>
+      {f.keep_or_trade === "Leasing" && (
+        <div className="sl" style={{ color: "#067647" }}>
+          💡 Lease angle: PPF protects against lease-return charges — wear &amp; tear fees usually cost more than the film.
+        </div>
+      )}
+      <input style={sel} placeholder="Main motivation (why now? what do they care about?)"
+        value={f.motivation} onChange={set("motivation")} />
       <select style={sel} value={f.seen_other_quotes} onChange={set("seen_other_quotes")}>
         <option value="">Seen other quotes?…</option>
         <option>No — we are the first</option><option>Yes — shopping around</option>
@@ -138,12 +159,19 @@ function LogCall({ card, userEmail, reload }) {
           placeholder="What did they quote? Shop, service, exact price and what was included — full sentences help the next call." />
       )}
       {f.interest === "Not interested" && (
-        <select style={sel} value={f.lost_reason} onChange={set("lost_reason")}>
-          <option value="">Lost reason…</option>
-          <option>Price too high</option><option>Went with competitor</option>
-          <option>Bad timing — try later</option><option>Sold / returned the car</option>
-          <option>No real intent</option><option>Other</option>
-        </select>
+        <>
+          <select style={sel} value={f.lost_reason} onChange={set("lost_reason")}>
+            <option value="">Lost reason… (moves the lead to Lost)</option>
+            <option>Price too high</option>
+            <option>Bad timing — try later</option>
+            <option>Bought elsewhere</option>
+            <option>Sold / returned the car</option>
+            <option>Spam</option>
+            <option>Wrong number</option>
+            <option>Other</option>
+          </select>
+          <div className="sl">Price/timing stay eligible for cold calls later · bought elsewhere / sold / spam / wrong number are terminal (never called again).</div>
+        </>
       )}
       <input style={sel} placeholder="Prices discussed (e.g. Full front PPF $2,200)"
         value={f.prices} onChange={set("prices")} />
@@ -167,18 +195,37 @@ function LogCall({ card, userEmail, reload }) {
   );
 }
 
-function PriceHint({ c, prices }) {
-  if (!prices) return null;
+const TIER_KEYWORDS = {
+  Large: ["escalade","suburban","tahoe","yukon","expedition","navigator","silverado","sierra",
+          "f150","f-150","f250","ram","tundra","sprinter","g63","gle","gls","x7","range rover",
+          "hummer","cybertruck","r1s","r1t","palisade","telluride","sequoia","armada","raptor","denali"],
+  Medium: ["cayenne","model y","model x","macan","x5","x6","q7","q8","rsq8","urus","levante",
+           "gv80","gv70","xt5","lyriq","highlander","4runner","grand cherokee","wrangler",
+           "explorer","bronco","santa fe","sorento","rx350","rx 350","gx550","defender","bentayga","cullinan"],
+  Compact: ["miata","mini","golf","gti","civic","corolla","elantra","jetta","kona","venue",
+            "hr-v","hrv","crosstrek","fiat","500","smart","spark","rio","yaris","bolt"],
+};
+function tierFor(c) {
   const t = ((c.title || "") + " " + (c.why || "")).toLowerCase();
-  const keys = [["tint", "window_tint"], ["ppf", "ppf"], ["ceramic", "ceramic"],
-                ["coating", "ceramic"], ["wrap", "wrap"], ["quote", "ppf"]];
-  const cat = keys.find(([k]) => t.includes(k));
-  const items = cat ? prices[cat[1]] : null;
-  if (!items || !Array.isArray(items)) return null;
+  for (const [tier, kws] of Object.entries(TIER_KEYWORDS)) {
+    if (kws.some((k) => t.includes(k))) return tier;
+  }
+  return "Standard";
+}
+
+function PriceHint({ c, prices }) {
+  // A7.3: "Prices for this car" — matriz oficial × porte do veículo
+  if (!prices || !prices.matrix) return null;
+  const tier = tierFor(c);
+  const labels = prices._labels || {};
+  const rows = Object.entries(prices.matrix)
+    .map(([k, tiers]) => [labels[k] || k, tiers[tier]])
+    .filter(([, v]) => v != null);
+  if (!rows.length) return null;
   return (
     <div className="dsec">
-      <div className="dl">Prices (source: price sheet)</div>
-      <p>{items.slice(0, 4).map((p) => `${p.service} — $${p.price}`).join(" · ")}</p>
+      <div className="dl">Prices for this car · tier: {tier}</div>
+      <p>{rows.slice(0, 5).map(([s, v]) => `${s} — $${v}`).join(" · ")}</p>
     </div>
   );
 }
@@ -237,6 +284,12 @@ function Task({ c, idx, expanded, onToggle, reload, preview = false, spanish = f
           <div className="dsec">
             <div className="dl">How to play it</div>
             <p>{how.join(" · ")}</p>
+          </div>
+        )}
+        {c.how && c.how.advice && (
+          <div className="dsec">
+            <div className="dl">Advice from the last call</div>
+            <p>{c.how.advice}</p>
           </div>
         )}
         <PriceHint c={c} prices={prices} />
@@ -304,26 +357,38 @@ function WrapUp({ c, userEmail, reload, preview }) {
 }
 
 function PriceSheet({ prices, onClose }) {
-  if (!prices) return null;
-  const cats = Object.entries(prices).filter(([k, v]) => Array.isArray(v));
+  // A7.3: matriz completa serviço × porte
+  if (!prices || !prices.matrix) return null;
+  const tiers = prices._tiers || ["Compact", "Standard", "Medium", "Large"];
+  const labels = prices._labels || {};
   return (
-    <div className="qcard" style={{ padding: 18 }}>
+    <div className="qcard" style={{ padding: 18, overflowX: "auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600 }}>💲 Price sheet (single source: config/prices.json)</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 600 }}>💲 Price sheet (source: config/prices.json)</h3>
         <button className="btn ghost sm" onClick={onClose}>close</button>
       </div>
-      {cats.map(([cat, items]) => (
-        <div key={cat} style={{ marginBottom: 10 }}>
-          <div className="dl" style={{ fontSize: 11.5, fontWeight: 700, textTransform: "uppercase",
-            color: "var(--faint)", letterSpacing: ".04em" }}>{cat.replace("_", " ")}</div>
-          {items.map((p, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between",
-              padding: "6px 0", borderBottom: "1px solid var(--line)", fontSize: 13.5 }}>
-              <span>{p.service}</span><b>${p.price}</b>
-            </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", padding: "6px 4px", color: "var(--faint)" }}>Service</th>
+            {tiers.map((t) => (
+              <th key={t} style={{ textAlign: "right", padding: "6px 4px", color: "var(--faint)" }}>{t}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(prices.matrix).map(([k, row]) => (
+            <tr key={k} style={{ borderTop: "1px solid var(--line)" }}>
+              <td style={{ padding: "7px 4px" }}>{labels[k] || k}</td>
+              {tiers.map((t) => (
+                <td key={t} style={{ textAlign: "right", padding: "7px 4px", fontWeight: 600 }}>
+                  {row[t] != null ? `$${row[t]}` : "—"}
+                </td>
+              ))}
+            </tr>
           ))}
-        </div>
-      ))}
+        </tbody>
+      </table>
       {prices._politica && <p className="meta" style={{ marginTop: 8 }}>⚠ {prices._politica}</p>}
     </div>
   );
@@ -476,7 +541,11 @@ export default function EugeneView({ session, data, reload, preview = false, pre
             <div className="mini">${potSum}<small>potential</small></div>
             <div className="mini">{pot.length}<small>awaiting sale</small></div>
             <div className="mini">+${bookedToday}<small>booked today</small></div>
-            <div className="mini" style={{ color: "#067647" }}>$50<small>rule bonus · on track {fortnightDay}/{fortnightLen}</small></div>
+            {(data.config.bonus_state || {}).status === "lost" ? (
+              <div className="mini" style={{ color: "#B42318" }}>$0<small>bonus lost this period — {(data.config.bonus_state.motivo || "").slice(0, 40)} ({data.config.bonus_state.date}) · clean restart {data.config.bonus_state.next_start}</small></div>
+            ) : (
+              <div className="mini" style={{ color: "#067647" }}>$50<small>rule bonus · on track {fortnightDay}/{fortnightLen}</small></div>
+            )}
             <div className="note">$10 per booked appointment that closes · +$50 every 2 weeks with zero critical misses</div>
             {guardItems.length + guardMsgs.length > 0 ? (
               <div className="guard"><b>Bonus guard</b> · {guardMsgs[0] || `${guardItems.length} item(s) need attention today: ${guardItems[0].title}`}</div>
