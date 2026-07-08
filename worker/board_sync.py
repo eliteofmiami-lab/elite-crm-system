@@ -309,12 +309,19 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
     key = (contact_id, kind)
     if existing is not None and key in existing:
         return False
-    # dedupe: aberto OU reportado p/ análise (⚑ report & close suprime a recriação
-    # até a revisão — senão o espelho ressuscitaria o card no ciclo seguinte)
-    dup = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
-                        "&or=(status.eq.open,resolved_by.like.*reported*)"
-                        "&select=id&limit=1")
+    dup = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{contact_id}"
+                        f"&kind=eq.{kind}&select=id&limit=1")
     if dup:
+        return False
+    # ⚑ reportado: suprime só a MESMA ocorrência — evento NOVO (origem_ts mais novo)
+    # recria normalmente (ex.: nova perdida volta; dia de confirmar aparece)
+    rep = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
+                        "&resolved_by=like.*reported*&select=origem_ts"
+                        "&order=resolved_at.desc&limit=1")
+    if rep and origem_ts and rep[0].get("origem_ts"):
+        if iso(origem_ts) <= rep[0]["origem_ts"]:
+            return False  # mesma ocorrência já reportada — aguarda revisão
+    elif rep and not origem_ts:
         return False
     if last_note is None:
         try:  # regra Rafael: toda nota/comentário interno aparece no card
@@ -757,6 +764,32 @@ def cycle(full_task_pass=False):
             if any(t.get("id") == card["task_id"] and t.get("completed") for t in tlist):
                 resolve_card(card, "task completed", "")
                 resolutions += 1
+                continue
+        # CHAMADA PERDIDA (regra Rafael): retornar a ligação FECHA o card sozinho.
+        # Se o retorno foi ATENDIDO e o lead ficou sem categoria → rastreador
+        # "needs categorization" na faixa vermelha (coluna 0 = só na faixa).
+        if kind == "missed_inbound":
+            org = parse_ts(card.get("origem_ts")) or created
+            ret = next((c for c in calls if c["contact_id"] == cid
+                        and c["direction"] == "outbound" and c["ts"] > org), None)
+            if ret:
+                answered_ret = call_answered(cfg, ret.get("status"), ret.get("duration"))
+                resolve_card(card, "returned the call" + ("" if answered_ret else " (no answer)"),
+                             user_key(cfg, ret.get("user_id"), ret.get("source")))
+                resolutions += 1
+                if answered_ret:
+                    sb._sb("POST", "board_cards", json={
+                        "coluna": 0, "kind": "uncategorized", "contact_id": cid,
+                        "nome": card.get("nome"), "veh": card.get("veh"),
+                        "interest": card.get("interest"), "phone": card.get("phone"),
+                        "origem": f"Returned call answered {ret['ts'].astimezone(ET):%H:%M} — needs categorization",
+                        "origem_ts": iso(ret["ts"]),
+                        "closes_when": "Needs categorization: book appointment · create task "
+                                       "· send estimate · or mark Lost / move stage.",
+                        "unres_call_ts": iso(ret["ts"]),
+                        "unres_call_user": user_key(cfg, ret.get("user_id"), ret.get("source")),
+                        "unres_call_answered": True,
+                        "unres_call_dur": ret.get("duration") or 0})
                 continue
         # SMS card: resposta enviada fecha · cortesia/appointment também (regra Greg/Coleen)
         if kind == "sms_reply":

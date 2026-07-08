@@ -370,8 +370,8 @@ export default function BoardView({ session, data, reload, role }) {
               {myUnres.map((c) => (
                 <div className="ncard" key={c.id}>
                   <div style={{ flex: 1, minWidth: 240 }}>
-                    <div className="t">Call {c.unres_call_ts ? new Date(c.unres_call_ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""} with {c.nome} — {c.unres_call_answered ? `answered (${Math.floor((c.unres_call_dur || 0) / 60)}m ${(c.unres_call_dur || 0) % 60}s)` : "not answered"} · no resolution registered</div>
-                    <div className="why">Every finished call needs one outcome in GHL:</div>
+                    <div className="t">Call {c.unres_call_ts ? new Date(c.unres_call_ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : ""} with {c.nome} — {c.unres_call_answered ? `answered (${Math.floor((c.unres_call_dur || 0) / 60)}m ${(c.unres_call_dur || 0) % 60}s) · needs categorization` : "not answered · no resolution registered"}</div>
+                    <div className="why">{c.unres_call_answered ? "The lead is uncategorized — pick one outcome in GHL:" : "Every finished call needs one outcome in GHL:"}</div>
                     <div className="tree"><b>Book appointment</b> (calendar) · <b>Create follow-up task</b> (with date) · <b>Send estimate</b> (Urable link + move to Quote Sent) · <b>Not interested → mark Lost with reason</b>. Unanswered call: <b>move to next stage</b>.</div>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
@@ -479,6 +479,30 @@ export default function BoardView({ session, data, reload, role }) {
             </div>
           </div>
           <OwnerFeedback email={email} />
+          <div className="ccard" style={{ marginTop: 14 }}>
+            <h3>⚑ Reported cards — review queue</h3>
+            {(() => {
+              const reported = cards.filter((c) => (c.resolved_by || "").includes("reported"));
+              const today = new Date().toISOString().slice(0, 10);
+              const todayN = reported.filter((c) => (c.resolved_at || "").slice(0, 10) === today).length;
+              return (
+                <>
+                  <p style={{ fontSize: 13, color: "var(--sub)" }}>
+                    <b>{todayN} reported today</b> · {reported.length} in view — each one is a
+                    rule-review case (daily digest in BETA_FEEDBACK.md). A report closes that
+                    occurrence only: new events (new missed call, confirmation day, new reply)
+                    recreate cards normally.
+                  </p>
+                  {reported.slice(0, 8).map((c) => (
+                    <div className="lrow" key={c.id}>
+                      <span className="tag old">⚑ {String(c.resolved_at || "").slice(11, 16)}</span>
+                      <span><b>{c.nome}</b> · {c.kind} · {(c.origem || "").slice(0, 60)}</span>
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </div>
           <div className="ccard" style={{ marginTop: 14 }}>
             <h3>🇪🇸 Spanish-only leads — yours</h3>
             <p style={{ fontSize: 13, color: "var(--sub)" }}>

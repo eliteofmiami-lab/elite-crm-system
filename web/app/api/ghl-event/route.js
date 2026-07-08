@@ -111,15 +111,21 @@ async function miniMirrorStage(cid) {
       if (!map) continue;
       if (map[1] === "pipeline" && (movedToday || []).length >= 2) continue;
       const dup = await sb("GET",
-        `board_cards?contact_id=eq.${cid}&kind=eq.${map[1]}&or=(status.eq.open,resolved_by.like.*reported*)&select=id&limit=1`);
+        `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.${map[1]}&select=id&limit=1`);
       if (dup.length) continue;
+      // ⚑ reportado: mesma ocorrência (stage não mudou desde o report) não recria;
+      // stage novo (lastStageChangeAt mais novo) recria normal
+      const ots = o.lastStageChangeAt || o.updatedAt || new Date().toISOString();
+      const rep = await sb("GET",
+        `board_cards?contact_id=eq.${cid}&kind=eq.${map[1]}&resolved_by=like.*reported*&select=origem_ts&order=resolved_at.desc&limit=1`);
+      if (rep.length && rep[0].origem_ts && ots <= rep[0].origem_ts) continue;
       const b = await contactBrief(cid);
       if ((b.tags || []).includes("teste-interno")) continue; // exceto durante aceite (config)
       await sb("POST", "board_cards", {
         coluna: map[0], kind: map[1], contact_id: cid, opportunity_id: o.id,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
-        origem: `${st} · since ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })} (live)`,
-        origem_ts: new Date().toISOString(), closes_when: CLOSES[map[1]], stage: st });
+        origem: `${st} · since ${new Date(ots).toLocaleDateString("en-US", { month: "short", day: "numeric" })} (live)`,
+        origem_ts: ots, closes_when: CLOSES[map[1]], stage: st });
       created++;
     }
   }
@@ -156,7 +162,7 @@ async function handleReply(cid) {
   });
   if (hasAppt) return { created: 0, closed: 0, skipped: "has upcoming appointment" };
   const dup = await sb("GET",
-    `board_cards?contact_id=eq.${cid}&kind=eq.sms_reply&or=(status.eq.open,resolved_by.like.*reported*)&select=id&limit=1`);
+    `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.sms_reply&select=id&limit=1`);
   if (!dup.length) {
     await sb("POST", "board_cards", {
       coluna: 1, kind: "sms_reply", contact_id: cid,
