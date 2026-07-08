@@ -98,6 +98,19 @@ def sync_appointment_confirmations():
     return n
 
 
+SCORE_CF_ID = "OKX1hfCHkn2FWZud9lj1"  # opportunity.elite_score
+
+
+def opp_score(o):
+    for cf in o.get("customFields", []):
+        if cf.get("id") == SCORE_CF_ID:
+            try:
+                return int(cf.get("fieldValue") or 0) or None
+            except Exception:
+                return None
+    return None
+
+
 def sync_quote_followups():
     """Opps em Quote Sent → follow-up da quote (camada 2)."""
     r = ghl.get("/opportunities/search", {"location_id": LOC,
@@ -114,7 +127,7 @@ def sync_quote_followups():
                 {"passos": ["Ligar e perguntar o que achou da proposta",
                             "Se achou caro: oferecer opção menor (não desconto direto)",
                             "Mencionar disponibilidade da agenda desta semana"]},
-                opportunity_id=o["id"])
+                opportunity_id=o["id"], score=opp_score(o))
             n += made is not None
     return n
 
@@ -146,7 +159,7 @@ def sync_warm_calls(limit=25):
                 {"passos": ["Abrir o contato no GHL e ler as notas",
                             "Ligar; se não atender, SMS curto e pessoal",
                             "Objetivo: agendar visita ou enviar quote"]},
-                opportunity_id=o["id"], score=sc(o))
+                opportunity_id=o["id"], score=sc(o) or None)
             n += made is not None
     return n
 
