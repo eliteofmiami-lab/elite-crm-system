@@ -70,6 +70,10 @@ A unidade é o LEAD, não uma call isolada. Regras:
    - agendado: appointment futuro marcado → só follow-up/confirmação na data certa.
    - callback_devido: o CLIENTE tentou falar conosco e não foi atendido (inbound perdida
      sem retorno nosso depois) → URGENTE, topo da fila. urgente=true.
+     JANELA DE VALIDADE (regra do Rafael): só vale se a perdida foi nos últimos 4 dias
+     (hoje, ontem, ou atravessando o fim de semana). Perdida mais antiga NÃO é
+     callback_devido — o erro não pode mais ser corrigido; classifique o lead pelo
+     restante da história (esfriou / ativo_venda / aguardando_*).
    - pos_venda: cliente JÁ COMPROU; call de garantia/pós-venda/suporte → o sistema fica
      INERTE (nada é criado). Reentrada só com conversa de venda NOVA.
    - esfriou: sem resposta a múltiplas tentativas, sem pedido de espaço → fila fria.
@@ -205,6 +209,16 @@ def apply_state(contact_id, state):
                         "set_by": "pos_venda (A16.1) — gestão pessoal do Rafael"})
         return n
     if sit == "callback_devido":
+        # trava de validade (defesa em profundidade): perdida >4 dias não fura a fila
+        data = state.get("situacao_data") or ""
+        limite = f"{(dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=4)):%Y-%m-%d}"
+        if data and data < limite:
+            print(f"  [callback expirado] {contact_id}: perdida em {data} — vira esfriou (C3)")
+            state["situacao"] = "esfriou"
+            cards._sb("PATCH", f"lead_states?contact_id=eq.{contact_id}",
+                      json={"situacao": "esfriou",
+                            "state": {**state, "situacao": "esfriou"}})
+            return n
         made = cards.create_card(
             "callback", 1, contact_id,
             "📞 CALLBACK OWED — customer called US and nobody answered",
