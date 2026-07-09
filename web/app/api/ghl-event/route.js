@@ -101,6 +101,7 @@ async function afterHoursAutoSms(cid, kind, isTest) {
       /closed (at the moment|right now)/i.test(m.body || ""));
     const teamActive = msgs.some((m) => m.direction === "outbound" &&
       m.messageType === "TYPE_SMS" && m.source !== "workflow" &&
+      m.status !== "failed" && m.status !== "undelivered" &&
       now - new Date(m.dateAdded).getTime() < 2 * 3600e3 &&
       !/closed (at the moment|right now)/i.test(m.body || ""));
     if (dup || teamActive) return false;
