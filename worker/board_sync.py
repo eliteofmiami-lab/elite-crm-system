@@ -707,27 +707,50 @@ def cycle(full_task_pass=False):
                                  f"Urable sent {s['ts'].astimezone(ET):%b %d} · no reply since",
                                  s["ts"], brief, existing=existing)
 
-    # ---- col5: appointments próximos 2 dias ----
+    # ---- col5: appointments próximos 2 dias (+ cancelamentos futuros → reschedule) ----
+    # Janela larga p/ pegar cancelamento de appointment futuro (report 09/jul NELSON).
     start = dt.datetime.now(ET).replace(hour=0, minute=0, second=0, microsecond=0)
-    end = start + dt.timedelta(days=2)
+    win_lo = start - dt.timedelta(days=1)
+    win_hi = start + dt.timedelta(days=14)
+    end = start + dt.timedelta(days=2)  # janela dos CARDS ativos (col5)
     appts = []
     for cal_name, cal_id in sb.CALENDARS.items():
         r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID, "calendarId": cal_id,
-                                          "startTime": int(start.timestamp() * 1000),
-                                          "endTime": int(end.timestamp() * 1000)})
+                                          "startTime": int(win_lo.timestamp() * 1000),
+                                          "endTime": int(win_hi.timestamp() * 1000)})
         if r.status_code == 200:
             appts += r.json().get("events", [])
+    # status atual por evento (p/ fechar cards obsoletos na resolução, mais abaixo)
+    appt_status = {e.get("id"): e.get("appointmentStatus") for e in appts if e.get("id")}
+    resched_done = set()
     for e in appts:
         cid = e.get("contactId")
         if not cid:
             continue
         status = e.get("appointmentStatus")
-        if status in ("cancelled", "invalid", "noshow"):
+        stt = parse_ts(str(e.get("startTime")))
+        # CANCELADO (report 09/jul NELSON): card de RESCHEDULE (assim como no-show).
+        # Os cards de confirmação obsoletos fecham no loop de resolução via appt_status.
+        # noshow/invalid: o pool do warm-up já cuida.
+        if status == "cancelled":
+            if cid in resched_done:
+                continue
+            resched_done.add(cid)
+            brief = contact_brief(cid)
+            if ok_contact(cid, brief):
+                n_new += upsert_card(6, "warmup", cid,
+                                     f"Cancelled {stt.astimezone(ET):%b %d} — RESCHEDULE (was booked)"
+                                     if stt else "Cancelled appointment — RESCHEDULE (was booked)",
+                                     stt or now, brief, grupo="reschedule", existing=existing)
+            continue
+        if status in ("invalid", "noshow"):
+            continue
+        # só vira card ativo se o appointment é nos próximos 2 dias
+        if not stt or stt.astimezone(ET) < win_lo or stt.astimezone(ET) > end:
             continue
         brief = contact_brief(cid)
         if not ok_contact(cid, brief):
             continue
-        stt = parse_ts(str(e.get("startTime")))
         if status == "confirmed":
             nr = ghl.get(f"/contacts/{cid}/notes")
             notes = nr.json().get("notes", []) if nr.status_code == 200 else []
@@ -1007,19 +1030,31 @@ def cycle(full_task_pass=False):
                 resolutions += 1
             continue
         # confirmação de appointment
+        # APPOINTMENTS (report 09/jul): o card "a confirmar" NÃO fecha só porque o SMS
+        # de confirmação saiu (isso é automático no booking) — fecha só quando o status
+        # vira "confirmed" (equipe marca à mão depois que o LEAD confirma) → aí o card
+        # verde (appt_info) assume. Assim fica claro pra quem o assistente precisa ligar.
         if kind == "appt_confirm":
-            ev = next((e for e in appts if e.get("id") == card.get("event_id")), None)
-            conf_sms = next((s for s in sms_out if s["contact_id"] == cid
-                             and s["ts"] > created and "confirm" in s["body"].lower()), None)
-            if (ev and ev.get("appointmentStatus") == "confirmed") or conf_sms:
-                who = user_key(cfg, conf_sms.get("user_id"), conf_sms.get("source")) if conf_sms else ""
-                resolve_card(card, "confirmed", who)
+            st = appt_status.get(card.get("event_id"))
+            if st == "confirmed":
+                resolve_card(card, "confirmed", "")  # → appt_info (verde) assume
+                resolutions += 1
+            elif st in ("cancelled", "invalid", "noshow"):
+                resolve_card(card, "appointment cancelled/gone", "")
+                resolutions += 1
+            elif card.get("appt_start") and parse_ts(card["appt_start"]) < now - dt.timedelta(hours=3):
+                resolve_card(card, "visit time passed", "")
                 resolutions += 1
             continue
         if kind == "appt_info":
-            # informativo: expira quando o appointment passa
-            if card.get("appt_start") and parse_ts(card["appt_start"]) < now - dt.timedelta(hours=3):
+            st = appt_status.get(card.get("event_id"))
+            if st and st not in ("confirmed", None):
+                # voltou a NÃO confirmado (equipe desmarcou) → o "a confirmar" assume
+                resolve_card(card, "no longer confirmed — needs confirmation again", "")
+                resolutions += 1
+            elif card.get("appt_start") and parse_ts(card["appt_start"]) < now - dt.timedelta(hours=3):
                 resolve_card(card, "visit time passed", "")
+                resolutions += 1
             continue
         # colunas com ligação: call nova → relógio de resolução
         lc = call_by_contact.get(cid)

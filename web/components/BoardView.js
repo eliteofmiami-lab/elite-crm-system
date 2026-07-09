@@ -71,7 +71,9 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
           ...(c.grupo === "reschedule"
             ? { background: "#FFF4ED", color: "#B93815", border: "1px solid #F9DBAF" }
             : { background: "#F5F9FF", color: "#175CD3", border: "1px solid #B2CCFF" }) }}>
-          {c.grupo === "reschedule" ? "① NO-SHOW — RESCHEDULE" : "② TOP CAR"}
+          {c.grupo === "reschedule"
+            ? (/cancel/i.test(c.origem || "") ? "① CANCELLED — RESCHEDULE" : "① NO-SHOW — RESCHEDULE")
+            : "② TOP CAR"}
         </div>
       )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>

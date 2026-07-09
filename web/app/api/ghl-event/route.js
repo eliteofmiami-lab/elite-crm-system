@@ -295,21 +295,47 @@ async function handleAppt(cid) {
       closed++;
     }
   }
+  // CANCELADO (report 09/jul NELSON): fecha cards de confirmação + card de RESCHEDULE.
+  const anyCancelled = evs.some((e) => e.appointmentStatus === "cancelled" &&
+    new Date(e.startTime).getTime() > now - 14 * 86400e3);
+  if (anyCancelled && !hasUpcoming) {
+    const gone = await sb("GET",
+      `board_cards?status=eq.open&contact_id=eq.${cid}&kind=in.(appt_info,appt_confirm)&select=id`);
+    for (const p of gone) {
+      await sb("PATCH", `board_cards?id=eq.${p.id}`, {
+        status: "resolved", resolved_by: "appointment cancelled (webhook)",
+        resolved_at: new Date().toISOString() });
+      closed++;
+    }
+    const dupR = await sb("GET",
+      `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.warmup&select=id&limit=1`);
+    if (!dupR.length) {
+      await sb("POST", "board_cards", {
+        coluna: 6, grupo: "reschedule", kind: "warmup", contact_id: cid,
+        nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
+        origem: "Cancelled appointment — RESCHEDULE (was booked) (live)",
+        origem_ts: new Date().toISOString() });
+      created++;
+    }
+  }
   for (const e of evs) {
     const st = new Date(e.startTime).getTime();
     if (isNaN(st) || st < now - 3 * 3600e3 || st > now + 2 * 86400e3) continue;
     const status = e.appointmentStatus;
     if (["cancelled", "invalid", "noshow"].includes(status)) continue;
     const kind = status === "confirmed" ? "appt_info" : "appt_confirm";
-    if (status === "confirmed") {
-      const pend = await sb("GET",
-        `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.appt_confirm&select=id`);
-      for (const p of pend) {
-        await sb("PATCH", `board_cards?id=eq.${p.id}`, {
-          status: "resolved", resolved_by: "confirmed (webhook)",
-          resolved_at: new Date().toISOString() });
-        closed++;
-      }
+    // fecha o card do status OPOSTO (dedup — report 09/jul): confirmado fecha
+    // 'a confirmar'; voltou a não-confirmado fecha o verde.
+    const opp = status === "confirmed" ? "appt_confirm" : "appt_info";
+    const pend = await sb("GET",
+      `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.${opp}&select=id`);
+    for (const p of pend) {
+      await sb("PATCH", `board_cards?id=eq.${p.id}`, {
+        status: "resolved",
+        resolved_by: status === "confirmed" ? "confirmed (webhook)"
+          : "no longer confirmed — needs confirmation again (webhook)",
+        resolved_at: new Date().toISOString() });
+      closed++;
     }
     const dup = await sb("GET",
       `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.${kind}&select=id&limit=1`);
