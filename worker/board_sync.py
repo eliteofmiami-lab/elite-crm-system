@@ -199,9 +199,16 @@ def user_key(cfg, user_id, source=None):
 
 
 def call_answered(cfg, status, duration):
-    """Atendida DE VERDADE: status completed OU ≥25s. Call de 3-7s = não atendida
-    (bug caso Jamile: duration>0 não é conexão)."""
+    """TENTATIVA VÁLIDA (esforço p/ meta/comissão): status completed OU ≥25s. Call de
+    3-7s conta como esforço (bug caso Jamile: duration>0 não é conexão)."""
     return (status or "").lower() == "completed" or (duration or 0) >= cfg["valid_min_sec"]
+
+
+def real_conversation(cfg, duration):
+    """CONVERSA DE VERDADE (p/ EXIGIR desfecho/categorização): tempo de fala ≥25s.
+    'completed 0m0s' = caixa postal / desligou = NÃO houve conversa (report 09/jul:
+    retornamos chamada perdida, ele não atendeu — nada a categorizar)."""
+    return (duration or 0) >= cfg["valid_min_sec"]
 
 
 # -------------------- coleta GHL (somente leitura) --------------------
@@ -933,11 +940,20 @@ def cycle(full_task_pass=False):
             ret = next((c for c in calls if c["contact_id"] == cid
                         and c["direction"] == "outbound" and c["ts"] > org), None)
             if ret:
-                answered_ret = call_answered(cfg, ret.get("status"), ret.get("duration"))
-                resolve_card(card, "returned the call" + ("" if answered_ret else " (no answer)"),
+                # REGRA (report 09/jul): retornar chamada perdida FECHA o card. Só há
+                # o que CATEGORIZAR se houve CONVERSA REAL (≥25s). "completed 0m0s" =
+                # caixa postal / desligou = não atendeu → nada a categorizar, só fecha.
+                # Se depois do retorno saiu SMS manual nosso (ex.: "returning your call,
+                # call me back"), também está resolvido — sem categorização.
+                real_talk = real_conversation(cfg, ret.get("duration"))
+                sms_after = any(s["contact_id"] == cid and s["ts"] > ret["ts"]
+                                and s.get("source") != "workflow" for s in sms_out)
+                needs_cat = real_talk and not sms_after
+                resolve_card(card, "returned the call" + (
+                    "" if real_talk else " — no answer/voicemail"),
                              user_key(cfg, ret.get("user_id"), ret.get("source")))
                 resolutions += 1
-                if answered_ret:
+                if needs_cat:
                     sb._sb("POST", "board_cards", json={
                         "coluna": 0, "kind": "uncategorized", "contact_id": cid,
                         "nome": card.get("nome"), "veh": card.get("veh"),
@@ -989,7 +1005,9 @@ def cycle(full_task_pass=False):
         # colunas com ligação: call nova → relógio de resolução
         lc = call_by_contact.get(cid)
         if lc and (not card.get("unres_call_ts") or lc["ts"] > parse_ts(card["unres_call_ts"])):
-            answered = call_answered(cfg, lc.get("status"), lc.get("duration"))
+            # p/ o relógio de resolução, "atendida" = CONVERSA REAL (≥25s); 0s = não
+            # atendeu → pode auto-resolver por "stage avançou" (report 09/jul)
+            answered = real_conversation(cfg, lc.get("duration"))
             sb._sb("PATCH", f"board_cards?id=eq.{card['id']}", json={
                 "unres_call_ts": iso(lc["ts"]),
                 "unres_call_user": user_key(cfg, lc.get("user_id"), lc.get("source")),
