@@ -76,6 +76,13 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
             : "② TOP CAR"}
         </div>
       )}
+      {c.grupo === "great_car" && (c.kind === "new_lead" || c.kind === "pipeline") && (
+        <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
+          borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
+          background: "#FEF6EE", color: "#B93815", border: "1px solid #F9DBAF" }}>
+          ⭐ GREAT CAR — CALL FIRST
+        </div>
+      )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
       <div className="org"><b>{(c.origem || "").split("·")[0]}</b>·{(c.origem || "").split("·").slice(1).join("·")}</div>
       {c.last_note
@@ -323,6 +330,12 @@ export default function BoardView({ session, data, reload, role }) {
       // col 4 mais NOVOS primeiro; resto mais antigo primeiro; vermelhos no topo.
       const redDiff = (RED_KINDS.has(b.kind) ? 1 : 0) - (RED_KINDS.has(a.kind) ? 1 : 0);
       if (redDiff) return redDiff;
+      // Great Cars (report 09/jul): ligar PRIMEIRO — topo das colunas New Leads e Pipeline.
+      if (n === 2 || n === 4) {
+        const gc = (c) => (c.grupo === "great_car" ? 0 : 1);
+        const gcd = gc(a) - gc(b);
+        if (gcd) return gcd;
+      }
       if (n === 3) {
         const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);
         if (kd) return kd;

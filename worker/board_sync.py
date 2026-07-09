@@ -138,10 +138,31 @@ def veh_rank(veh):
     return tier, yr
 # Regra Rafael 2026-07-08: Contact 1/2/3 = coluna 4 (mais novos primeiro; 2 moves/dia
 # = completo por hoje). Follow Up = coluna 7, AMARRADO a task (sem task = vermelho).
+# Regra Rafael (report 09/jul): Great Cars = NEW LEAD (carro premium/qualificado) →
+# coluna New Leads, chamado PRIMEIRO. Grupo "great_car" prioriza + badge; a tag
+# "great cars" persiste a prioridade quando o lead avança pro pipeline.
 STAGE_COLS = {"HOT LEADS": (1, "hot"), "New Lead": (2, "new_lead"),
+              "Great Cars": (2, "new_lead"),
               "Contact 1 (AM)": (4, "pipeline"), "Contact 1 (PM)": (4, "pipeline"),
               "Contact 2 (AM)": (4, "pipeline"), "Contact 2 (PM)": (4, "pipeline"),
               "Contact 3 (AM)": (4, "pipeline"), "Contact 3 (PM)": (4, "pipeline")}
+GREAT_CARS_TAG = "great cars"
+
+
+def is_great_car(stage, brief):
+    tags = {str(t).lower() for t in (brief.get("tags") or [])} if brief else set()
+    return stage == "Great Cars" or GREAT_CARS_TAG in tags
+
+
+def add_contact_tag(cid, tag):
+    """Aplica tag no contato (write autorizado — persiste prioridade Great Cars)."""
+    import requests as _rq
+    try:
+        _rq.post(f"{ghl.BASE}/contacts/{cid}/tags", headers=ghl.H,
+                 json={"tags": [tag]}, timeout=30)
+        return True
+    except Exception:
+        return False
 STAGE_KINDS = {"hot", "new_lead", "pipeline", "followup", "quote_task",
                "followup_notask", "quote_notask"}
 
@@ -583,10 +604,18 @@ def cycle(full_task_pass=False):
             brief = contact_brief(cid)
             if not ok_contact(cid, brief):
                 continue
-            origem = (f"HOT LEADS · in stage since {ots:%b %d}" if kind == "hot" else
+            # Great Cars: prioridade + tag persistente (report 09/jul)
+            gc = is_great_car(stage, brief)
+            grupo = "great_car" if gc else None
+            if stage == "Great Cars" and GREAT_CARS_TAG not in \
+                    {str(t).lower() for t in (brief.get("tags") or [])}:
+                if add_contact_tag(cid, GREAT_CARS_TAG):
+                    brief.setdefault("tags", []).append(GREAT_CARS_TAG)
+            origem = ("Great Cars (qualified) · call FIRST" if stage == "Great Cars" else
+                      f"HOT LEADS · in stage since {ots:%b %d}" if kind == "hot" else
                       f"New Lead · came in {ots:%b %d %H:%M}" if kind == "new_lead" else
                       f"{stage} · since {ots:%b %d}")
-            n_new += upsert_card(col, kind, cid, origem, ots, brief,
+            n_new += upsert_card(col, kind, cid, origem, ots, brief, grupo=grupo,
                                  opportunity_id=o["id"], stage=stage, existing=existing)
 
     # (definições usadas pelas colunas 7 e 3 — Follow Up/Quote Sent + tasks por contato)
