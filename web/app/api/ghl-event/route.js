@@ -73,6 +73,48 @@ async function contactBrief(cid) {
   };
 }
 
+// ---- FORA DE HORÁRIO (PLANO §D): auto-SMS pelo webhook — os workflows nativos de
+// If/Else avaliaram os segments como E (nunca verdadeiro), então o envio vive aqui.
+// 1x por conversa/12h · nunca se a equipe respondeu há <2h · chave config.after_hours_sms.
+const AH_MSG_REPLY = "We're closed at the moment - back at 9 AM and you'll hear from us first thing.";
+const AH_MSG_MISSED = "Hi! This is Elite Premium Detailing - we're closed right now, but you're first in line tomorrow. Reply with your car and what you're looking for, and we'll call you at 9 AM sharp.";
+
+function afterHoursNow() {
+  const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  return et.getDay() === 0 || et.getHours() < 9 || et.getHours() >= 17;
+}
+
+async function afterHoursAutoSms(cid, kind, isTest) {
+  if (!afterHoursNow()) return false;
+  const rows = await sb("GET", "config?key=eq.after_hours_sms&select=value");
+  const c = rows?.[0]?.value || {};
+  if (c.enabled === false) return false;
+  if (isTest && !c.test_mode) return false;
+  const cs = await ghl("/conversations/search", { locationId: LOC, contactId: cid });
+  const conv = cs?.conversations?.[0];
+  if (conv) {
+    const mj = await ghl(`/conversations/${conv.id}/messages`);
+    const msgs = mj?.messages?.messages || [];
+    const now = Date.now();
+    const dup = msgs.some((m) => m.direction === "outbound" &&
+      now - new Date(m.dateAdded).getTime() < 12 * 3600e3 &&
+      /closed (at the moment|right now)/i.test(m.body || ""));
+    const teamActive = msgs.some((m) => m.direction === "outbound" &&
+      m.messageType === "TYPE_SMS" && m.source !== "workflow" &&
+      now - new Date(m.dateAdded).getTime() < 2 * 3600e3 &&
+      !/closed (at the moment|right now)/i.test(m.body || ""));
+    if (dup || teamActive) return false;
+  }
+  const r = await fetch(GHL + "/conversations/messages", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.GHL_API_TOKEN}`, Version: "2021-07-28",
+      "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ type: "SMS", contactId: cid,
+      message: kind === "missed" ? AH_MSG_MISSED : AH_MSG_REPLY }),
+  });
+  return r.ok;
+}
+
 async function miniMirrorStage(cid) {
   // espelho do contato: stages atuais → fecha cards órfãos, cria o do stage novo
   const j = await ghl("/opportunities/search", { location_id: LOC, contact_id: cid, limit: 10 });
@@ -145,7 +187,9 @@ async function handleReply(cid) {
   // Customer Replied → card col 1 (sms_reply) + fecha urable "no reply"
   // + REGRA CARL: resposta do cliente LIMPA o vermelho SEM RESOLUÇÃO na hora
   const b = await contactBrief(cid);
-  if ((b.tags || []).includes("teste-interno")) return { skipped: "test contact" };
+  const isTest = (b.tags || []).includes("teste-interno");
+  const autoSms = await afterHoursAutoSms(cid, "reply", isTest);
+  if (isTest) return { skipped: "test contact", auto_sms: autoSms };
   let created = 0, closed = 0;
   await sb("PATCH", `board_cards?contact_id=eq.${cid}&status=eq.open&unres=eq.true`,
     { unres: false, unres_call_ts: null });
@@ -274,6 +318,11 @@ async function handleCall(cid) {
   if (!last) return { created: 0 };
   const dur = last.meta?.call?.duration || 0;
   if (last.direction === "inbound" && dur < 20) {
+    // fora de horário: SMS imediato pro caller (1x/12h; teste só com test_mode)
+    const bAh = await contactBrief(cid);
+    const autoSms = await afterHoursAutoSms(cid, "missed",
+      (bAh.tags || []).includes("teste-interno"));
+    if ((bAh.tags || []).includes("teste-interno")) return { skipped: "test contact", auto_sms: autoSms };
     // report Rafael 08/jul: appointment futuro vence a chamada perdida
     const aj2 = await ghl(`/contacts/${cid}/appointments`);
     const hasAppt2 = (aj2?.events || []).some((e) => {
