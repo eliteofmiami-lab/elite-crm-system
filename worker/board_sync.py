@@ -1011,13 +1011,15 @@ def cycle(full_task_pass=False):
             if card["stage"] in ("Follow Up", "Quote Sent"):
                 opr = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID,
                                                         "contact_id": cid, "limit": 5})
-                cur = {rules.STAGE_BY_ID.get(o.get("pipelineStageId"))
-                       for o in (opr.json().get("opportunities", []) if opr.status_code == 200 else [])
-                       if o.get("status") == "open"}
-                if card["stage"] not in cur:
-                    resolve_card(card, "stage moved", "")
-                    resolutions += 1
-                    continue
+                if opr.status_code == 200:  # API OK: só então decide fechar
+                    cur = {rules.STAGE_BY_ID.get(o.get("pipelineStageId"))
+                           for o in opr.json().get("opportunities", [])
+                           if o.get("status") == "open"}
+                    if card["stage"] not in cur:
+                        resolve_card(card, "stage moved", "")
+                        resolutions += 1
+                        continue
+                # API falhou (timeout/429) → NÃO fecha por engano; tenta no próximo ciclo
             elif card["stage"] not in stage_now.get(cid, set()):
                 resolve_card(card, "stage moved", "")
                 resolutions += 1
@@ -1047,6 +1049,19 @@ def cycle(full_task_pass=False):
             due2 = parse_ts(tk.get("dueDate")) if tk.get("dueDate") else None
             if due2 and due2.astimezone(ET).date() > dt.datetime.now(ET).date():
                 resolve_card(card, "task rescheduled — back on its due date", "")
+                resolutions += 1
+                continue
+            # OPP MOVIDA P/ LOST/WON (report 09/jul): o lead saiu do pipeline → a task
+            # perde o sentido, fecha o card mesmo com a task ainda aberta. Sinal
+            # POSITIVO: só fecha quando VÊ um opp Lost/Won — nunca por resposta vazia
+            # ou API caída (senão fecharia card bom no timeout).
+            opr = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID,
+                                                    "contact_id": cid, "limit": 10})
+            if opr.status_code == 200 and any(
+                    rules.STAGE_BY_ID.get(o.get("pipelineStageId")) in ("Lost", "Win")
+                    or o.get("status") in ("lost", "won", "abandoned")
+                    for o in opr.json().get("opportunities", [])):
+                resolve_card(card, "opportunity closed (Lost/Won) — task off the daily board", "")
                 resolutions += 1
                 continue
         # CHAMADA PERDIDA (regra Rafael): retornar a ligação FECHA o card sozinho.
