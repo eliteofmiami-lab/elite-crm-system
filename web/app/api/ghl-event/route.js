@@ -105,7 +105,13 @@ async function afterHoursAutoSms(cid, kind, isTest) {
       m.status !== "failed" && m.status !== "undelivered" &&
       now - new Date(m.dateAdded).getTime() < 2 * 3600e3 &&
       !/closed (at the moment|right now)/i.test(m.body || ""));
-    if (dup || teamActive) return false;
+    // newlead: NÃO duplicar com o "00: New Lead Submitted" (SMS de workflow nativo).
+    // Se qualquer SMS saiu nos últimos 15 min, o welcome noturno segura.
+    const recentAnySms = kind === "newlead" && msgs.some((m) =>
+      m.direction === "outbound" && m.messageType === "TYPE_SMS" &&
+      m.status !== "failed" && m.status !== "undelivered" &&
+      now - new Date(m.dateAdded).getTime() < 15 * 60e3);
+    if (dup || teamActive || recentAnySms) return false;
   }
   const r = await fetch(GHL + "/conversations/messages", {
     method: "POST",
