@@ -415,6 +415,29 @@ async function handleCall(cid) {
   return { created: 0 };
 }
 
+async function handleTask(cid) {
+  // Board Task webhook (Task added / Task completed): fecha o card de task em TEMPO
+  // REAL quando a task foi concluída ou sumiu do GHL. Criação/refresh de card fica
+  // com o worker (cache/delta, ≤45min). SEGURO: falha de API (ghl()=null) → não age;
+  // sinal positivo (task concluída/ausente) → fecha. Nunca fecha por resposta vazia.
+  const j = await ghl(`/contacts/${cid}/tasks`);
+  if (!j) return { skipped: "task api failed — no action" };
+  const tasks = j.tasks || [];
+  const open = await sb("GET", `board_cards?status=eq.open&contact_id=eq.${cid}` +
+    `&kind=in.(task,followup,quote_task)&select=id,task_id`);
+  let closed = 0;
+  for (const c of (open || [])) {
+    const tk = tasks.find((t) => t.id === c.task_id);
+    if (!tk || tk.completed) {
+      await sb("PATCH", `board_cards?id=eq.${c.id}`, {
+        status: "resolved", resolved_by: "task completed (webhook)",
+        resolved_at: new Date().toISOString() });
+      closed++;
+    }
+  }
+  return { closed };
+}
+
 export async function POST(req) {
   const t0 = Date.now();
   const url = new URL(req.url);
@@ -448,6 +471,7 @@ export async function POST(req) {
     else if (type === "appt") result = await handleAppt(cid);
     else if (type === "call") result = await handleCall(cid);
     else if (type === "newlead") result = await handleNewLead(cid);
+    else if (type === "task") result = await handleTask(cid);
     else result = await miniMirrorStage(cid);
   } catch (e) {
     await sb("POST", "config?on_conflict=key", { key: "board_live_error",
