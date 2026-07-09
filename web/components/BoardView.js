@@ -9,9 +9,9 @@ const GHL = "https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contac
 const COLS = [
   { n: 1, title: "Return · Reply · Hot", cap: "missed calls, unanswered SMS, HOT LEADS · oldest first" },
   { n: 2, title: "New Leads — Call ASAP", cap: "stage New Lead · oldest first" },
-  { n: 3, title: "Today's tasks — Quotes · Follow-ups", cap: "🟢 quote task first · 🔵 follow-up task · 🟡 other tasks · Urable no reply" },
+  { n: 3, title: "Today's tasks — Quotes · Follow-ups", cap: "quote tasks first, then follow-ups, then other tasks · Urable no reply" },
   { n: 4, title: "Pipeline — Contact 1/2/3", cap: "newest first · 1–2 calls/day · 2 moves today = done till tomorrow" },
-  { n: 7, title: "⚠ Needs attention — no task", cap: "Quote Sent & Follow Up without a task — create task + date" },
+  { n: 7, title: "Needs attention — no task", cap: "Quote Sent & Follow Up without a task — create task + date" },
   { n: 5, title: "Appointments · next 2 days", cap: "confirm the pending · know who's coming" },
   { n: 6, title: "Warm up", cap: "daily ration · Lost recoverable + 30d+ idle" },
 ];
@@ -58,9 +58,9 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
     <div className={`kcard${conf ? " conf" : ""}${open ? " open" : ""}`}
       style={style}
       onClick={(e) => { if (e.target.closest("a,button,input")) return; setOpen(!open); }}>
-      <div className="nm">{isSpanish ? "🇪🇸 " : ""}{c.nome || "—"}
+      <div className="nm">{isSpanish && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px", color: "var(--purple-text)", border: "1px solid var(--purple-text)", borderRadius: 4, padding: "0 4px", marginRight: 5, verticalAlign: "middle" }}>ES</span>}{c.nome || "—"}
         {conf
-          ? <span className="ok">✓ {new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span>
+          ? <span className="ok">Confirmed · {new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span>
           : <span className={`age ${ageClass(c.origem_ts)}`}>{c.kind === "appt_confirm" && c.appt_start
               ? new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit" })
               : ageOf(c.origem_ts)}</span>}
@@ -72,15 +72,15 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
             ? { background: "#FFF4ED", color: "#B93815", border: "1px solid #F9DBAF" }
             : { background: "#F5F9FF", color: "#175CD3", border: "1px solid #B2CCFF" }) }}>
           {c.grupo === "reschedule"
-            ? (/cancel/i.test(c.origem || "") ? "① CANCELLED — RESCHEDULE" : "① NO-SHOW — RESCHEDULE")
-            : "② TOP CAR"}
+            ? (/cancel/i.test(c.origem || "") ? "CANCELLED — RESCHEDULE" : "NO-SHOW — RESCHEDULE")
+            : "TOP CAR"}
         </div>
       )}
-      {c.grupo === "great_car" && (c.kind === "new_lead" || c.kind === "pipeline") && (
+      {c.grupo === "great_car" && (
         <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
           borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
-          background: "#FEF6EE", color: "#B93815", border: "1px solid #F9DBAF" }}>
-          ⭐ GREAT CAR — CALL FIRST
+          background: "#EFF4FF", color: "#1849A9", border: "1px solid #B2CCFF" }}>
+          GREAT CAR — CALL FIRST
         </div>
       )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
@@ -90,16 +90,16 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
         : conf && <div className="note empty">No notes on this contact yet — add the call notes so the visit starts prepared.</div>}
       <div className="kx">
         <div className="row">
-          <span className="ph">📞 {c.phone || "—"}</span>
+          <span className="ph">{c.phone || "—"}</span>
           {onSpanish && (
             <button onClick={() => onSpanish(c, !isSpanish)}
               title={isSpanish ? "Send back to Eugene's board" : "Send to Rafael's board (Spanish speaker)"}
               style={{ border: "1px solid var(--line)", background: "var(--card)", borderRadius: 8,
                 padding: "6px 10px", font: "600 11.5px Inter", cursor: "pointer", color: "var(--sub)" }}>
-              {isSpanish ? (isOwner ? "Remove 🇪🇸 flag" : "🇪🇸 flagged") : "🇪🇸 Spanish only"}
+              {isSpanish ? (isOwner ? "Remove ES flag" : "ES flagged") : "Spanish only"}
             </button>
           )}
-          <a className="open" href={GHL + c.contact_id} target="_blank" rel="noreferrer">Open ↗</a>
+          <a className="open" href={GHL + c.contact_id} target="_blank" rel="noreferrer">Open in GHL</a>
         </div>
         {c.closes_when && <div className="closes"><b>Closes when:</b>{c.closes_when.replace("Closes when:", "")}</div>}
         {isSpanish && <div style={{ fontSize: 11, color: "var(--purple-text)", marginTop: 6, fontWeight: 600 }}>
@@ -109,7 +109,7 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
             style={{ marginTop: 7, border: "1px solid var(--green-border)", background: "var(--green-soft)",
               color: "var(--green-text)", borderRadius: 7, padding: "6px 10px",
               font: "600 11.5px Inter", cursor: "pointer" }}>
-            ✓ Close — no reply needed
+            Close — no reply needed
           </button>
         )}
         {onReport && (
@@ -118,7 +118,7 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
               <button onClick={() => setShowFb(true)}
                 style={{ border: "none", background: "transparent", color: "var(--faint)",
                   font: "600 11px Inter", cursor: "pointer", padding: 0 }}>
-                ⚑ Wrong card? Report &amp; close
+                Wrong card? Report &amp; close
               </button>
             ) : (
               <div style={{ display: "flex", gap: 6 }}>
@@ -130,7 +130,7 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
                   style={{ border: "1px solid var(--amber-border)", background: "var(--amber-soft)",
                     color: "var(--amber-text)", borderRadius: 7, padding: "6px 10px",
                     font: "600 11.5px Inter", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  ⚑ Report &amp; close
+                  Report &amp; close
                 </button>
               </div>
             )}
@@ -326,7 +326,7 @@ export default function BoardView({ session, data, reload, role }) {
         veh: c.veh, interest: c.interest, unres: c.unres },
       reported_by: email });
     await supabase.from("board_cards").update({
-      status: "resolved", resolved_by: "⚑ reported — closed for review",
+      status: "resolved", resolved_by: "reported — closed for review",
       resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
     reload && reload();
   }
@@ -399,7 +399,8 @@ export default function BoardView({ session, data, reload, role }) {
           <span className="d">{now.toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
             {" · "}
             <span style={{ color: liveStale ? "var(--amber-text)" : "var(--green-text)", fontWeight: 600 }}>
-              {liveStale ? "⟳ syncing" : "● Live"}
+              <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: liveStale ? "var(--amber)" : "var(--green)", marginRight: 5, verticalAlign: "middle" }} />
+              {liveStale ? "Syncing" : "Live"}
               {lastEventTs ? ` · last event ${lastEventTs.toLocaleTimeString("en-US", { hour12: false })}` : ""}
             </span>
           </span></div>
@@ -421,11 +422,11 @@ export default function BoardView({ session, data, reload, role }) {
 
       {tab === "board" && (
         <div>
-          {idleReported && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>📩 {Math.floor(idleMin)} min without activity — this was reported to Rafael. Get back on the board.</div>}
-          {!idleReported && bizHours && idleMin >= 15 && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>⏰ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
-          {!idleReported && bizHours && idleMin >= 10 && idleMin < 15 && <div className="banner">⚠ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
-          {afterClose && myShift && idleMin >= 5 && idleMin < 10 && <div className="banner">🌙 After 5 PM — the board will clock you out after 10 min idle.</div>}
-          {behindPace && <div className="banner">🕐 Midday check: {validToday}/{goal} valid calls — behind pace. Hit the queue and warm-up list.</div>}
+          {idleReported && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>{Math.floor(idleMin)} min without activity — this was reported to Rafael. Get back on the board.</div>}
+          {!idleReported && bizHours && idleMin >= 15 && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>{Math.floor(idleMin)} min without activity — the board is waiting</div>}
+          {!idleReported && bizHours && idleMin >= 10 && idleMin < 15 && <div className="banner">{Math.floor(idleMin)} min without activity — the board is waiting</div>}
+          {afterClose && myShift && idleMin >= 5 && idleMin < 10 && <div className="banner">After 5 PM — the board will clock you out after 10 min idle.</div>}
+          {behindPace && <div className="banner">Midday check: {validToday}/{goal} valid calls — behind pace. Work the queue and warm-up list.</div>}
 
           <div className="earn">
             <div className="earnrow">
@@ -444,7 +445,7 @@ export default function BoardView({ session, data, reload, role }) {
               <div className="sec"><div className="lbl">Potential</div>
                 <div className="big" style={{ color: "var(--green-text)" }}>${potential}</div>
                 <div className="sub2"><b>{awaiting.length} awaiting</b> · booked &amp; done, waiting to close</div>
-                {toConfirm > 0 && <div className="sub2" style={{ color: "var(--amber-text)", fontWeight: 600 }}>⚠ {toConfirm} to confirm — miss = clean day lost</div>}</div>
+                {toConfirm > 0 && <div className="sub2" style={{ color: "var(--amber-text)", fontWeight: 600 }}>{toConfirm} to confirm — miss = clean day lost</div>}</div>
               <div className="sec"><div className="lbl">Clean-board bonus · {fortLabel}</div>
                 <div className="big">${tiers.bonus} <span style={{ fontSize: 13, color: bonusLost ? "var(--red-text)" : "var(--green-text)" }}>
                   {bonusLost ? "lost" : `${cleanDays}/${fdays.length || 0} · on track`}</span></div>
@@ -457,13 +458,13 @@ export default function BoardView({ session, data, reload, role }) {
               <div className="day"><div className="lbl">Max this month</div>
                 <div className="big" style={{ fontSize: 16 }}>${tiers.t1 * tiers.rate1 + (tiers.t3 - tiers.t1) * tiers.rate2 + 2 * tiers.bonus}</div>
                 <div className="sub2">${tiers.t1 * tiers.rate1 + (tiers.t3 - tiers.t1) * tiers.rate2} sales + ${2 * tiers.bonus} clean-board</div>
-                <div className="ok" style={{ marginTop: 4 }}>Today: {myUnres.length === 0 ? "✔ on track" : `${myUnres.length} to resolve`}</div></div>
+                <div className="ok" style={{ marginTop: 4 }}>Today: {myUnres.length === 0 ? "on track" : `${myUnres.length} to resolve`}</div></div>
             </div>
           </div>
 
           {myUnres.length > 0 && (
             <div className="nores">
-              <div className="nh">⏱ YOUR CALLS WITHOUT RESOLUTION · {myUnres.length} <span style={{ fontWeight: 500, fontSize: 11, opacity: .8 }}>— only calls made by you; Rafael&apos;s show on his tab</span></div>
+              <div className="nh">YOUR CALLS WITHOUT RESOLUTION · {myUnres.length} <span style={{ fontWeight: 500, fontSize: 11, opacity: .8 }}>— only calls made by you; Rafael&apos;s show on his tab</span></div>
               {myUnres.map((c) => (
                 <div className="ncard" key={c.id}>
                   <div style={{ flex: 1, minWidth: 240 }}>
@@ -474,7 +475,7 @@ export default function BoardView({ session, data, reload, role }) {
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
                     <span className="age">open {ageOf(c.unres_call_ts)}</span>
                     <a className="open" href={GHL + c.contact_id} target="_blank" rel="noreferrer"
-                      style={{ font: "600 12px Inter", color: "#fff", background: "var(--red)", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Open ↗</a>
+                      style={{ font: "600 12px Inter", color: "#fff", background: "var(--red)", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Open in GHL</a>
                   </div>
                 </div>
               ))}
@@ -496,7 +497,7 @@ export default function BoardView({ session, data, reload, role }) {
                       {toConf.map((c) => <KCard key={c.id} c={c}
                         isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
                         onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
-                      <div className="subhead">✓ Confirmed — who&apos;s coming · {confd.length}</div>
+                      <div className="subhead">Confirmed — who&apos;s coming · {confd.length}</div>
                       {confd.map((c) => <KCard key={c.id} c={c} conf
                         isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
                         onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
@@ -513,7 +514,7 @@ export default function BoardView({ session, data, reload, role }) {
                           fontSize: 11.5, color: "var(--sub)" }}>
                           <span style={{ fontWeight: 700, color: p.tier === 0 ? "#B93815"
                             : p.tier === 1 ? "#175CD3" : "var(--faint)" }}>
-                            {p.tier === 0 ? "①" : p.tier === 1 ? "②" : p.tier === 3 ? "④" : "③"}
+                            {p.tier === 0 ? "1" : p.tier === 1 ? "2" : p.tier === 3 ? "4" : "3"}
                           </span>
                           <span style={{ fontWeight: 600, color: "var(--ink)",
                             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
@@ -531,7 +532,7 @@ export default function BoardView({ session, data, reload, role }) {
                       )}
                     </div>
                   )}
-                  {items.length === 0 && col.n !== 6 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>clear ✓</div>}
+                  {items.length === 0 && col.n !== 6 && <div style={{ color: "var(--faint)", fontSize: 12, padding: "8px 4px" }}>Clear</div>}
                 </div>
               );
             })}
@@ -542,11 +543,11 @@ export default function BoardView({ session, data, reload, role }) {
       {tab === "owner" && isOwner && (
         <div>
           {liveStale && (
-            <div className="banner">⚠ Realtime feed stale — no push/delta event in 12+ min. Check the GHL webhook workflows and the Vercel env vars (GUIA_WEBHOOKS_REALTIME.md).</div>
+            <div className="banner">Realtime feed stale — no push/delta event in 12+ min. Check the GHL webhook workflows and the Vercel env vars (GUIA_WEBHOOKS_REALTIME.md).</div>
           )}
           {data.config.board_live_error && (
             <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>
-              ✕ Push handler error at {String(data.config.board_live_error.at || "").slice(11, 19)}: {String(data.config.board_live_error.error || "").slice(0, 120)}
+              Push handler error at {String(data.config.board_live_error.at || "").slice(11, 19)}: {String(data.config.board_live_error.error || "").slice(0, 120)}
             </div>
           )}
           <div className="grid2">
@@ -581,7 +582,7 @@ export default function BoardView({ session, data, reload, role }) {
               <div className="lrow" key={c.id}>
                 <span className={c.grupo === "confirmed" ? "tag" : "tag old"}
                   style={c.grupo === "confirmed" ? { background: "var(--green-soft)", color: "var(--green-text)" } : {}}>
-                  {c.grupo === "confirmed" ? "✓ " : "To confirm · "}
+                  {c.grupo === "confirmed" ? "Confirmed · " : "To confirm · "}
                   {c.appt_start ? new Date(c.appt_start).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }) : ""}
                 </span>
                 <span><b>{c.nome}</b> · {c.veh || "—"} · {c.interest || "—"}{c.last_note ? <> — {c.last_note.slice(0, 120)}</> : c.grupo === "confirmed" ? <> — <b style={{ color: "var(--amber-text)" }}>no notes on contact</b></> : null}</span>
@@ -604,7 +605,7 @@ export default function BoardView({ session, data, reload, role }) {
           </div>
           <OwnerFeedback email={email} />
           <div className="ccard" style={{ marginTop: 14 }}>
-            <h3>⚑ Reported cards — review queue</h3>
+            <h3>Reported cards — review queue</h3>
             {(() => {
               const reported = cards.filter((c) => (c.resolved_by || "").includes("reported"));
               const today = new Date().toISOString().slice(0, 10);
@@ -619,7 +620,7 @@ export default function BoardView({ session, data, reload, role }) {
                   </p>
                   {reported.slice(0, 8).map((c) => (
                     <div className="lrow" key={c.id}>
-                      <span className="tag old">⚑ {String(c.resolved_at || "").slice(11, 16)}</span>
+                      <span className="tag old">{String(c.resolved_at || "").slice(11, 16)}</span>
                       <span><b>{c.nome}</b> · {c.kind} · {(c.origem || "").slice(0, 60)}</span>
                     </div>
                   ))}
@@ -628,10 +629,10 @@ export default function BoardView({ session, data, reload, role }) {
             })()}
           </div>
           <div className="ccard" style={{ marginTop: 14 }}>
-            <h3>🇪🇸 Spanish-only leads — yours</h3>
+            <h3>Spanish-only leads — yours</h3>
             <p style={{ fontSize: 13, color: "var(--sub)" }}>
               {open.filter((c) => spanishSet.has(c.contact_id)).length} open card(s) flagged Spanish
-              — hidden from Eugene&apos;s board, visible on yours (badge 🇪🇸 on the card).
+              — hidden from Eugene&apos;s board, visible on yours (ES badge on the card).
               Flag/unflag lives inside each card.
             </p>
           </div>
@@ -691,7 +692,7 @@ function OwnerFeedback({ email }) {
             setSent(true); setRef(""); setTxt("");
           }}>Send</button>
       </div>
-      {sent && <p style={{ color: "var(--green-text)", fontSize: 12, marginTop: 6 }}>✓ Logged — nothing changes automatically; it goes to the daily BETA_FEEDBACK.md.</p>}
+      {sent && <p style={{ color: "var(--green-text)", fontSize: 12, marginTop: 6 }}>Logged — nothing changes automatically; it goes to the daily BETA_FEEDBACK.md.</p>}
     </div>
   );
 }
