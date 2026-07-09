@@ -31,6 +31,81 @@ import ghl  # noqa: E402
 from brain import cards as sb  # noqa: E402  (usamos só o _sb — cliente Supabase)
 from brain import rules  # noqa: E402
 
+import os  # noqa: E402
+
+# ---- CACHE TTL EM DISCO (Lote 1, otimização de rate limit GHL) ----
+# O bridge relança o processo a cada ciclo, então cache de processo não persiste.
+# Perfil e tasks quase não mudam em minutos → cache em arquivo, com TTL. Corta ~80%
+# das chamadas (varredura por-contato). Falha de API usa cache velho (nunca fecha
+# card por engano). O arquivo vive na máquina do bridge (out/ghl_cache.json).
+_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "out", "ghl_cache.json")
+BRIEF_TTL_MIN = 30
+TASKS_TTL_MIN = 15
+_cache_obj = None
+_tasks_mem = {}  # dedup DENTRO do ciclo (evita re-busca task_universe + resolução)
+
+
+def _cache_load():
+    global _cache_obj
+    if _cache_obj is None:
+        try:
+            with open(_CACHE_PATH) as f:
+                _cache_obj = json.load(f)
+        except Exception:
+            _cache_obj = {}
+        _cache_obj.setdefault("brief", {})
+        _cache_obj.setdefault("tasks", {})
+    return _cache_obj
+
+
+def _cache_fresh(entry, ttl_min):
+    if not entry or "at" not in entry:
+        return False
+    try:
+        return (now_utc() - parse_ts(entry["at"])).total_seconds() < ttl_min * 60
+    except Exception:
+        return False
+
+
+def _cache_save():
+    if _cache_obj is None:
+        return
+    try:
+        cut = now_utc() - dt.timedelta(hours=2)  # poda entradas velhas
+        for kind in ("brief", "tasks"):
+            for cid in list(_cache_obj.get(kind, {}).keys()):
+                a = _cache_obj[kind][cid].get("at")
+                if not a or parse_ts(a) < cut:
+                    del _cache_obj[kind][cid]
+        os.makedirs(os.path.dirname(_CACHE_PATH), exist_ok=True)
+        with open(_CACHE_PATH, "w") as f:
+            json.dump(_cache_obj, f)
+    except Exception:
+        pass
+
+
+def contact_tasks(contact_id):
+    """Tasks do contato com cache TTL + dedup no ciclo. Retorna lista (sucesso ou
+    cache fresco/velho) ou None se a API falhou e não há cache — nesse caso o caller
+    NÃO deve agir (não cria nem fecha card)."""
+    if contact_id in _tasks_mem:
+        return _tasks_mem[contact_id]
+    fc = _cache_load()["tasks"].get(contact_id)
+    if _cache_fresh(fc, TASKS_TTL_MIN):
+        _tasks_mem[contact_id] = fc["data"]
+        return fc["data"]
+    r = ghl.get(f"/contacts/{contact_id}/tasks")
+    if r.status_code == 200:
+        tasks = r.json().get("tasks", [])
+        _cache_load()["tasks"][contact_id] = {"data": tasks, "at": iso(now_utc())}
+        _tasks_mem[contact_id] = tasks
+        return tasks
+    if fc:  # API falhou → usa cache velho (nunca fecha card por engano)
+        _tasks_mem[contact_id] = fc["data"]
+        return fc["data"]
+    _tasks_mem[contact_id] = None
+    return None
+
 ET = ZoneInfo("America/New_York")
 URABLE = re.compile(r"go\.urable\.com/\S+", re.I)
 
@@ -263,9 +338,13 @@ def last_note_for(contact_id):
 
 
 def contact_brief(contact_id, cache={}):
-    """nome, veh, interest, phone, tags (com cache do processo)."""
+    """nome, veh, interest, phone, tags (cache no ciclo + cache TTL em disco)."""
     if contact_id in cache:
         return cache[contact_id]
+    fc = _cache_load()["brief"].get(contact_id)
+    if _cache_fresh(fc, BRIEF_TTL_MIN):  # perfil quase não muda em minutos
+        cache[contact_id] = fc["data"]
+        return fc["data"]
     r = ghl.get(f"/contacts/{contact_id}")
     b = {"nome": None, "veh": None, "interest": None, "phone": None, "tags": [],
          "dnd": False}
@@ -287,6 +366,9 @@ def contact_brief(contact_id, cache={}):
         b["interest"] = cfs.get(CF_INTEREST) or next(
             (str(v) for k, v in cfs.items() if isinstance(v, str)
              and any(w in str(v).lower() for w in ("ppf", "coating", "wrap", "tint"))), None)
+        _cache_load()["brief"][contact_id] = {"data": b, "at": iso(now_utc())}  # grava só em sucesso
+    elif fc:
+        b = fc["data"]  # API falhou → usa cache velho (melhor que vazio)
     cache[contact_id] = b
     return b
 
@@ -422,6 +504,13 @@ def age_out(card, dest_note):
 
 # -------------------- ciclo --------------------
 def cycle(full_task_pass=False):
+    # TRAVA DE HORÁRIO (Lote 1): a varredura completa só roda em horário comercial
+    # (seg-sáb, 9h-17h ET). Fora disso o webhook mantém o board vivo em tempo real —
+    # varrer ~400 contatos de madrugada/domingo só queima a cota diária do GHL.
+    et_now = dt.datetime.now(ET)
+    if et_now.weekday() == 6 or not (9 <= et_now.hour < 17):
+        log(f"fora do horário comercial ({et_now:%a %H:%M} ET) — ciclo pulado (webhook mantém o board)")
+        return
     cfg = load_cfg()
     W = cfg["windows"]
     test_ids, silent = excluded_sets()
@@ -476,6 +565,7 @@ def cycle(full_task_pass=False):
                                    "error": "GHL API returned 0 opportunities — cycle skipped to protect the board"}})
         except Exception:
             pass
+        _cache_save()
         return
 
     # ---- 2. varredura de conversas ----
@@ -657,8 +747,7 @@ def cycle(full_task_pass=False):
                 continue  # envelhecido → warm-up cuida
             pend = tasks_by_contact.get(cid)
             if pend is None:
-                tr = ghl.get(f"/contacts/{cid}/tasks")
-                pend = [t for t in (tr.json().get("tasks", []) if tr.status_code == 200 else [])
+                pend = [t for t in (contact_tasks(cid) or [])
                         if not t.get("completed") and t.get("dueDate")]
             if pend:
                 continue  # tem task → vive na col 3 quando a data chegar
@@ -715,10 +804,10 @@ def cycle(full_task_pass=False):
         | set(fu_opps) | set(qs_opps)
     for cid in list(task_universe)[:450]:
         brief = None
-        r = ghl.get(f"/contacts/{cid}/tasks")
-        if r.status_code != 200:
-            continue
-        pend = [t for t in r.json().get("tasks", [])
+        tks = contact_tasks(cid)
+        if tks is None:
+            continue  # API falhou e sem cache → não age neste ciclo
+        pend = [t for t in tks
                 if not t.get("completed") and t.get("dueDate")]
         pend.sort(key=lambda t: t.get("dueDate") or "")  # mais VENCIDA primeiro
         tasks_by_contact[cid] = pend
@@ -1045,9 +1134,8 @@ def cycle(full_task_pass=False):
                 continue
         # vermelhos de task faltando: somem quando a task com data EXISTE
         if kind in ("followup_notask", "quote_notask"):
-            tr = ghl.get(f"/contacts/{cid}/tasks")
             has_task = any(not t.get("completed") and t.get("dueDate")
-                           for t in (tr.json().get("tasks", []) if tr.status_code == 200 else []))
+                           for t in (contact_tasks(cid) or []))
             if has_task:
                 resolve_card(card, "task created", "")
                 resolutions += 1
@@ -1056,10 +1144,9 @@ def cycle(full_task_pass=False):
         # sumiu do GHL, ou foi REAGENDADA pro futuro (volta sozinha no novo dia). O
         # recolor vencida→vermelho é refeito no loop de criação a cada ciclo.
         if kind in ("task", "followup", "quote_task") and card.get("task_id"):
-            tr = ghl.get(f"/contacts/{cid}/tasks")
-            if tr.status_code != 200:
-                continue  # API falhou (timeout/429) → NÃO fecha por engano; tenta no próximo ciclo
-            tlist = tr.json().get("tasks", [])
+            tlist = contact_tasks(cid)
+            if tlist is None:
+                continue  # API falhou e sem cache → NÃO fecha por engano; tenta depois
             tk = next((t for t in tlist if t.get("id") == card["task_id"]), None)
             if tk is None or tk.get("completed"):
                 resolve_card(card, "task completed", "")
@@ -1220,13 +1307,11 @@ def cycle(full_task_pass=False):
                     break
         # 2) task criada com data
         if not resolved:
-            tr = ghl.get(f"/contacts/{cid}/tasks")
-            if tr.status_code == 200:
-                for t in tr.json().get("tasks", []):
-                    if parse_ts(t.get("dateAdded") or "") and parse_ts(t.get("dateAdded")) > cts \
-                            and t.get("dueDate"):
-                        resolved = "follow-up task created"
-                        break
+            for t in (contact_tasks(cid) or []):
+                if parse_ts(t.get("dateAdded") or "") and parse_ts(t.get("dateAdded")) > cts \
+                        and t.get("dueDate"):
+                    resolved = "follow-up task created"
+                    break
         # 3) estimate: link urable após a call
         if not resolved:
             ur = next((s for s in sms_out if s["contact_id"] == cid and s["ts"] > cts
@@ -1380,6 +1465,7 @@ def cycle(full_task_pass=False):
            json={"key": "board_state", "value": {"last_scan": iso(now)}})
     log(f"ciclo ok: +{n_new} cards · {resolutions} resoluções · "
         f"válidas Eugene hoje: {sum(1 for a in att if a['valid'])}")
+    _cache_save()  # persiste o cache TTL (perfil/tasks) p/ o próximo ciclo
 
 
 if __name__ == "__main__":
