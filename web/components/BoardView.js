@@ -393,8 +393,9 @@ export default function BoardView({ session, data, reload, role }) {
         if (gcd) return gcd;
       }
       if (n === 3) {
-        // vencidas (vermelho) primeiro; depois quote → follow-up → task → urable
-        const od = (c) => (c.grupo === "overdue" ? 0 : 1);
+        // tasks do DIA primeiro (quote → follow-up → task → urable); as VENCIDAS
+        // (vermelho) ficam ABAIXO, depois das do dia (regra Rafael 09/jul).
+        const od = (c) => (c.grupo === "overdue" ? 1 : 0);
         const odd = od(a) - od(b);
         if (odd) return odd;
         const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);

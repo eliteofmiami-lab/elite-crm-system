@@ -720,14 +720,40 @@ def cycle(full_task_pass=False):
                 kind, pref = "followup", "Follow Up"
             else:
                 kind, pref = "task", "Task"
-            n_new += upsert_card(3, kind, cid,
-                                 f"{pref} · task \"{(t.get('title') or '')[:36]}\" · {label}",
-                                 due, brief, task_id=t.get("id"),
-                                 grupo=("overdue" if overdue else None),
-                                 stage=("Quote Sent" if kind == "quote_task" else
-                                        "Follow Up" if kind == "followup" else None),
-                                 existing=existing)
-            break  # 1 card por contato (a task mais próxima/vencida)
+            origem_txt = f"{pref} · task \"{(t.get('title') or '')[:36]}\" · {label}"
+            want_grupo = "overdue" if overdue else None
+            tid = t.get("id")
+            # 1 card de task por contato, SEMPRE refletindo o estado ATUAL. upsert_card
+            # só CRIA (dedup por contato+kind) — então uma task que virou vencida nunca
+            # recoloria. Aqui a gente ATUALIZA o card aberto (recolor p/ vermelho) e
+            # fecha duplicados do mesmo contato (ex.: task + followup no mesmo lead).
+            exlist = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{cid}"
+                                   "&kind=in.(task,followup,quote_task)"
+                                   "&select=id,grupo,origem,kind,task_id"
+                                   "&order=created_at.asc") or []
+            if exlist:
+                keep = exlist[0]
+                patch = {}
+                if keep.get("grupo") != want_grupo:
+                    patch["grupo"] = want_grupo
+                if keep.get("origem") != origem_txt:
+                    patch["origem"] = origem_txt
+                if keep.get("kind") != kind:
+                    patch["kind"] = kind
+                if keep.get("task_id") != tid:
+                    patch["task_id"] = tid
+                if patch:
+                    patch["origem_ts"] = iso(due)
+                    sb._sb("PATCH", f"board_cards?id=eq.{keep['id']}", json=patch)
+                for extra in exlist[1:]:
+                    resolve_card(extra, "dedup — one task card per contact", "")
+            else:
+                n_new += upsert_card(3, kind, cid, origem_txt, due, brief,
+                                     task_id=tid, grupo=want_grupo,
+                                     stage=("Quote Sent" if kind == "quote_task" else
+                                            "Follow Up" if kind == "followup" else None),
+                                     existing=existing)
+            break  # 1 card por contato (a task mais VENCIDA/próxima)
     # urable enviados (scan) sem resposta
     for s in sms_out:
         if URABLE.search(s["body"]) and s["ts"] >= now - dt.timedelta(days=W["urable_days"]):
@@ -1003,12 +1029,20 @@ def cycle(full_task_pass=False):
                 resolve_card(card, "task created", "")
                 resolutions += 1
             continue
-        # follow-up/quote com task: fecha quando a task é CONCLUÍDA no GHL
-        if kind in ("followup", "quote_task") and card.get("task_id"):
+        # cards de TASK (avulsa/follow-up/quote): fecham quando a task é CONCLUÍDA,
+        # sumiu do GHL, ou foi REAGENDADA pro futuro (volta sozinha no novo dia). O
+        # recolor vencida→vermelho é refeito no loop de criação a cada ciclo.
+        if kind in ("task", "followup", "quote_task") and card.get("task_id"):
             tr = ghl.get(f"/contacts/{cid}/tasks")
             tlist = tr.json().get("tasks", []) if tr.status_code == 200 else []
-            if any(t.get("id") == card["task_id"] and t.get("completed") for t in tlist):
+            tk = next((t for t in tlist if t.get("id") == card["task_id"]), None)
+            if tk is None or tk.get("completed"):
                 resolve_card(card, "task completed", "")
+                resolutions += 1
+                continue
+            due2 = parse_ts(tk.get("dueDate")) if tk.get("dueDate") else None
+            if due2 and due2.astimezone(ET).date() > dt.datetime.now(ET).date():
+                resolve_card(card, "task rescheduled — back on its due date", "")
                 resolutions += 1
                 continue
         # CHAMADA PERDIDA (regra Rafael): retornar a ligação FECHA o card sozinho.
