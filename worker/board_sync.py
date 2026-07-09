@@ -535,11 +535,13 @@ def cycle(full_task_pass=False):
     oc = open_cards()
     # envelhecimento (PLANO §A): card aberto que saiu da janela viva → aged_out (vira
     # ração do warm-up); nada é deletado nem esquecido — só muda de coluna.
+    # TASKS NÃO ENVELHECEM (report 09/jul): uma task vencida FICA no board em vermelho
+    # até o Eugene resolver (concluir · reagendar · mover p/ Lost). Antes "task/
+    # followup/quote_task" envelheciam em 7d e a vencida sumia pra ração — o oposto
+    # do pedido. O ciclo de vida delas é a própria task (concluída/reagendada/sumiu).
     AGE_WIN = {"missed_inbound": W["col1_days"], "sms_reply": W["col1_days"],
                "hot": W["col1_days"], "new_lead": W["col2_days"],
-               "task": W["task_overdue_days"], "urable": W["urable_days"],
-               "pipeline": W["pipeline_days"], "followup": W["pipeline_days"],
-               "quote_task": W["pipeline_days"],
+               "urable": W["urable_days"], "pipeline": W["pipeline_days"],
                "followup_notask": W["pipeline_days"], "quote_notask": W["pipeline_days"]}
     aged_n = 0
     for c in list(oc):
@@ -1034,7 +1036,9 @@ def cycle(full_task_pass=False):
         # recolor vencida→vermelho é refeito no loop de criação a cada ciclo.
         if kind in ("task", "followup", "quote_task") and card.get("task_id"):
             tr = ghl.get(f"/contacts/{cid}/tasks")
-            tlist = tr.json().get("tasks", []) if tr.status_code == 200 else []
+            if tr.status_code != 200:
+                continue  # API falhou (timeout/429) → NÃO fecha por engano; tenta no próximo ciclo
+            tlist = tr.json().get("tasks", [])
             tk = next((t for t in tlist if t.get("id") == card["task_id"]), None)
             if tk is None or tk.get("completed"):
                 resolve_card(card, "task completed", "")
