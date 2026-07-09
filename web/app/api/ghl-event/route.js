@@ -66,10 +66,13 @@ async function contactBrief(cid) {
   const c = j?.contact || {};
   const cfs = Object.fromEntries((c.customFields || []).map((f) => [f.id, f.value]));
   const veh = [cfs[CF_VEH.year], cfs[CF_VEH.make], cfs[CF_VEH.model]].filter(Boolean).join(" ");
+  // DND (report 09/jul): spam bloqueado = dnd global OU Call+SMS ambos ativos
+  const ds = c.dndSettings || {};
+  const dndBlocked = !!c.dnd || (ds.Call?.status === "active" && ds.SMS?.status === "active");
   return {
     nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || null,
     phone: c.phone || null, veh: veh || null,
-    interest: cfs[CF_INTEREST] || null, tags: c.tags || [],
+    interest: cfs[CF_INTEREST] || null, tags: c.tags || [], dnd: dndBlocked,
   };
 }
 
@@ -243,6 +246,7 @@ async function handleReply(cid) {
       !["cancelled", "invalid", "noshow"].includes(e.appointmentStatus);
   });
   if (hasAppt) return { created: 0, closed: 0, skipped: "has upcoming appointment" };
+  if (b.dnd) return { created: 0, closed, skipped: "dnd blocked (spam)" };  // report 09/jul
   const dup = await sb("GET",
     `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.sms_reply&select=id&limit=1`);
   if (!dup.length) {
@@ -354,6 +358,7 @@ async function handleCall(cid) {
     if (!dup.length) {
       const b = await contactBrief(cid);
       if ((b.tags || []).includes("teste-interno")) return { skipped: "test contact" };
+      if (b.dnd) return { skipped: "dnd blocked (spam)" };  // report 09/jul
       await sb("POST", "board_cards", {
         coluna: 1, kind: "missed_inbound", contact_id: cid,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,

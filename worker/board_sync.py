@@ -246,12 +246,19 @@ def contact_brief(contact_id, cache={}):
     if contact_id in cache:
         return cache[contact_id]
     r = ghl.get(f"/contacts/{contact_id}")
-    b = {"nome": None, "veh": None, "interest": None, "phone": None, "tags": []}
+    b = {"nome": None, "veh": None, "interest": None, "phone": None, "tags": [],
+         "dnd": False}
     if r.status_code == 200:
         c = r.json().get("contact", {})
         b["nome"] = f"{c.get('firstName') or ''} {c.get('lastName') or ''}".strip() or None
         b["phone"] = c.get("phone")
         b["tags"] = c.get("tags") or []
+        # DND (report 09/jul: spam com DND ativado não deve gerar card de retorno).
+        # Bloqueado = DND global OU Call+SMS ambos ativos (totalmente inalcançável).
+        ds = c.get("dndSettings") or {}
+        call_off = (ds.get("Call") or {}).get("status") == "active"
+        sms_off = (ds.get("SMS") or {}).get("status") == "active"
+        b["dnd"] = bool(c.get("dnd")) or (call_off and sms_off)
         cfs = {f.get("id"): f.get("value") for f in c.get("customFields", [])}
         veh = " ".join(str(x) for x in (cfs.get(CF_VEH["year"]), cfs.get(CF_VEH["make"]),
                                         cfs.get(CF_VEH["model"])) if x)
@@ -407,6 +414,10 @@ def cycle(full_task_pass=False):
         if cid in test_ids or cid in silent:
             return False
         if brief and "teste-interno" in (brief.get("tags") or []):
+            return False
+        # report 09/jul: spam/DND totalmente bloqueado (dnd global ou Call+SMS ativos)
+        # não gera card nenhum — não dá pra ligar nem textar, nada a fazer.
+        if brief and brief.get("dnd"):
             return False
         return True
 
@@ -1080,7 +1091,11 @@ def cycle(full_task_pass=False):
             resolutions += 1
         else:
             mins = (now - cts).total_seconds() / 60
-            if mins > cfg["resolution_min"] and not card.get("unres"):
+            # VERMELHO "sem resolução" SÓ para CONVERSA REAL (report 09/jul): ligação
+            # não atendida (0-25s) não vira vermelho — o desfecho dela é avançar stage
+            # / tentar de novo, não "logar um resultado que não existe".
+            if mins > cfg["resolution_min"] and not card.get("unres") \
+                    and card.get("unres_call_answered"):
                 sb._sb("PATCH", f"board_cards?id=eq.{card['id']}", json={"unres": True})
 
     # ---- 6. comissões (5 casos do Rafael) ----
