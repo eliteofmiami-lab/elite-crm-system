@@ -227,7 +227,12 @@ export default function BoardView({ session, data, reload, role }) {
   const expired = comms.filter((c) => c.eligible && c.status === "expired").length;
 
   const days = data.boardDays || [];
-  const now = new Date();
+  // timer p/ re-render periódico (idle/auto-clockout precisam rodar mesmo parado)
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
+  const etHour = Number(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" }));
+  const afterClose = etHour >= 17;         // 5pm ET = fim do expediente
+  const bizHours = etHour >= 9 && etHour < 17;
   const fortnightStart = now.getDate() <= 15 ? 1 : 16;
   const fdays = days.filter((d) => {
     const dd = new Date(d.day + "T12:00:00");
@@ -251,11 +256,34 @@ export default function BoardView({ session, data, reload, role }) {
   const [ckH, ckM] = (cfg.checkpoint || "13:00").split(":").map(Number);
   const behindPace = hhmm >= ckH * 60 + ckM && validToday < goal * 0.5;
 
+  // AUTO CLOCK-IN (report 09/jul): operador abriu o board logado → entra em turno sozinho.
+  const autoInRef = useRef(false);
+  useEffect(() => {
+    if (!isOwner && !myShift && !autoInRef.current) {
+      autoInRef.current = true;
+      supabase.from("shifts").insert({ user_email: email }).then(() => reload && reload());
+    }
+    if (myShift) autoInRef.current = false;
+  }, [isOwner, myShift, email]);
+
+  const [idleReported, setIdleReported] = useState(false);
   useEffect(() => {
     if (idleMin >= 15 && !beeped.current.idle) { beep(); beeped.current.idle = true; }
-    if (idleMin < 10) beeped.current.idle = false;
+    if (idleMin < 10) { beeped.current.idle = false; beeped.current.rep = false; if (idleReported) setIdleReported(false); }
     if (behindPace && !beeped.current.pace) { beep(); beeped.current.pace = true; }
-  }, [idleMin, behindPace]);
+    // AUTO CLOCK-OUT (report 09/jul): após 17h ET + 10min parado → encerra o turno.
+    if (myShift && afterClose && idleMin >= 10) { clockOut(); return; }
+    // INATIVIDADE LONGA (≥20min) no horário → registra bloco (aparece na aba do Rafael)
+    // + avisa o Eugene que o report foi enviado pro Rafael. Cadência: 10 lembrete /
+    // 15 vermelho+som / 20 reporta.
+    if (myShift && !myPause && bizHours && idleMin >= 20 && !beeped.current.rep) {
+      beeped.current.rep = true;
+      fetch("/api/inactivity", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shift_id: myShift.id, queue_size: open.length,
+          started_at: lastAct ? new Date(lastAct).toISOString() : new Date().toISOString() }) })
+        .then(() => setIdleReported(true)).catch(() => {});
+    }
+  }, [idleMin, behindPace, afterClose, bizHours, myShift, myPause]);
 
   async function clockIn() {
     await supabase.from("shifts").insert({ user_email: email });
@@ -271,7 +299,8 @@ export default function BoardView({ session, data, reload, role }) {
     reload();
   }
 
-  // gate de clock-in (só operador)
+  // AUTO CLOCK-IN: abriu o board → entra em turno sozinho (o useEffect insere o shift).
+  // Enquanto o shift não volta do banco, mostra "entrando" (some sozinho no reload).
   if (!isOwner && !myShift) {
     return (
       <div className="wrap" style={{ maxWidth: 520, textAlign: "center", paddingTop: 60 }}>
@@ -280,9 +309,9 @@ export default function BoardView({ session, data, reload, role }) {
         <p style={{ color: "var(--sub)", marginBottom: 8 }}>
           {open.length} cards waiting · {open.filter((c) => c.coluna === 5 && c.kind === "appt_confirm").length} appointments to confirm
         </p>
-        <button className="btn" style={{ background: "var(--blue)", color: "#fff", borderColor: "var(--blue)", fontSize: 15, padding: "12px 30px" }}
-          onClick={clockIn}>Clock in</button>
-        <p style={{ color: "var(--faint)", fontSize: 12, marginTop: 12 }}>The board unlocks after clock-in.</p>
+        <p style={{ color: "var(--blue)", fontSize: 14, fontWeight: 600 }}>Clocking you in…</p>
+        <button className="btn" style={{ background: "var(--card)", color: "var(--sub)", fontSize: 12, padding: "8px 18px", marginTop: 10 }}
+          onClick={clockIn}>Tap if it doesn&apos;t open</button>
       </div>
     );
   }
@@ -392,8 +421,10 @@ export default function BoardView({ session, data, reload, role }) {
 
       {tab === "board" && (
         <div>
-          {idleMin >= 15 && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>⏰ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
-          {idleMin >= 10 && idleMin < 15 && <div className="banner">⚠ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
+          {idleReported && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>📩 {Math.floor(idleMin)} min without activity — this was reported to Rafael. Get back on the board.</div>}
+          {!idleReported && bizHours && idleMin >= 15 && <div className="banner" style={{ background: "var(--red-soft)", borderColor: "var(--red-border)", color: "var(--red-text)" }}>⏰ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
+          {!idleReported && bizHours && idleMin >= 10 && idleMin < 15 && <div className="banner">⚠ {Math.floor(idleMin)} min without activity — the board is waiting</div>}
+          {afterClose && myShift && idleMin >= 5 && idleMin < 10 && <div className="banner">🌙 After 5 PM — the board will clock you out after 10 min idle.</div>}
           {behindPace && <div className="banner">🕐 Midday check: {validToday}/{goal} valid calls — behind pace. Hit the queue and warm-up list.</div>}
 
           <div className="earn">
