@@ -296,9 +296,9 @@ async function handleAppt(cid) {
     }
   }
   // CANCELADO (report 09/jul NELSON): fecha cards de confirmação + card de RESCHEDULE.
-  const anyCancelled = evs.some((e) => e.appointmentStatus === "cancelled" &&
+  const cancelledEv = evs.find((e) => e.appointmentStatus === "cancelled" &&
     new Date(e.startTime).getTime() > now - 14 * 86400e3);
-  if (anyCancelled && !hasUpcoming) {
+  if (cancelledEv && !hasUpcoming) {
     const gone = await sb("GET",
       `board_cards?status=eq.open&contact_id=eq.${cid}&kind=in.(appt_info,appt_confirm)&select=id`);
     for (const p of gone) {
@@ -309,20 +309,39 @@ async function handleAppt(cid) {
     }
     const dupR = await sb("GET",
       `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.warmup&select=id&limit=1`);
-    if (!dupR.length) {
+    // IGNORADO antes (Eugene dispensou este cancelamento) → não recria.
+    const ignored = await sb("GET",
+      `board_cards?contact_id=eq.${cid}&kind=eq.warmup&event_id=eq.${cancelledEv.id}` +
+      `&resolved_by=like.*ignored*&select=id&limit=1`);
+    if (!dupR.length && !ignored.length) {
       await sb("POST", "board_cards", {
         coluna: 6, grupo: "reschedule", kind: "warmup", contact_id: cid,
+        event_id: cancelledEv.id,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
         origem: "Cancelled appointment — RESCHEDULE (was booked) (live)",
         origem_ts: new Date().toISOString() });
       created++;
     }
   }
+  // COMPARECEU (report 09/jul): estado terminal bom — nenhum card novo; fecha os
+  // cards de appointment abertos (visita concluída). Não vira reschedule.
+  const anyShowed = evs.some((e) => e.appointmentStatus === "showed" &&
+    new Date(e.startTime).getTime() > now - 3 * 86400e3);
+  if (anyShowed && !hasUpcoming) {
+    const done = await sb("GET",
+      `board_cards?status=eq.open&contact_id=eq.${cid}&kind=in.(appt_info,appt_confirm)&select=id`);
+    for (const p of done) {
+      await sb("PATCH", `board_cards?id=eq.${p.id}`, {
+        status: "resolved", resolved_by: "showed — visit completed (webhook)",
+        resolved_at: new Date().toISOString() });
+      closed++;
+    }
+  }
   for (const e of evs) {
     const st = new Date(e.startTime).getTime();
     if (isNaN(st) || st < now - 3 * 3600e3 || st > now + 2 * 86400e3) continue;
     const status = e.appointmentStatus;
-    if (["cancelled", "invalid", "noshow"].includes(status)) continue;
+    if (["cancelled", "invalid", "noshow", "showed"].includes(status)) continue;
     const kind = status === "confirmed" ? "appt_info" : "appt_confirm";
     // fecha o card do status OPOSTO (dedup — report 09/jul): confirmado fecha
     // 'a confirmar'; voltou a não-confirmado fecha o verde.

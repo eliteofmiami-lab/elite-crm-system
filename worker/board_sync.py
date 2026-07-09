@@ -695,14 +695,17 @@ def cycle(full_task_pass=False):
             continue
         pend = [t for t in r.json().get("tasks", [])
                 if not t.get("completed") and t.get("dueDate")]
+        pend.sort(key=lambda t: t.get("dueDate") or "")  # mais VENCIDA primeiro
         tasks_by_contact[cid] = pend
         for t in pend:
             due = parse_ts(t.get("dueDate"))
             days_over = (now - due).days
             if due.date() > dt.datetime.now(ET).date():
                 continue  # futuras: invisíveis até o dia
-            if days_over > W["task_overdue_days"]:
-                continue  # envelhecida → warm
+            # VENCIDAS (report 09/jul): ficam SEMPRE no board, em vermelho, até o Eugene
+            # resolver (mudar a data → recolore · ou fechar a task + mover p/ Lost → some).
+            # Nada de sumir por idade — antes uma vencida antiga "desaparecia" do board.
+            overdue = days_over > 0
             brief = brief or contact_brief(cid)
             if not ok_contact(cid, brief):
                 break
@@ -716,10 +719,11 @@ def cycle(full_task_pass=False):
             n_new += upsert_card(3, kind, cid,
                                  f"{pref} · task \"{(t.get('title') or '')[:36]}\" · {label}",
                                  due, brief, task_id=t.get("id"),
+                                 grupo=("overdue" if overdue else None),
                                  stage=("Quote Sent" if kind == "quote_task" else
                                         "Follow Up" if kind == "followup" else None),
                                  existing=existing)
-            break  # 1 card por contato (a task mais próxima)
+            break  # 1 card por contato (a task mais próxima/vencida)
     # urable enviados (scan) sem resposta
     for s in sms_out:
         if URABLE.search(s["body"]) and s["ts"] >= now - dt.timedelta(days=W["urable_days"]):
@@ -765,14 +769,25 @@ def cycle(full_task_pass=False):
             if cid in resched_done:
                 continue
             resched_done.add(cid)
+            # IGNORADO (report 09/jul): se o Eugene já dispensou o reschedule DESTE
+            # cancelamento (cliente desistiu de vez), não recria o card do mesmo evento.
+            eid = e.get("id")
+            ign = sb._sb("GET", f"board_cards?contact_id=eq.{cid}&kind=eq.warmup"
+                                f"&event_id=eq.{eid}&resolved_by=like.*ignored*"
+                                "&select=id&limit=1") if eid else None
+            if ign:
+                continue
             brief = contact_brief(cid)
             if ok_contact(cid, brief):
                 n_new += upsert_card(6, "warmup", cid,
                                      f"Cancelled {stt.astimezone(ET):%b %d} — RESCHEDULE (was booked)"
                                      if stt else "Cancelled appointment — RESCHEDULE (was booked)",
-                                     stt or now, brief, grupo="reschedule", existing=existing)
+                                     stt or now, brief, grupo="reschedule",
+                                     event_id=eid, existing=existing)
             continue
-        if status in ("invalid", "noshow"):
+        # COMPARECEU (report 09/jul): estado terminal bom — nenhum card (nem "a
+        # confirmar" nem reschedule). Os cards de appt abertos fecham na resolução.
+        if status in ("invalid", "noshow", "showed"):
             continue
         # só vira card ativo se o appointment é nos próximos 2 dias
         if not stt or stt.astimezone(ET) < win_lo or stt.astimezone(ET) > end:
@@ -1068,6 +1083,9 @@ def cycle(full_task_pass=False):
             if st == "confirmed":
                 resolve_card(card, "confirmed", "")  # → appt_info (verde) assume
                 resolutions += 1
+            elif st == "showed":
+                resolve_card(card, "showed — visit completed", "")
+                resolutions += 1
             elif st in ("cancelled", "invalid", "noshow"):
                 resolve_card(card, "appointment cancelled/gone", "")
                 resolutions += 1
@@ -1077,7 +1095,10 @@ def cycle(full_task_pass=False):
             continue
         if kind == "appt_info":
             st = appt_status.get(card.get("event_id"))
-            if st and st not in ("confirmed", None):
+            if st == "showed":
+                resolve_card(card, "showed — visit completed", "")
+                resolutions += 1
+            elif st and st not in ("confirmed", None):
                 # voltou a NÃO confirmado (equipe desmarcou) → o "a confirmar" assume
                 resolve_card(card, "no longer confirmed — needs confirmation again", "")
                 resolutions += 1

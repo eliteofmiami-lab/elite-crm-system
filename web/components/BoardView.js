@@ -46,11 +46,12 @@ function beep() {
   } catch (_) { /* sem som, sem drama */ }
 }
 
-function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
+function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose, onIgnore }) {
   const [open, setOpen] = useState(false);
   const [fb, setFb] = useState("");
   const [showFb, setShowFb] = useState(false);
-  const red = RED_KINDS.has(c.kind);
+  const overdue = c.grupo === "overdue";
+  const red = RED_KINDS.has(c.kind) || overdue;
   const style = red
     ? { border: "1.5px solid var(--red-border)", borderLeft: "4px solid var(--red)", background: "#FFFBFA" }
     : KIND_STYLE[c.kind];
@@ -83,6 +84,13 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
           GREAT CAR — CALL FIRST
         </div>
       )}
+      {overdue && (
+        <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
+          borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
+          background: "var(--red-soft)", color: "var(--red-text)", border: "1px solid var(--red-border)" }}>
+          OVERDUE — UPDATE DATE OR CLOSE TASK
+        </div>
+      )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
       <div className="org"><b>{(c.origem || "").split("·")[0]}</b>·{(c.origem || "").split("·").slice(1).join("·")}</div>
       {c.last_note
@@ -110,6 +118,15 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose }) {
               color: "var(--green-text)", borderRadius: 7, padding: "6px 10px",
               font: "600 11.5px Inter", cursor: "pointer" }}>
             Close — no reply needed
+          </button>
+        )}
+        {c.grupo === "reschedule" && onIgnore && (
+          <button onClick={() => onIgnore(c)}
+            title="Only if the client gave up for good — this reschedule won't come back"
+            style={{ marginTop: 7, border: "1px solid var(--line)", background: "var(--card)",
+              color: "var(--sub)", borderRadius: 7, padding: "6px 10px",
+              font: "600 11.5px Inter", cursor: "pointer" }}>
+            Client gave up — ignore (no reschedule)
           </button>
         )}
         {onReport && (
@@ -331,10 +348,19 @@ export default function BoardView({ session, data, reload, role }) {
     reload && reload();
   }
 
-  // ✓ fechamento manual simples do card de SMS (caso Carlos Quinhones)
+  // fechamento manual simples do card de SMS (caso Carlos Quinhones)
   async function closeNoReply(c) {
     await supabase.from("board_cards").update({
       status: "resolved", resolved_by: "closed manually — no reply needed",
+      resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
+    reload && reload();
+  }
+
+  // IGNORAR reschedule (report 09/jul): cliente cancelou e desistiu de vez. Fecha o
+  // card e NÃO reaparece — o espelho respeita o resolved_by "ignored" (por event_id).
+  async function ignoreReschedule(c) {
+    await supabase.from("board_cards").update({
+      status: "resolved", resolved_by: "ignored — client cancelled, no reschedule",
       resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
     reload && reload();
   }
@@ -366,6 +392,10 @@ export default function BoardView({ session, data, reload, role }) {
         if (gcd) return gcd;
       }
       if (n === 3) {
+        // vencidas (vermelho) primeiro; depois quote → follow-up → task → urable
+        const od = (c) => (c.grupo === "overdue" ? 0 : 1);
+        const odd = od(a) - od(b);
+        if (odd) return odd;
         const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);
         if (kd) return kd;
       }
@@ -504,7 +534,8 @@ export default function BoardView({ session, data, reload, role }) {
                     </>
                   ) : items.map((c) => <KCard key={c.id} c={c}
                     isSpanish={spanishSet.has(c.contact_id)} isOwner={isOwner}
-                    onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply} />)}
+                    onSpanish={flagSpanish} onReport={reportClose} onClose={closeNoReply}
+                    onIgnore={ignoreReschedule} />)}
                   {col.n === 6 && waitingLine.length > 0 && (
                     <div style={{ marginTop: 10 }}>
                       <div className="subhead">In line — next up · {waitingLine.length}</div>
