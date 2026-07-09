@@ -385,8 +385,9 @@ export default function BoardView({ session, data, reload, role }) {
       // col 4 mais NOVOS primeiro; resto mais antigo primeiro; vermelhos no topo.
       const redDiff = (RED_KINDS.has(b.kind) ? 1 : 0) - (RED_KINDS.has(a.kind) ? 1 : 0);
       if (redDiff) return redDiff;
-      // Great Cars (report 09/jul): ligar PRIMEIRO — topo das colunas New Leads e Pipeline.
-      if (n === 2 || n === 4) {
+      // Great Cars (report 09/jul): ligar PRIMEIRO — topo de Return/Reply/Hot, New Leads
+      // e Pipeline. A tag "great cars" acompanha o lead em todas essas colunas.
+      if (n === 1 || n === 2 || n === 4) {
         const gc = (c) => (c.grupo === "great_car" ? 0 : 1);
         const gcd = gc(a) - gc(b);
         if (gcd) return gcd;

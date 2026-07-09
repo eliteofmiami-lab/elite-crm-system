@@ -668,7 +668,9 @@ def cycle(full_task_pass=False):
                 continue
             n_new += upsert_card(1, "missed_inbound", c["contact_id"],
                                  f"Missed inbound · called {c['ts'].astimezone(ET):%H:%M}, no answer",
-                                 c["ts"], brief, existing=existing)
+                                 c["ts"], brief,
+                                 grupo=("great_car" if is_great_car(None, brief) else None),
+                                 existing=existing)
     for cid, last in conv_last.items():
         if last["type"] == "TYPE_SMS" and last["direction"] == "inbound" \
                 and last["ts"] and last["ts"] >= col1_win:
@@ -682,7 +684,9 @@ def cycle(full_task_pass=False):
                 continue
             n_new += upsert_card(1, "sms_reply", cid,
                                  f"SMS awaiting reply · last msg is theirs, {last['ts'].astimezone(ET):%H:%M}",
-                                 last["ts"], brief, existing=existing)
+                                 last["ts"], brief,
+                                 grupo=("great_car" if is_great_car(None, brief) else None),
+                                 existing=existing)
 
     # ---- col3: tasks POR IMPORTÂNCIA (regra Rafael): verde=Quote Sent c/ task ·
     # azul=Follow Up c/ task · amarelo=task avulsa. + urable sem resposta. ----
