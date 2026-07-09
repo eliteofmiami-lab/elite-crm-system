@@ -41,7 +41,8 @@ const CLOSES = {
   appt_confirm: "Closes when: confirmation SMS sent OR status \"confirmed\" in GHL.",
 };
 const CF_VEH = { make: "CiRd678lAFn854igklGR", model: "LHwTnTb8TPz5BbJ0I2XV", year: "C01IzbXlbESCLfhoHkrZ" };
-const CF_INTEREST = "D5TgphY9HlZMoS8wcWj1";
+const CF_SERVICES = "308nNEqn6D0lZruuJ10m";  // "What Services are you interested in?" (form)
+const CF_INTEREST = "D5TgphY9HlZMoS8wcWj1";  // "Elite Interesse Atual" (manual, fallback)
 
 function sb(method, path, body, extra = {}) {
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/${path}`;
@@ -72,7 +73,7 @@ async function contactBrief(cid) {
   return {
     nome: `${c.firstName || ""} ${c.lastName || ""}`.trim() || null,
     phone: c.phone || null, veh: veh || null,
-    interest: cfs[CF_INTEREST] || null, tags: c.tags || [], dnd: dndBlocked,
+    interest: cfs[CF_SERVICES] || cfs[CF_INTEREST] || null, tags: c.tags || [], dnd: dndBlocked,
   };
 }
 

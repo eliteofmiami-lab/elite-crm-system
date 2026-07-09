@@ -250,7 +250,11 @@ STAGE_KINDS = {"hot", "new_lead", "pipeline", "followup", "quote_task",
 
 CF_VEH = {"make": "CiRd678lAFn854igklGR", "model": "LHwTnTb8TPz5BbJ0I2XV",
           "year": "C01IzbXlbESCLfhoHkrZ"}
-CF_INTEREST = "D5TgphY9HlZMoS8wcWj1"
+# FONTE DO INTERESSE (09/jul): o lead responde "What Services are you interested in?"
+# no formulário (CF_SERVICES). O antigo CF_INTEREST ("Elite Interesse Atual") é campo
+# MANUAL quase sempre vazio → era a causa de "interest not set". Lê o form primeiro.
+CF_SERVICES = "308nNEqn6D0lZruuJ10m"   # "What Services are you interested in?" (form)
+CF_INTEREST = "D5TgphY9HlZMoS8wcWj1"   # "Elite Interesse Atual" (manual, fallback)
 
 
 def log(m):
@@ -371,7 +375,7 @@ def contact_brief(contact_id, cache={}):
         veh = " ".join(str(x) for x in (cfs.get(CF_VEH["year"]), cfs.get(CF_VEH["make"]),
                                         cfs.get(CF_VEH["model"])) if x)
         b["veh"] = veh or None
-        b["interest"] = cfs.get(CF_INTEREST) or next(
+        b["interest"] = cfs.get(CF_SERVICES) or cfs.get(CF_INTEREST) or next(
             (str(v) for k, v in cfs.items() if isinstance(v, str)
              and any(w in str(v).lower() for w in ("ppf", "coating", "wrap", "tint"))), None)
         _cache_load()["brief"][contact_id] = {"data": b, "at": iso(now_utc())}  # grava só em sucesso
