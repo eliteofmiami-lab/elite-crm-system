@@ -891,6 +891,14 @@ def cycle(full_task_pass=False):
         cid = card["contact_id"]
         kind = card["kind"]
         created = parse_ts(card["created_at"])
+        # DND AUTO-CLOSE (report 09/jul): atendente ativou DND depois que o card já
+        # existia (ex.: percebeu que era spam) → o card SOME sozinho. Só p/ cards de
+        # "contatar" (col1/warm-up, poucos) pra não estourar chamadas de contact_brief.
+        if kind in ("missed_inbound", "sms_reply", "hot", "new_lead", "warmup", "urable") \
+                and contact_brief(cid).get("dnd"):
+            resolve_card(card, "DND activated — blocked/spam, no contact possible", "")
+            resolutions += 1
+            continue
         # REGRA PETER (report 08/jul): appointment futuro fecha qualquer card de
         # prioridade de contato — o lead já vive na coluna 5.
         if kind in APPT_WINS_KINDS and cid in appt_cids:
