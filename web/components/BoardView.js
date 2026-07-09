@@ -92,6 +92,11 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose, onIg
         </div>
       )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
+      {(!c.veh || !c.interest) && (
+        <div style={{ fontSize: 11, fontWeight: 500, color: "var(--amber-text)", marginTop: 2 }}>
+          Get this call: {[!c.veh && "vehicle", !c.interest && "interest"].filter(Boolean).join(" + ")}
+        </div>
+      )}
       <div className="org"><b>{(c.origem || "").split("·")[0]}</b>·{(c.origem || "").split("·").slice(1).join("·")}</div>
       {c.last_note
         ? <div className="note"><b>{c.last_note.split(":")[0]}:</b>{c.last_note.split(":").slice(1).join(":")}</div>
