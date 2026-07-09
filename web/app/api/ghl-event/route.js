@@ -145,6 +145,7 @@ async function handleReply(cid) {
   // Customer Replied → card col 1 (sms_reply) + fecha urable "no reply"
   // + REGRA CARL: resposta do cliente LIMPA o vermelho SEM RESOLUÇÃO na hora
   const b = await contactBrief(cid);
+  if ((b.tags || []).includes("teste-interno")) return { skipped: "test contact" };
   let created = 0, closed = 0;
   await sb("PATCH", `board_cards?contact_id=eq.${cid}&status=eq.open&unres=eq.true`,
     { unres: false, unres_call_ts: null });
@@ -207,6 +208,7 @@ async function handleAppt(cid) {
   const evs = j?.events || [];
   const now = Date.now();
   const b = await contactBrief(cid);
+  if ((b.tags || []).includes("teste-interno")) return { skipped: "test contact" };
   let created = 0, closed = 0;
   // regra Peter (08/jul): appointment futuro fecha NA HORA os cards de prioridade
   // do contato — o lead vive na coluna 5 (Hot/New/Pipeline/perdida/SMS somem).
@@ -284,6 +286,7 @@ async function handleCall(cid) {
       `board_cards?status=eq.open&contact_id=eq.${cid}&kind=eq.missed_inbound&select=id&limit=1`);
     if (!dup.length) {
       const b = await contactBrief(cid);
+      if ((b.tags || []).includes("teste-interno")) return { skipped: "test contact" };
       await sb("POST", "board_cards", {
         coluna: 1, kind: "missed_inbound", contact_id: cid,
         nome: b.nome, veh: b.veh, interest: b.interest, phone: b.phone,
