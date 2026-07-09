@@ -378,7 +378,8 @@ export default function BoardView({ session, data, reload, role }) {
     }
     reload && reload();
   }
-  const openByCol = (n) => open.filter((c) => c.coluna === n)
+  const openByCol = (n) => {
+    const arr = open.filter((c) => c.coluna === n)
     .filter((c) => (isOwner ? true : !spanishSet.has(c.contact_id)))
     .sort((a, b) => {
       // regra Rafael: col 3 por importância (verde→azul→amarelo→urable);
@@ -417,6 +418,27 @@ export default function BoardView({ session, data, reload, role }) {
       const tb = new Date(b.origem_ts || b.created_at);
       return n === 4 ? tb - ta : ta - tb;
     });
+    // UM CARD POR LEAD na coluna 1 (report 09/jul Onel): o mesmo contato pode ter
+    // chamada perdida + HOT + SMS aguardando = 3 sinais técnicos, mas é 1 pessoa pra
+    // contatar. Mostra só o mais acionável (SMS > perdida > HOT); os outros seguem
+    // no banco pro fechamento, só não poluem o board.
+    if (n === 1) {
+      const PRIO = { sms_reply: 0, missed_inbound: 1, hot: 2 };
+      const sc = (x) => (PRIO[x.kind] ?? 9);
+      const best = new Map();
+      for (const c of arr) {
+        const cur = best.get(c.contact_id);
+        if (!cur || sc(c) < sc(cur) ||
+            (sc(c) === sc(cur) &&
+             new Date(c.origem_ts || c.created_at) > new Date(cur.origem_ts || cur.created_at))) {
+          best.set(c.contact_id, c);
+        }
+      }
+      const keep = new Set([...best.values()].map((c) => c.id));
+      return arr.filter((c) => keep.has(c.id));
+    }
+    return arr;
+  };
   const today = new Date().toISOString().slice(0, 10);
   const createdToday = (n) => cards.filter((c) => c.coluna === n && c.day_created === today).length;
   const resolvedToday = (n) => cards.filter((c) => c.coluna === n && c.status === "resolved" &&
