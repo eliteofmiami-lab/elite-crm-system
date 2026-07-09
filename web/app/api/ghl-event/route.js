@@ -78,6 +78,7 @@ async function contactBrief(cid) {
 // 1x por conversa/12h · nunca se a equipe respondeu há <2h · chave config.after_hours_sms.
 const AH_MSG_REPLY = "We're closed at the moment - back at 9 AM and you'll hear from us first thing.";
 const AH_MSG_MISSED = "Hi! This is Elite Premium Detailing - we're closed right now, but you're first in line tomorrow. Reply with your car and what you're looking for, and we'll call you at 9 AM sharp.";
+const AH_MSG_NEWLEAD = "Thanks for reaching out to Elite Premium Detailing! We'll call you first thing at 9 AM. Meanwhile: what car is it, and are you thinking PPF, ceramic, or a wrap?";
 
 function afterHoursNow() {
   const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
@@ -111,9 +112,19 @@ async function afterHoursAutoSms(cid, kind, isTest) {
     headers: { Authorization: `Bearer ${process.env.GHL_API_TOKEN}`, Version: "2021-07-28",
       "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({ type: "SMS", contactId: cid,
-      message: kind === "missed" ? AH_MSG_MISSED : AH_MSG_REPLY }),
+      message: kind === "missed" ? AH_MSG_MISSED
+        : kind === "newlead" ? AH_MSG_NEWLEAD : AH_MSG_REPLY }),
   });
   return r.ok;
+}
+
+async function handleNewLead(cid) {
+  // Lead novo (form/Meta) FORA do horário → boas-vindas + expectativa (PLANO §D.2).
+  // Dentro do horário o "00: New Lead Submitted - ADS" nativo cobre — aqui só a noite.
+  const b = await contactBrief(cid);
+  const isTest = (b.tags || []).includes("teste-interno");
+  const autoSms = await afterHoursAutoSms(cid, "newlead", isTest);
+  return { auto_sms: autoSms, after_hours: afterHoursNow() };
 }
 
 async function miniMirrorStage(cid) {
@@ -380,6 +391,7 @@ export async function POST(req) {
     else if (type === "reply") result = await handleReply(cid);
     else if (type === "appt") result = await handleAppt(cid);
     else if (type === "call") result = await handleCall(cid);
+    else if (type === "newlead") result = await handleNewLead(cid);
     else result = await miniMirrorStage(cid);
   } catch (e) {
     await sb("POST", "config?on_conflict=key", { key: "board_live_error",
