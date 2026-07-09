@@ -268,7 +268,12 @@ export default function BoardView({ session, data, reload, role }) {
     const ts = attempts.filter((a) => a.user_key === "eugene").map((a) => new Date(a.call_ts).getTime());
     return ts.length ? Math.max(...ts) : (myShift ? new Date(myShift.clock_in).getTime() : null);
   }, [attempts, myShift]);
-  const idleMin = myShift && !myPause && lastAct ? (Date.now() - lastAct) / 60000 : 0;
+  // INATIVIDADE só conta se os DADOS estão frescos (worker sincronizando). Se o worker
+  // ou a API do GHL cai, board_attempts congela e o "sem atividade" seria FALSO — não é
+  // o Eugene parado, é o dado velho. (report 09/jul: apagão da API do GHL às 14h)
+  const actUpd = (data.config.board_activity || {}).updated;
+  const dataFresh = actUpd ? (Date.now() - new Date(actUpd).getTime()) < 8 * 60000 : false;
+  const idleMin = myShift && !myPause && lastAct && dataFresh ? (Date.now() - lastAct) / 60000 : 0;
   const hhmm = now.getHours() * 60 + now.getMinutes();
   const [ckH, ckM] = (cfg.checkpoint || "13:00").split(":").map(Number);
   const behindPace = hhmm >= ckH * 60 + ckM && validToday < goal * 0.5;

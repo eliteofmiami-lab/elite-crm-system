@@ -459,6 +459,25 @@ def cycle(full_task_pass=False):
         opps.setdefault(o["contactId"], []).append((stage, o))
     log(f"stages espelhados: {len(by_opp)} opps ({sum(len(v) for v in opps.values())} após dedupe)")
 
+    # SALVA-VIDAS (report 09/jul — apagão da API do GHL às 14h): se a busca de
+    # oportunidades voltou VAZIA, é falha/instabilidade da API do GHL, NÃO "todo mundo
+    # saiu do stage". Aborta o ciclo AGORA — antes de envelhecer/resolver — pra NUNCA
+    # apagar o board inteiro por causa de resposta vazia. Quando a API volta, o próximo
+    # ciclo sincroniza normal.
+    stage_col_cards = [c for c in open_cards() if c["kind"] in ("hot", "new_lead", "pipeline")]
+    if not by_opp and stage_col_cards:
+        log(f"ABORTA CICLO: GHL devolveu 0 oportunidades, mas há {len(stage_col_cards)} "
+            f"cards de stage abertos → instabilidade da API. Board preservado, nada apagado.")
+        try:
+            sb._sb("POST", "config?on_conflict=key",
+                   headers_extra={"Prefer": "resolution=merge-duplicates"},
+                   json={"key": "board_live_error",
+                         "value": {"at": iso(now_utc()),
+                                   "error": "GHL API returned 0 opportunities — cycle skipped to protect the board"}})
+        except Exception:
+            pass
+        return
+
     # ---- 2. varredura de conversas ----
     calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback)
     log(f"scan: {len(calls)} calls · {len(sms_out)} sms out · {len(sms_in)} sms in · "
