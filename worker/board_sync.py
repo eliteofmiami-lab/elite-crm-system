@@ -39,10 +39,16 @@ import os  # noqa: E402
 # das chamadas (varredura por-contato). Falha de API usa cache velho (nunca fecha
 # card por engano). O arquivo vive na máquina do bridge (out/ghl_cache.json).
 _CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "out", "ghl_cache.json")
-BRIEF_TTL_MIN = 30
-TASKS_TTL_MIN = 15
+# TTLs LONGOS + DELTA (Lote 2): o cache serve de rede de segurança; a atualização
+# imediata vem do DELTA — contato que MUDOU (call/sms/stage novo, ou tem card de task
+# aberto) é re-buscado na hora (_changed_contacts). Contato sem mudança usa cache até
+# o TTL longo. Perfil quase nunca muda (4h); tasks: 45min só p/ pegar due-date que
+# chega sem atividade (o delta já pega abertura/fechamento de quem tem card).
+BRIEF_TTL_MIN = 240
+TASKS_TTL_MIN = 45
 _cache_obj = None
 _tasks_mem = {}  # dedup DENTRO do ciclo (evita re-busca task_universe + resolução)
+_changed_contacts = set()  # DELTA: contatos com mudança neste ciclo → força re-busca
 
 
 def _cache_load():
@@ -91,7 +97,8 @@ def contact_tasks(contact_id):
     if contact_id in _tasks_mem:
         return _tasks_mem[contact_id]
     fc = _cache_load()["tasks"].get(contact_id)
-    if _cache_fresh(fc, TASKS_TTL_MIN):
+    # DELTA: contato que mudou (ou tem card de task aberto) NÃO usa cache — re-busca
+    if contact_id not in _changed_contacts and _cache_fresh(fc, TASKS_TTL_MIN):
         _tasks_mem[contact_id] = fc["data"]
         return fc["data"]
     r = ghl.get(f"/contacts/{contact_id}/tasks")
@@ -342,7 +349,8 @@ def contact_brief(contact_id, cache={}):
     if contact_id in cache:
         return cache[contact_id]
     fc = _cache_load()["brief"].get(contact_id)
-    if _cache_fresh(fc, BRIEF_TTL_MIN):  # perfil quase não muda em minutos
+    # DELTA: força re-busca se o contato mudou neste ciclo; senão usa cache (TTL longo)
+    if contact_id not in _changed_contacts and _cache_fresh(fc, BRIEF_TTL_MIN):
         cache[contact_id] = fc["data"]
         return fc["data"]
     r = ghl.get(f"/contacts/{contact_id}")
@@ -642,6 +650,22 @@ def cycle(full_task_pass=False):
                    json={"pending_sms": False})
 
     oc = open_cards()
+    # DELTA (Lote 2): monta o conjunto de contatos que MUDARAM neste ciclo → esses
+    # forçam re-busca de brief/tasks (os demais usam cache com TTL longo). Sinais:
+    # call/sms/comentário novos (scan), mudança de stage recente, e quem tem card de
+    # task aberto (p/ fechar rápido quando a task é concluída/reagendada).
+    _changed_contacts.clear()
+    _changed_contacts.update(c["contact_id"] for c in calls)
+    _changed_contacts.update(s["contact_id"] for s in sms_out)
+    _changed_contacts.update(s["contact_id"] for s in sms_in)
+    _changed_contacts.update(ev["contact_id"] for ev in comments)
+    for _stage, _o in by_opp.values():
+        _lsc = parse_ts(_o.get("lastStageChangeAt"))
+        if _lsc and _lsc > since:  # mudou de stage desde o último scan
+            _changed_contacts.add(_o["contactId"])
+    _changed_contacts.update(c["contact_id"] for c in oc
+                             if c["kind"] in ("task", "followup", "quote_task"))
+
     # envelhecimento (PLANO §A): card aberto que saiu da janela viva → aged_out (vira
     # ração do warm-up); nada é deletado nem esquecido — só muda de coluna.
     # TASKS NÃO ENVELHECEM (report 09/jul): uma task vencida FICA no board em vermelho
