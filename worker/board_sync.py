@@ -1196,7 +1196,8 @@ def cycle(full_task_pass=False):
             if ur:
                 resolved = "estimate sent (Urable)"
                 res_user = user_key(cfg, ur.get("user_id"), ur.get("source"))
-        # 4) Lost
+        # 4) Lost · ou avanço de stage (a disposição da call moveu o lead na cadência)
+        stage_moved = False
         if not resolved:
             opr = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID,
                                                     "contact_id": cid, "limit": 5})
@@ -1205,10 +1206,14 @@ def cycle(full_task_pass=False):
                         and parse_ts(o.get("updatedAt")) and parse_ts(o.get("updatedAt")) > cts:
                     resolved = "marked Lost"
                     break
-                # não atendida: stage avançou
-                if not card.get("unres_call_answered") and card.get("stage") \
-                        and rules.STAGE_BY_ID.get(o.get("pipelineStageId")) not in (card["stage"], None):
-                    resolved = "stage advanced"
+                # STAGE AVANÇOU DEPOIS DA CALL (report 09/jul Shandor): a disposição
+                # "No Answer" (workflow ladder) moveu o lead pra frente. ISSO é a
+                # resolução "moved to next stage" — vale mesmo p/ call lida como
+                # 'atendida', porque um voicemail de 56s é logado como completed/56s e
+                # engana a duração. Sinal confiável: lastStageChangeAt do opp > a call.
+                lsc = parse_ts(o.get("lastStageChangeAt"))
+                if lsc and lsc > cts:
+                    stage_moved = True
                     break
         # warm-up não atendida: SMS de reativação
         if not resolved and kind == "warmup" and not card.get("unres_call_answered"):
@@ -1220,6 +1225,15 @@ def cycle(full_task_pass=False):
         if resolved:
             resolve_card(card, resolved, res_user or card.get("unres_call_user") or "")
             resolutions += 1
+        elif stage_moved:
+            # a call foi um NO ANSWER (moveu o lead na cadência). NÃO fecha o card do
+            # stage ATUAL — o Eugene ainda liga no slot novo. Só apaga o vermelho e
+            # corrige a call p/ não-atendida, pra não voltar a cobrar categorização.
+            if card.get("unres") or card.get("unres_call_answered"):
+                sb._sb("PATCH", f"board_cards?id=eq.{card['id']}",
+                       json={"unres": False, "unres_call_answered": False})
+                card["unres"] = False
+                card["unres_call_answered"] = False
         else:
             mins = (now - cts).total_seconds() / 60
             # VERMELHO "sem resolução" SÓ para CONVERSA REAL (report 09/jul): ligação
