@@ -1431,6 +1431,21 @@ def cycle(full_task_pass=False):
                 if lsc and lsc > cts:
                     stage_moved = True
                     break
+        # 5) DISPOSIÇÃO registrada depois da call (webhook type=disposition, 10/jul):
+        # o clique do atendente no fim da chamada é a FONTE DA VERDADE do outcome
+        # (a API não expõe — chega via workflow Disposition:* → ghl_events).
+        # no_answer/voicemail = NÃO houve conversa → mesmo efeito do stage_moved
+        # (limpa o vermelho e corrige a call p/ não-atendida); os demais = resolução.
+        if not resolved and not stage_moved:
+            evs = sb._sb("GET", f"ghl_events?type=eq.disposition&contact_id=eq.{cid}"
+                                f"&created_at=gte.{iso(cts)}"
+                                "&select=payload&order=created_at.desc&limit=1") or []
+            if evs:
+                d = ((evs[0].get("payload") or {}).get("_disposition") or "").lower()
+                if d in ("no_answer", "voicemail"):
+                    stage_moved = True
+                elif d:
+                    resolved = f"disposition: {d.replace('_', ' ')}"
         # warm-up não atendida: SMS de reativação
         if not resolved and kind == "warmup" and not card.get("unres_call_answered"):
             re_sms = next((s for s in sms_out if s["contact_id"] == cid and s["ts"] > cts

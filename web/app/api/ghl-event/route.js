@@ -444,6 +444,38 @@ async function handleTask(cid) {
   return { closed };
 }
 
+async function handleDisposition(cid, d) {
+  // Disposição da call (webhook nos workflows Disposition:*): o clique do atendente
+  // no fim da chamada é a FONTE DA VERDADE do outcome — a API do GHL não expõe isso.
+  // Efeito imediato: a disposição É a resolução → limpa o vermelho SEM RESOLUÇÃO.
+  // no_answer/voicemail: NÃO houve conversa (voicemail de 56s vem como completed/56s
+  // e engana a duração — caso Shandor) → corrige a call p/ não-atendida também.
+  // O evento fica no ghl_events (payload._disposition) — o worker consulta antes de
+  // re-marcar unres, e o Reports agrega por outcome.
+  if (!d) return { skipped: "no disposition param" };
+  const noTalk = ["no_answer", "voicemail"].includes(d);
+  const open = await sb("GET", `board_cards?status=eq.open&contact_id=eq.${cid}` +
+    "&select=id,kind,unres,unres_call_answered");
+  let cleared = 0, closed = 0;
+  for (const c of (open || [])) {
+    // rastreador "needs categorization": a disposição É a categoria → fecha
+    if (c.kind === "uncategorized") {
+      await sb("PATCH", `board_cards?id=eq.${c.id}`, {
+        status: "resolved", resolved_by: `disposition: ${d} (webhook)`,
+        resolved_at: new Date().toISOString(), unres: false });
+      closed++;
+      continue;
+    }
+    const patch = {};
+    if (c.unres) { patch.unres = false; cleared++; }
+    if (noTalk && c.unres_call_answered) patch.unres_call_answered = false;
+    if (Object.keys(patch).length) {
+      await sb("PATCH", `board_cards?id=eq.${c.id}`, patch);
+    }
+  }
+  return { disposition: d, cleared, closed };
+}
+
 export async function POST(req) {
   const t0 = Date.now();
   const url = new URL(req.url);
@@ -478,6 +510,11 @@ export async function POST(req) {
     else if (type === "call") result = await handleCall(cid);
     else if (type === "newlead") result = await handleNewLead(cid);
     else if (type === "task") result = await handleTask(cid);
+    else if (type === "disposition") {
+      const d = (url.searchParams.get("d") || "").toLowerCase();
+      body._disposition = d;  // persiste no ghl_events → worker + Reports leem
+      result = await handleDisposition(cid, d);
+    }
     else result = await miniMirrorStage(cid);
   } catch (e) {
     await sb("POST", "config?on_conflict=key", { key: "board_live_error",
