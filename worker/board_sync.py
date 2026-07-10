@@ -513,15 +513,10 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
                             "&select=id&limit=1")
         if dup:
             return False
+        # ⚑ reportado/fechado na mão: mesma checagem comum abaixo, só que por task
         rep = sb._sb("GET", f"board_cards?task_id=eq.{task_id}"
                             "&or=(resolved_by.like.*reported*,resolved_by.like.*closed%20manually*)"
                             "&select=origem_ts&order=resolved_at.desc&limit=1")
-        if rep and origem_ts and rep[0].get("origem_ts"):
-            if iso(origem_ts) <= rep[0]["origem_ts"]:
-                return False  # mesma ocorrência já reportada — aguarda revisão
-        elif rep and not origem_ts:
-            return False
-        rep = None  # já tratado acima
     else:
         key = (contact_id, kind)
         if existing is not None and key in existing:
