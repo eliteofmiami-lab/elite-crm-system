@@ -113,6 +113,42 @@ def contact_tasks(contact_id):
     _tasks_mem[contact_id] = None
     return None
 
+
+_open_tasks_mem = {"val": "unset"}  # memo por processo (1 processo = 1 ciclo)
+
+
+def location_open_tasks():
+    """ESPELHO DO PAINEL DE TASKS (regra Rafael 10/jul): a lista de tasks PENDENTES
+    do GHL é a fonte da verdade da coluna 3 — independente do stage da oportunidade
+    (lead em Lost com task aberta = warm up, a task continua valendo). Usa o POST
+    /tasks/search (o único endpoint com flag completed CONFIÁVEL — o GET com
+    isLocation=true devolve flags velhas). Retorna a lista completa paginada, ou
+    None se a API falhou — nesse caso o caller NÃO cria nem fecha nada no ciclo."""
+    if _open_tasks_mem["val"] != "unset":
+        return _open_tasks_mem["val"]
+    out, after = [], None
+    for _ in range(50):
+        body = {"completed": False, "limit": 100}
+        if after:
+            body["searchAfter"] = after
+        try:
+            r = ghl.post(f"/locations/{ghl.LOCATION_ID}/tasks/search", body)
+        except Exception:
+            _open_tasks_mem["val"] = None
+            return None
+        if r.status_code not in (200, 201):
+            _open_tasks_mem["val"] = None
+            return None
+        tks = r.json().get("tasks", [])
+        out.extend(tks)
+        if len(tks) < 100:
+            break
+        after = tks[-1].get("searchAfter")
+        if not after:
+            break
+    _open_tasks_mem["val"] = out
+    return out
+
 ET = ZoneInfo("America/New_York")
 URABLE = re.compile(r"go\.urable\.com/\S+", re.I)
 
@@ -126,6 +162,7 @@ DEFAULT_CFG = {
     "resolution_min": 15,
     "checkpoint": "13:00",
     "windows": {"col1_days": 3, "col2_days": 7, "task_overdue_days": 7,
+                "task_upcoming_days": 7,  # espelho col3: próximas N dias visíveis
                 "urable_days": 14, "pipeline_days": 30, "stalled_days": 30},
     "ration": 20,
     # Warm up = casa de TODO o passivo recuperável (regra Rafael 08/jul noite).
@@ -245,7 +282,9 @@ def add_contact_tag(cid, tag):
         return True
     except Exception:
         return False
-STAGE_KINDS = {"hot", "new_lead", "pipeline", "followup", "quote_task",
+# followup/quote_task FORA daqui (10/jul): são cards do ESPELHO de tasks — só a
+# task fechada/reagendada os fecha, nunca a mudança de stage (Lost = warm up).
+STAGE_KINDS = {"hot", "new_lead", "pipeline",
                "followup_notask", "quote_notask"}
 
 CF_VEH = {"make": "CiRd678lAFn854igklGR", "model": "LHwTnTb8TPz5BbJ0I2XV",
@@ -465,20 +504,37 @@ def open_cards():
 
 def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
                 opportunity_id=None, stage=None, task_id=None, event_id=None,
-                appt_start=None, last_note=None, existing=None):
-    """1 card aberto por (contact, kind). Retorna True se criou."""
-    key = (contact_id, kind)
-    if existing is not None and key in existing:
-        return False
-    dup = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{contact_id}"
-                        f"&kind=eq.{kind}&select=id&limit=1")
-    if dup:
-        return False
-    # ⚑ reportado ou fechado na mão: suprime só a MESMA ocorrência — evento NOVO
-    # (origem_ts mais novo) recria normalmente (nova perdida volta; nova resposta idem)
-    rep = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
-                        "&or=(resolved_by.like.*reported*,resolved_by.like.*closed%20manually*)"
-                        "&select=origem_ts&order=resolved_at.desc&limit=1")
+                appt_start=None, last_note=None, existing=None, assignee=None,
+                dedup_task=False):
+    """1 card aberto por (contact, kind) — ou por TASK (dedup_task=True, espelho da
+    col 3: um contato pode ter várias tasks, cada uma vira um card). Retorna True se criou."""
+    if dedup_task and task_id:
+        dup = sb._sb("GET", f"board_cards?status=eq.open&task_id=eq.{task_id}"
+                            "&select=id&limit=1")
+        if dup:
+            return False
+        rep = sb._sb("GET", f"board_cards?task_id=eq.{task_id}"
+                            "&or=(resolved_by.like.*reported*,resolved_by.like.*closed%20manually*)"
+                            "&select=origem_ts&order=resolved_at.desc&limit=1")
+        if rep and origem_ts and rep[0].get("origem_ts"):
+            if iso(origem_ts) <= rep[0]["origem_ts"]:
+                return False  # mesma ocorrência já reportada — aguarda revisão
+        elif rep and not origem_ts:
+            return False
+        rep = None  # já tratado acima
+    else:
+        key = (contact_id, kind)
+        if existing is not None and key in existing:
+            return False
+        dup = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{contact_id}"
+                            f"&kind=eq.{kind}&select=id&limit=1")
+        if dup:
+            return False
+        # ⚑ reportado ou fechado na mão: suprime só a MESMA ocorrência — evento NOVO
+        # (origem_ts mais novo) recria normalmente (nova perdida volta; nova resposta idem)
+        rep = sb._sb("GET", f"board_cards?contact_id=eq.{contact_id}&kind=eq.{kind}"
+                            "&or=(resolved_by.like.*reported*,resolved_by.like.*closed%20manually*)"
+                            "&select=origem_ts&order=resolved_at.desc&limit=1")
     if rep and origem_ts and rep[0].get("origem_ts"):
         if iso(origem_ts) <= rep[0]["origem_ts"]:
             return False  # mesma ocorrência já reportada — aguarda revisão
@@ -498,7 +554,7 @@ def upsert_card(coluna, kind, contact_id, origem, origem_ts, brief, grupo=None,
         "closes_when": CLOSES.get(kind, ""), "stage": stage,
         "task_id": task_id, "event_id": event_id,
         "appt_start": iso(appt_start) if appt_start else None,
-        "last_note": last_note,
+        "last_note": last_note, "assignee": assignee,
     })
     return True
 
@@ -673,9 +729,9 @@ def cycle(full_task_pass=False):
     # envelhecimento (PLANO §A): card aberto que saiu da janela viva → aged_out (vira
     # ração do warm-up); nada é deletado nem esquecido — só muda de coluna.
     # TASKS NÃO ENVELHECEM (report 09/jul): uma task vencida FICA no board em vermelho
-    # até o Eugene resolver (concluir · reagendar · mover p/ Lost). Antes "task/
-    # followup/quote_task" envelheciam em 7d e a vencida sumia pra ração — o oposto
-    # do pedido. O ciclo de vida delas é a própria task (concluída/reagendada/sumiu).
+    # até resolver (concluir · reagendar). Antes "task/followup/quote_task" envelheciam
+    # em 7d e a vencida sumia pra ração — o oposto do pedido. O ciclo de vida delas é a
+    # própria task no painel do GHL (10/jul: nem Lost fecha — warm up).
     AGE_WIN = {"missed_inbound": W["col1_days"], "sms_reply": W["col1_days"],
                "hot": W["col1_days"], "new_lead": W["col2_days"],
                "urable": W["urable_days"], "pipeline": W["pipeline_days"],
@@ -762,7 +818,33 @@ def cycle(full_task_pass=False):
                if o.get("status") == "open"}
     qs_opps = {o["contactId"]: o for o in paged_opps(rules.STAGES["Quote Sent"])
                if o.get("status") == "open"}
-    tasks_by_contact = {}
+
+    # ---- fonte da verdade das tasks (regra Rafael 10/jul): painel de tasks do GHL.
+    # 1 busca paginada substitui ~450 GETs por contato. None = API falhou → nenhum
+    # card de task é criado NEM fechado neste ciclo (segurança contra fechamento falso).
+    open_tasks = location_open_tasks()
+    open_tasks_by_contact = {}
+    open_task_by_id = {}
+    if open_tasks is not None:
+        for t in open_tasks:
+            tid = t.get("_id") or t.get("id")
+            if tid:
+                open_task_by_id[tid] = t
+            if t.get("contactId") and t.get("dueDate"):
+                open_tasks_by_contact.setdefault(t["contactId"], []).append(t)
+    # tag de responsável: nomes conhecidos do config + o resto da API de users
+    assignee_names = {cfg["eugene_user_id"]: "Eugene", cfg["rafael_user_id"]: "Rafael"}
+    for alias in cfg.get("rafael_aliases", []):
+        assignee_names[alias] = "Rafael"
+    try:
+        ru = ghl.get("/users/", {"locationId": ghl.LOCATION_ID})
+        if ru.status_code == 200:
+            for u in ru.json().get("users", []):
+                nm = ((u.get("firstName") or u.get("name") or "").strip().split() or ["—"])[0]
+                assignee_names.setdefault(u.get("id"), nm)
+    except Exception:
+        pass
+    upcoming_days = W.get("task_upcoming_days", 7)
 
     # ---- col7: SÓ VERMELHOS — Follow Up e Quote Sent SEM task (atenção imediata) ----
     for fu_stage, notask_kind, stage_opps in (("Follow Up", "followup_notask", fu_opps),
@@ -773,8 +855,9 @@ def cycle(full_task_pass=False):
             ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt")) or now
             if (now - ots).days > W["pipeline_days"]:
                 continue  # envelhecido → warm-up cuida
-            pend = tasks_by_contact.get(cid)
-            if pend is None:
+            if open_tasks is not None:
+                pend = open_tasks_by_contact.get(cid, [])
+            else:  # busca global falhou → fonte por contato (confiável, só mais cara)
                 pend = [t for t in (contact_tasks(cid) or [])
                         if not t.get("completed") and t.get("dueDate")]
             if pend:
@@ -826,48 +909,43 @@ def cycle(full_task_pass=False):
                                  grupo=("great_car" if is_great_car(None, brief) else None),
                                  existing=existing)
 
-    # ---- col3: tasks POR IMPORTÂNCIA (regra Rafael): verde=Quote Sent c/ task ·
-    # azul=Follow Up c/ task · amarelo=task avulsa. + urable sem resposta. ----
-    task_universe = set(opps.keys()) | {c["contact_id"] for c in oc} \
-        | set(fu_opps) | set(qs_opps)
-    for cid in list(task_universe)[:450]:
-        brief = None
-        tks = contact_tasks(cid)
-        if tks is None:
-            continue  # API falhou e sem cache → não age neste ciclo
-        pend = [t for t in tks
-                if not t.get("completed") and t.get("dueDate")]
-        pend.sort(key=lambda t: t.get("dueDate") or "")  # mais VENCIDA primeiro
-        tasks_by_contact[cid] = pend
-        for t in pend:
-            due = parse_ts(t.get("dueDate"))
-            days_over = (now - due).days
-            if due.date() > dt.datetime.now(ET).date():
-                continue  # futuras: invisíveis até o dia
-            # VENCIDAS (report 09/jul): ficam SEMPRE no board, em vermelho, até o Eugene
-            # resolver (mudar a data → recolore · ou fechar a task + mover p/ Lost → some).
-            # Nada de sumir por idade — antes uma vencida antiga "desaparecia" do board.
-            overdue = days_over > 0
-            brief = brief or contact_brief(cid)
-            if not ok_contact(cid, brief):
-                break
-            label = "due today" if days_over <= 0 else f"overdue {days_over}d"
+    # ---- col3: ESPELHO DO PAINEL DE TASKS (regra Rafael 10/jul). TODA task pendente
+    # do GHL vira card — vencida (vermelho) · do dia · próxima (janela de N dias) —
+    # de TODOS os usuários (tag de responsável no card: um cobre o outro), e
+    # INDEPENDENTE do stage: lead em Lost com task aberta é warm up, continua aqui.
+    # Cores por contexto: verde=Quote Sent · azul=Follow Up · amarelo=task avulsa. ----
+    if open_tasks is not None:
+        today_et = dt.datetime.now(ET).date()
+        upcoming_lim = today_et + dt.timedelta(days=upcoming_days)
+        for t in open_tasks:
+            tid = t.get("_id") or t.get("id")
+            cid = t.get("contactId")
+            due = parse_ts(t.get("dueDate")) if t.get("dueDate") else None
+            if not (tid and cid and due):
+                continue
+            d = due.astimezone(ET).date()
+            if d > upcoming_lim:
+                continue  # longe demais: entra sozinha quando a janela alcançar
+            days_over = (today_et - d).days
+            if d < today_et:
+                want_grupo, label = "overdue", f"overdue {days_over}d"
+            elif d == today_et:
+                want_grupo, label = None, "due today"
+            else:
+                want_grupo, label = "upcoming", f"upcoming {d:%b %d}"
             if cid in qs_opps:
                 kind, pref = "quote_task", "QUOTE SENT"
             elif cid in fu_opps:
                 kind, pref = "followup", "Follow Up"
             else:
                 kind, pref = "task", "Task"
-            origem_txt = f"{pref} · task \"{(t.get('title') or '')[:36]}\" · {label}"
-            want_grupo = "overdue" if overdue else None
-            tid = t.get("id")
-            # 1 card de task por contato, SEMPRE refletindo o estado ATUAL. upsert_card
-            # só CRIA (dedup por contato+kind) — então uma task que virou vencida nunca
-            # recoloria. Aqui a gente ATUALIZA o card aberto (recolor p/ vermelho) e
-            # fecha duplicados do mesmo contato (ex.: task + followup no mesmo lead).
-            exlist = sb._sb("GET", f"board_cards?status=eq.open&contact_id=eq.{cid}"
-                                   "&kind=in.(task,followup,quote_task)"
-                                   "&select=id,grupo,origem,kind,task_id"
+            who = assignee_names.get(t.get("assignedTo") or "", "Unassigned")
+            origem_txt = f"{pref} · task \"{(t.get('title') or '').strip()[:36]}\" · {label}"
+            # 1 card por TASK, sempre refletindo o estado ATUAL (recolor vencida→vermelho,
+            # do dia→normal, reagendada→upcoming). Duplicatas da era "1 card por contato"
+            # são fechadas pelo loop de resolução (task_id que sumiu da lista pendente).
+            exlist = sb._sb("GET", f"board_cards?status=eq.open&task_id=eq.{tid}"
+                                   "&select=id,grupo,origem,kind,assignee"
                                    "&order=created_at.asc") or []
             if exlist:
                 keep = exlist[0]
@@ -878,20 +956,20 @@ def cycle(full_task_pass=False):
                     patch["origem"] = origem_txt
                 if keep.get("kind") != kind:
                     patch["kind"] = kind
-                if keep.get("task_id") != tid:
-                    patch["task_id"] = tid
+                if keep.get("assignee") != who:
+                    patch["assignee"] = who
                 if patch:
                     patch["origem_ts"] = iso(due)
                     sb._sb("PATCH", f"board_cards?id=eq.{keep['id']}", json=patch)
                 for extra in exlist[1:]:
-                    resolve_card(extra, "dedup — one task card per contact", "")
+                    resolve_card(extra, "dedup — one card per task", "")
             else:
+                brief = contact_brief(cid)
+                if not ok_contact(cid, brief):
+                    continue
                 n_new += upsert_card(3, kind, cid, origem_txt, due, brief,
                                      task_id=tid, grupo=want_grupo,
-                                     stage=("Quote Sent" if kind == "quote_task" else
-                                            "Follow Up" if kind == "followup" else None),
-                                     existing=existing)
-            break  # 1 card por contato (a task mais VENCIDA/próxima)
+                                     assignee=who, dedup_task=True)
     # urable enviados (scan) sem resposta
     for s in sms_out:
         if URABLE.search(s["body"]) and s["ts"] >= now - dt.timedelta(days=W["urable_days"]):
@@ -1162,40 +1240,32 @@ def cycle(full_task_pass=False):
                 continue
         # vermelhos de task faltando: somem quando a task com data EXISTE
         if kind in ("followup_notask", "quote_notask"):
-            has_task = any(not t.get("completed") and t.get("dueDate")
-                           for t in (contact_tasks(cid) or []))
+            if open_tasks is not None:
+                has_task = bool(open_tasks_by_contact.get(cid))
+            else:  # busca global falhou → fonte por contato
+                has_task = any(not t.get("completed") and t.get("dueDate")
+                               for t in (contact_tasks(cid) or []))
             if has_task:
                 resolve_card(card, "task created", "")
                 resolutions += 1
             continue
-        # cards de TASK (avulsa/follow-up/quote): fecham quando a task é CONCLUÍDA,
-        # sumiu do GHL, ou foi REAGENDADA pro futuro (volta sozinha no novo dia). O
-        # recolor vencida→vermelho é refeito no loop de criação a cada ciclo.
+        # cards de TASK (espelho, 10/jul): fecham SÓ quando a task sai da lista de
+        # pendentes do GHL (concluída/apagada) ou é reagendada além da janela de
+        # próximas (volta sozinha quando a data se aproximar). Stage NÃO fecha:
+        # lead em Lost com task aberta = warm up, o card fica (regra Rafael 10/jul,
+        # revoga a regra Lost/Won de 09/jul). Recolor é feito no loop de criação.
         if kind in ("task", "followup", "quote_task") and card.get("task_id"):
-            tlist = contact_tasks(cid)
-            if tlist is None:
-                continue  # API falhou e sem cache → NÃO fecha por engano; tenta depois
-            tk = next((t for t in tlist if t.get("id") == card["task_id"]), None)
-            if tk is None or tk.get("completed"):
+            if open_tasks is None:
+                continue  # busca global falhou → NÃO fecha por engano; tenta depois
+            tk = open_task_by_id.get(card["task_id"])
+            if tk is None:
                 resolve_card(card, "task completed", "")
                 resolutions += 1
                 continue
             due2 = parse_ts(tk.get("dueDate")) if tk.get("dueDate") else None
-            if due2 and due2.astimezone(ET).date() > dt.datetime.now(ET).date():
-                resolve_card(card, "task rescheduled — back on its due date", "")
-                resolutions += 1
-                continue
-            # OPP MOVIDA P/ LOST/WON (report 09/jul): o lead saiu do pipeline → a task
-            # perde o sentido, fecha o card mesmo com a task ainda aberta. Sinal
-            # POSITIVO: só fecha quando VÊ um opp Lost/Won — nunca por resposta vazia
-            # ou API caída (senão fecharia card bom no timeout).
-            opr = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID,
-                                                    "contact_id": cid, "limit": 10})
-            if opr.status_code == 200 and any(
-                    rules.STAGE_BY_ID.get(o.get("pipelineStageId")) in ("Lost", "Win")
-                    or o.get("status") in ("lost", "won", "abandoned")
-                    for o in opr.json().get("opportunities", [])):
-                resolve_card(card, "opportunity closed (Lost/Won) — task off the daily board", "")
+            if due2 and due2.astimezone(ET).date() > \
+                    dt.datetime.now(ET).date() + dt.timedelta(days=upcoming_days):
+                resolve_card(card, "task rescheduled — returns when its date is close", "")
                 resolutions += 1
                 continue
         # CHAMADA PERDIDA (regra Rafael): retornar a ligação FECHA o card sozinho.

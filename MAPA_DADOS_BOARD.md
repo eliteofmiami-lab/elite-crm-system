@@ -35,12 +35,13 @@ falha, então os ⚠ são o mais importante.
 - **⚠ RISCO:** **contato com 2 opps** — o espelho dedup por `opp_id` (mantém o de `lastStageChangeAt` mais novo), mas se o contato tem opps em stages diferentes, `opps[cid]` guarda os 2 → pode gerar card em 2 colunas. Great Cars: a priorização depende da tag "great cars" persistir; se a tag some, perde o "call FIRST".
 
 ## Coluna 3 — "Today's tasks — Quotes · Follow-ups" (kinds: quote_task, followup, task, urable)
-- **GATILHO:** para cada contato do `task_universe` (opps + cards abertos + Follow Up + Quote Sent), busca `contact_tasks(cid)`; se tem task **due hoje ou vencida** (dueDate ≤ hoje, não completa): cria card. `kind` = quote_task (se Quote Sent) / followup (se Follow Up) / task (senão). `grupo="overdue"` se vencida (vermelho). `urable`: SMS com link Urable sem resposta.
-- **FONTE:** task title/dueDate = `/contacts/{id}/tasks` (**cache 45min** ou forçado no delta). nome/veh = contact_brief. Ordena pela **mais vencida primeiro**; **1 card por contato**.
-- **FECHA/REMOVE:** task **concluída** OU **sumiu** do GHL OU **reagendada pro futuro** OU **opp virou Lost/Won**. Dedup fecha cards de task extras do mesmo contato.
-- **FREQUÊNCIA:** **SÓ POLLING** (o webhook `Board Task` NÃO está publicado — é o rascunho pendente). Fechamento em tempo real só depois de publicar. Contato "mudou" (call/sms/stage) força re-busca; senão cache 45min. **Atraso: até 45min** (ou até 9h se fora de horário).
-- **⚠ DADO FALTANDO:** task sem dueDate é ignorada. Contato sem opp aberto: card de task fecha (regra "só lead ativo").
-- **⚠ RISCO:** (a) tasks **metadados** (ex.: "Spanish") aparecem como task real → ruído. (b) 45min de atraso pra refletir conclusão sem o webhook. (c) se a API de tasks falha, usa **cache velho** (pode mostrar task já concluída por até 45min).
+**REESCRITA 10/jul — ESPELHO DO PAINEL DE TASKS DO GHL (regra Rafael).**
+- **GATILHO:** `POST /locations/{id}/tasks/search {completed:false}` (paginado — o ÚNICO endpoint com flag `completed` confiável; o GET `isLocation=true` devolve flags velhas). **TODA task pendente** vira card: **vencida** (`grupo="overdue"`, vermelho) · **do dia** · **próxima** (`grupo="upcoming"`, até `task_upcoming_days`=7 dias). **Independe do stage**: lead em **Lost com task aberta = warm up, o card fica**. `kind` = quote_task (Quote Sent) / followup (Follow Up) / task (senão). `urable`: SMS com link Urable sem resposta (inalterado).
+- **FONTE:** a própria busca global (title/dueDate/assignedTo). **Tag de responsável** no card (`assignee`: Eugene/Rafael/Unassigned — um cobre o outro). nome/veh = contact_brief (cache 4h). **1 card por TASK** (não mais por contato).
+- **FECHA/REMOVE:** task **saiu da lista de pendentes** (concluída/apagada no GHL) OU **reagendada além da janela** (volta sozinha quando a data se aproxima). **Stage NÃO fecha** (revogada a regra Lost/Won de 09/jul — worker E webhook). Se a busca global falha → não cria nem fecha nada no ciclo.
+- **FREQUÊNCIA:** worker a cada ~2min em horário comercial + webhook `task` (fechamento). A busca global é 1-2 chamadas por ciclo (substituiu ~450 `contact_tasks`).
+- **⚠ DADO FALTANDO:** task sem dueDate é ignorada.
+- **⚠ RISCO:** (a) tasks **metadados** (ex.: "Spanish") aparecem como task real → ruído. (b) card de task de lead Lost cobra ligação para lead que desistiu de vez — a tag Lost está no GHL, não no card (possível melhoria).
 
 ## Coluna 4 — "Pipeline — Contact 1/2/3" (kind: pipeline)
 - **GATILHO:** opp em **Contact 1 (AM/PM)**, **Contact 2 (AM/PM)**, **Contact 3 (AM/PM)** → `(4,"pipeline")`.
@@ -50,10 +51,10 @@ falha, então os ⚠ são o mais importante.
 - **⚠ RISCO:** o "sem resolução" (faixa vermelha) atrela a última call ao card; **voicemail longo lido como conversa real** cobra categorização indevida (mitigado por "stage avançou depois da call = resolvido" via `lastStageChangeAt`). Contato com 2 opps: mesmo risco da col2.
 
 ## Coluna 7 — "Needs attention — no task" (kinds: followup_notask, quote_notask)
-- **GATILHO:** opp em **Follow Up** ou **Quote Sent** que **NÃO tem** task pendente com data (`contact_tasks` vazio) → card vermelho "needs a decision".
+- **GATILHO:** opp em **Follow Up** ou **Quote Sent** que **NÃO tem** task pendente com data (checado na busca global de tasks; fallback `contact_tasks` se ela falhar) → card vermelho "needs a decision".
 - **FECHA/REMOVE:** quando **uma task com data passa a existir** (o Eugene cria a task).
-- **FREQUÊNCIA:** **SÓ POLLING** (depende de `contact_tasks`, sem webhook de task). Atraso até 45min.
-- **⚠ RISCO:** se a API de tasks falha → trata como "sem task" (mitigado: `contact_tasks` retorna cache velho ou None). Mesmo atraso da col3.
+- **FREQUÊNCIA:** worker (~2min em horário comercial), mesma busca global da col3.
+- **⚠ RISCO:** se a busca global E o fallback falham → não cria nem fecha (nunca trata falha como "sem task").
 
 ## Coluna 5 — "Appointments · next 2 days" (kinds: appt_confirm=to_confirm, appt_info=confirmed)
 - **GATILHO:** appointment nos **próximos 2 dias** (janela = hoje 00:00 → hoje+2 dias 00:00), lido de `/calendars/events` dos 3 calendários. status "confirmed" → `appt_info` (verde); senão → `appt_confirm` (a confirmar). Cancelado → card de reschedule (col6). "showed"/noshow/invalid → não cria.

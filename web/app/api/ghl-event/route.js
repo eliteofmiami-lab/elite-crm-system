@@ -31,7 +31,9 @@ const STAGE_CARD = {
   "Contact 2 (AM)": [4, "pipeline"], "Contact 2 (PM)": [4, "pipeline"],
   "Contact 3 (AM)": [4, "pipeline"], "Contact 3 (PM)": [4, "pipeline"],
 };
-const STAGE_KINDS = ["hot", "new_lead", "pipeline", "followup", "followup_notask", "quote_notask"];
+// followup/quote_task FORA (10/jul): cards do ESPELHO de tasks — só a task fechada
+// os resolve, nunca o stage (Lost com task aberta = warm up, o card fica no board).
+const STAGE_KINDS = ["hot", "new_lead", "pipeline", "followup_notask", "quote_notask"];
 const CLOSES = {
   hot: "Closes when: call made → one resolution (appointment · task · estimate+stage · Lost). Unanswered: next stage.",
   new_lead: "Closes when: call made → appointment · task · estimate+stage · Lost. Unanswered: move to Contact 1.",
@@ -147,15 +149,18 @@ async function miniMirrorStage(cid) {
   const open = await sb("GET", `board_cards?status=eq.open&contact_id=eq.${cid}&select=*`);
   let closed = 0, created = 0;
   for (const card of open) {
+    // cards do ESPELHO de tasks (10/jul): stage/Win não fecha — só a task concluída
+    // no GHL (o ciclo e o handleTask cuidam). Lost com task aberta = warm up.
+    const isTaskMirror = ["task", "followup", "quote_task"].includes(card.kind);
     const stale = STAGE_KINDS.includes(card.kind) &&
       card.stage && !stagesNow.has(card.stage);
-    if (isWin || stale) {
+    if ((isWin && !isTaskMirror) || stale) {
       // espelho primeiro: opp saiu do stage (ou virou Win) → card fecha SEMPRE
       await sb("PATCH", `board_cards?id=eq.${card.id}`, {
         status: "resolved", resolved_by: isWin ? "won" : "stage moved (webhook)",
         resolved_at: new Date().toISOString(), unres: false });
       closed++;
-    } else if (card.unres && stagesNow.has("Lost")) {
+    } else if (card.unres && !isTaskMirror && stagesNow.has("Lost")) {
       // resolução da árvore: marcado Lost limpa o SEM RESOLUÇÃO
       await sb("PATCH", `board_cards?id=eq.${card.id}`, {
         status: "resolved", resolved_by: "marked Lost (webhook)",

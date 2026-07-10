@@ -85,10 +85,25 @@ function KCard({ c, conf, isSpanish, isOwner, onSpanish, onReport, onClose, onIg
         </div>
       )}
       {overdue && (
-        <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
+        <div style={{ display: "inline-block", margin: "2px 5px 4px 0", padding: "2px 8px",
           borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
           background: "var(--red-soft)", color: "var(--red-text)", border: "1px solid var(--red-border)" }}>
           OVERDUE — UPDATE DATE OR CLOSE TASK
+        </div>
+      )}
+      {c.grupo === "upcoming" && (
+        <div style={{ display: "inline-block", margin: "2px 5px 4px 0", padding: "2px 8px",
+          borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
+          background: "#FFFCF5", color: "#B54708", border: "1px solid #FEDF89" }}>
+          UPCOMING{c.origem_ts ? ` — ${new Date(c.origem_ts).toLocaleDateString("en-US",
+            { weekday: "short", month: "short", day: "numeric" }).toUpperCase()}` : ""}
+        </div>
+      )}
+      {c.assignee && (
+        <div style={{ display: "inline-block", margin: "2px 0 4px", padding: "2px 8px",
+          borderRadius: 6, font: "700 10px Inter", letterSpacing: ".4px",
+          background: "var(--card)", color: "var(--sub)", border: "1px solid var(--line)" }}>
+          {c.assignee === "Unassigned" ? "UNASSIGNED" : `FOR ${c.assignee.toUpperCase()}`}
         </div>
       )}
       <div className="veh">{c.veh || "—"} · {c.interest || "interest not set"}</div>
@@ -404,9 +419,10 @@ export default function BoardView({ session, data, reload, role }) {
         if (gcd) return gcd;
       }
       if (n === 3) {
-        // tasks do DIA primeiro (quote → follow-up → task → urable); as VENCIDAS
-        // (vermelho) ficam ABAIXO, depois das do dia (regra Rafael 09/jul).
-        const od = (c) => (c.grupo === "overdue" ? 1 : 0);
+        // espelho do painel de tasks (regra Rafael 10/jul): tasks do DIA primeiro
+        // (quote → follow-up → task → urable), VENCIDAS logo abaixo (vermelho,
+        // regra 09/jul), e as PRÓXIMAS (janela de dias) no fim.
+        const od = (c) => (c.grupo === "overdue" ? 1 : c.grupo === "upcoming" ? 2 : 0);
         const odd = od(a) - od(b);
         if (odd) return odd;
         const kd = (KIND_RANK[a.kind] ?? 9) - (KIND_RANK[b.kind] ?? 9);
