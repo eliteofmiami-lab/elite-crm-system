@@ -1,10 +1,16 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-10 10:37
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-11 07:18
 
-**7 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
+**8 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
 | Tipo | Reportes |
 |---|---|
-| card_indevido | 7 |
+| card_indevido | 8 |
+
+## 2026-07-10T13:10 · card_indevido · por rafael.oliveira91@icloud.com
+- Card: JONATHA PLAISIR · Missed inbound · called 8:57 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “Already returned the call - create a opportunity on lost- client called by mistake - card did not close”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/avVK3DYJEGrzjbWyNAYq)
 
 ## 2026-07-09T17:17 · card_indevido · por rafael.oliveira91@icloud.com
 - Card: Guillermo Torres · Task · task "Spanish" · overdue 26d (C?, `?`)
