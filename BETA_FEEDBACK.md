@@ -1,10 +1,16 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-11 07:18
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-12 07:39
 
-**8 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
+**9 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
 | Tipo | Reportes |
 |---|---|
-| card_indevido | 8 |
+| card_indevido | 9 |
+
+## 2026-07-11T14:22 · card_indevido · por rafael.oliveira91@icloud.com
+- Card: John Edwards · Missed inbound · called 09:29, no answer (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “Already txted back - never replied - lost opportunity already updated”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/K7NDB8kMGGYPVlor6Csr)
 
 ## 2026-07-10T13:10 · card_indevido · por rafael.oliveira91@icloud.com
 - Card: JONATHA PLAISIR · Missed inbound · called 8:57 PM, no answer (live) (C?, `?`)
