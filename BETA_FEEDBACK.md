@@ -1,10 +1,70 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-12 07:39
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-14 06:37
 
-**9 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
+**19 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
 | Tipo | Reportes |
 |---|---|
-| card_indevido | 9 |
+| card_indevido | 19 |
+
+## 2026-07-13T19:05 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Denise Loveras · QUOTE SENT · task "RAFAEL NEEDS TO CALL" · upcoming Jul 20 (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/yf6Mj1JqDbVg5CAn1ib7)
+
+## 2026-07-13T19:05 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Dan Gainza · Task · task "Call to book" · upcoming Jul 20 (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/CR2Usuc0gjH0u9gVMVeZ)
+
+## 2026-07-13T19:05 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Joel Pellicci · Follow Up · task "Call to book" · upcoming Jul 20 (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/3a9Myq4ZQaFj6DKdok2s)
+
+## 2026-07-13T19:05 · card_indevido · por eugenebaruelova@gmail.com
+- Card: K WASHINGTON · Follow Up · task "Call to boook" · overdue 1d (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/1kE0GvvXmEIzrAXvxLBc)
+
+## 2026-07-13T19:00 · card_indevido · por eugenebaruelova@gmail.com
+- Card: MELISSA JEUDY · Missed inbound · called 09:47, no answer (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/lRLZdIdLY9ukBa8m3q9g)
+
+## 2026-07-13T16:10 · card_indevido · por eugenebaruelova@gmail.com
+- Card: null · Missed inbound · called 9:41 AM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/OxX6fAleXXRGSMa7KS0j)
+
+## 2026-07-13T16:10 · card_indevido · por eugenebaruelova@gmail.com
+- Card: MELISSA JEUDY · Missed inbound · called 9:47 AM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/lRLZdIdLY9ukBa8m3q9g)
+
+## 2026-07-13T16:10 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Cris Frias · Missed inbound · called 9:01 AM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/nHt3jqmpI3jrICApnQQF)
+
+## 2026-07-13T16:09 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Jack Daniles · Missed inbound · called 1:31 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/Qu2ohlJRm8lphswwey9s)
+
+## 2026-07-13T15:06 · card_indevido · por rafael.oliveira91@icloud.com
+- Card: Terrell Roach · Missed inbound · called 10:42 AM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “already spoke with the customer... nothing need to be done”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/6qkaCbZEvWF01Q6Vqx7C)
 
 ## 2026-07-11T14:22 · card_indevido · por rafael.oliveira91@icloud.com
 - Card: John Edwards · Missed inbound · called 09:29, no answer (C?, `?`)
