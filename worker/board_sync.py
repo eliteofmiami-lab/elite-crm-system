@@ -1634,6 +1634,14 @@ def cycle(full_task_pass=False):
     except Exception as e:
         log(f"[warn] digest de confirmações D-2 falhou (não derruba o ciclo): {e}")
 
+    # ---- 9. RESGATE DE NO-SHOW (regra Rafael 16/07): no-show novo recebe a mensagem
+    # padrão do Rafael ANTES de virar reschedule — pessoal, com saída honrosa e
+    # pergunta concreta de agenda. 1 SMS por evento, nunca re-dispara.
+    try:
+        noshow_rescue()
+    except Exception as e:
+        log(f"[warn] resgate de no-show falhou (não derruba o ciclo): {e}")
+
     sb._sb("POST", "config?on_conflict=key",
            headers_extra={"Prefer": "resolution=merge-duplicates"},
            json={"key": "board_state", "value": {"last_scan": iso(now)}})
@@ -1705,6 +1713,57 @@ def confirm_digest_d2():
     r = ghl.post("/conversations/messages",
                  {"type": "SMS", "contactId": cid, "message": msg})
     log(f"digest D-2 enviado ({len(linhas)} appointments, status {r.status_code})")
+
+
+def noshow_rescue():
+    """SMS padrão do Rafael pra cada no-show NOVO (1x por evento, direto ao lead)."""
+    st_rows = sb._sb("GET", "config?key=eq.noshow_rescue_state&select=value") or []
+    state = st_rows[0]["value"] if st_rows else None
+    seen = set((state or {}).get("seen") or [])
+    first_run = state is None
+    ini = now_utc() - dt.timedelta(days=5)
+    novos = []
+    for cal_id in sb.CALENDARS.values():
+        r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID,
+                                          "calendarId": cal_id,
+                                          "startTime": int(ini.timestamp() * 1000),
+                                          "endTime": int(now_utc().timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            eid = e.get("id")
+            if not eid or e.get("appointmentStatus") != "noshow" or eid in seen \
+                    or not e.get("contactId"):
+                continue
+            seen.add(eid)
+            novos.append(e)
+    enviados = 0
+    if not first_run:  # 1ª rodada só marca o passado — nunca metralhar no-show antigo
+        for e in novos:
+            cid = e["contactId"]
+            b = contact_brief(cid)
+            if (b.get("dnd")) or not b.get("phone"):
+                continue
+            first = (b.get("nome") or "").split(" ")[0] or "there"
+            carro = b.get("veh") or b.get("interest") or "your car"
+            msg = (f"Hey {first}. This is Rafael from Elite Premium Detailing. "
+                   f"We had you down for the {carro} and I blocked shop time for it — "
+                   "I'd hate for you to lose the slot. If the timing changed, no problem: "
+                   "what day works better this week? I'll handle your car personally. "
+                   "Feel free to call or text me back. Thank you!")
+            r = ghl.post("/conversations/messages",
+                         {"type": "SMS", "contactId": cid, "message": msg})
+            if r.status_code in (200, 201):
+                enviados += 1
+                sb._sb("PATCH", f"board_cards?status=eq.open&contact_id=eq.{cid}",
+                       json={"last_note": "No-show rescue SMS sent (Rafael) — aguardando resposta"})
+    sb._sb("POST", "config?on_conflict=key",
+           headers_extra={"Prefer": "resolution=merge-duplicates"},
+           json={"key": "noshow_rescue_state",
+                 "value": {"seen": sorted(seen)[-500:], "updated": iso(now_utc())}})
+    if novos:
+        log(f"resgate no-show: {len(novos)} novos, {enviados} SMS enviados"
+            + (" (1ª rodada: só semeou o estado)" if first_run else ""))
 
 
 if __name__ == "__main__":
