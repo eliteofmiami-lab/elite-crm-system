@@ -1625,12 +1625,86 @@ def cycle(full_task_pass=False):
            json={"key": "board_activity", "value": {"date": today, "users": act,
                                                     "updated": iso(now)}})
 
+    # ---- 8. CONFIRMAÇÕES D-2 (regra Rafael 16/07): booking sem confirmação humana
+    # vira no-show — o Rafael assumiu as confirmações PESSOALMENTE. Todo dia, no 1º
+    # ciclo depois das 8h ET, ele recebe por SMS a lista dos appointments de DAQUI A
+    # 2 DIAS (nome, fone, carro, horário) pra ligar confirmando.
+    try:
+        confirm_digest_d2()
+    except Exception as e:
+        log(f"[warn] digest de confirmações D-2 falhou (não derruba o ciclo): {e}")
+
     sb._sb("POST", "config?on_conflict=key",
            headers_extra={"Prefer": "resolution=merge-duplicates"},
            json={"key": "board_state", "value": {"last_scan": iso(now)}})
     log(f"ciclo ok: +{n_new} cards · {resolutions} resoluções · "
         f"válidas Eugene hoje: {sum(1 for a in att if a['valid'])}")
     _cache_save()  # persiste o cache TTL (perfil/tasks) p/ o próximo ciclo
+
+
+def _staff_contact_id(phone, name):
+    """Contato de staff no GHL (upsert por telefone — não duplica)."""
+    r = ghl.post("/contacts/upsert",
+                 {"locationId": ghl.LOCATION_ID, "phone": phone,
+                  "firstName": name, "tags": ["staff"]})
+    if r.status_code not in (200, 201):
+        return None
+    return ((r.json() or {}).get("contact") or {}).get("id")
+
+
+def confirm_digest_d2():
+    """SMS diário pro Rafael com os appointments de D+2 (confirmação pessoal)."""
+    import os
+    rafael = (os.environ.get("RAFAEL_PHONE") or "").strip()
+    if not rafael:
+        return
+    now_et = dt.datetime.now(ET)
+    day_key = f"{now_et:%Y-%m-%d}"
+    st_rows = sb._sb("GET", "config?key=eq.confirm_digest_d2&select=value") or []
+    if now_et.hour < 8 or (st_rows and st_rows[0]["value"].get("day") == day_key):
+        return
+    alvo = (now_et + dt.timedelta(days=2)).date()
+    ini = dt.datetime(alvo.year, alvo.month, alvo.day, tzinfo=ET)
+    fim = ini + dt.timedelta(days=1)
+    linhas = []
+    for cal_id in sb.CALENDARS.values():
+        r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID,
+                                          "calendarId": cal_id,
+                                          "startTime": int(ini.timestamp() * 1000),
+                                          "endTime": int(fim.timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            if e.get("appointmentStatus") in ("cancelled", "invalid", "noshow", "showed") \
+                    or not e.get("contactId"):
+                continue
+            st = parse_ts(str(e.get("startTime")))
+            b = contact_brief(e["contactId"])
+            nome = b.get("nome") or e.get("title") or "?"
+            fone = b.get("phone") or "sem fone"
+            veh = b.get("veh") or ""
+            status = e.get("appointmentStatus") or "new"
+            hora = f"{st.astimezone(ET):%I:%M%p}".lstrip("0").lower() if st else "?"
+            linhas.append(f"• {hora} {nome} {fone}" + (f" — {veh}" if veh else "")
+                          + (" [NAO CONFIRMADO]" if status != "confirmed" else ""))
+    # marca o dia ANTES de enviar — reenvio manual é melhor que SMS duplicado em loop
+    sb._sb("POST", "config?on_conflict=key",
+           headers_extra={"Prefer": "resolution=merge-duplicates"},
+           json={"key": "confirm_digest_d2",
+                 "value": {"day": day_key, "count": len(linhas), "sent_at": iso(now_utc())}})
+    if not linhas:
+        log(f"digest D-2: sem appointments em {alvo:%d/%m} — nada a enviar")
+        return
+    cid = _staff_contact_id(rafael, "Rafael")
+    if not cid:
+        log("digest D-2: upsert do contato do Rafael falhou")
+        return
+    msg = (f"ELITE — CONFIRMACOES {alvo:%a %d/%m} (D-2):\n" + "\n".join(linhas[:12])
+           + (f"\n(+{len(linhas)-12} mais no board)" if len(linhas) > 12 else "")
+           + "\nLigar e confirmar cada um. No-show custa job.")
+    r = ghl.post("/conversations/messages",
+                 {"type": "SMS", "contactId": cid, "message": msg})
+    log(f"digest D-2 enviado ({len(linhas)} appointments, status {r.status_code})")
 
 
 if __name__ == "__main__":
