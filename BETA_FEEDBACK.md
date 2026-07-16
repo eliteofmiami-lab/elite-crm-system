@@ -1,10 +1,34 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-15 07:23
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-16 07:33
 
-**33 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
+**37 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
 | Tipo | Reportes |
 |---|---|
-| card_indevido | 33 |
+| card_indevido | 37 |
+
+## 2026-07-15T16:06 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Roderick Mobley · Missed inbound · called 11:13 AM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/PR0YurVMrmZ8SA23JC6k)
+
+## 2026-07-15T16:06 · card_indevido · por eugenebaruelova@gmail.com
+- Card: MIREYA MIR · Missed inbound · called 10:24 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/a4CMQMG1ChEQbOLkJ5NU)
+
+## 2026-07-15T16:06 · card_indevido · por eugenebaruelova@gmail.com
+- Card: JENNIFE MACKESY · Missed inbound · called 8:33 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/EoEa9QttpC7RzWTNqNxZ)
+
+## 2026-07-15T16:05 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Cesar Estrada · Missed inbound · called 17:19, no answer (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/8GmEGhKRCwGlFW5h9C7o)
 
 ## 2026-07-14T20:21 · card_indevido · por eugenebaruelova@gmail.com
 - Card: Pedro Mirabal · Follow Up since Jul 14 — NO TASK · needs a decision (C?, `?`)
