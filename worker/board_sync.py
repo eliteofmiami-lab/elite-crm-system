@@ -467,6 +467,8 @@ def scan_conversations(since, max_pages=4):
                     rec["direction"] = msg.get("direction")
                     rec["duration"] = meta.get("duration") or 0
                     rec["status"] = msg.get("status")
+                    rec["from_num"] = msg.get("from")
+                    rec["to_num"] = msg.get("to")
                     calls.append(rec)
                 elif msg.get("messageType") == "TYPE_SMS":
                     (sms_in if msg.get("direction") == "inbound" else sms_out).append(rec)
@@ -1642,6 +1644,14 @@ def cycle(full_task_pass=False):
     except Exception as e:
         log(f"[warn] resgate de no-show falhou (não derruba o ciclo): {e}")
 
+    # ---- 10. RODÍZIO DE NÚMEROS (regra Rafael 16/07): número ativo do Eugene bateu
+    # 45 outbound no dia → SMS pros dois + banner no topo do board dizendo PRA QUAL
+    # número trocar. Banner some sozinho quando a troca acontece (ou no dia seguinte).
+    try:
+        rotation_watch(calls)
+    except Exception as e:
+        log(f"[warn] vigia do rodízio falhou (não derruba o ciclo): {e}")
+
     sb._sb("POST", "config?on_conflict=key",
            headers_extra={"Prefer": "resolution=merge-duplicates"},
            json={"key": "board_state", "value": {"last_scan": iso(now)}})
@@ -1658,6 +1668,77 @@ def _staff_contact_id(phone, name):
     if r.status_code not in (200, 201):
         return None
     return ((r.json() or {}).get("contact") or {}).get("id")
+
+
+def rotation_watch(calls):
+    """Conta outbound por número (dedupe por msg id) e avisa a troca aos 45 no ativo."""
+    import os
+    day = f"{dt.datetime.now(ET):%Y-%m-%d}"
+    pool_rows = sb._sb("GET", "config?key=eq.rotation_pool&select=value") or []
+    pool = (pool_rows[0]["value"] if pool_rows else None) or \
+        ["+19543353693", "+19543145029", "+19543352725"]
+    st_rows = sb._sb("GET", "config?key=eq.rotation_counts&select=value") or []
+    st = (st_rows[0]["value"] if st_rows else None) or {}
+    if st.get("day") != day:
+        st = {"day": day, "counts": {}, "seen": [], "notified": []}
+    seen = set(st.get("seen") or [])
+    counts = st.get("counts") or {}
+    for c in calls:
+        if c.get("direction") != "outbound" or not c.get("id") or c["id"] in seen:
+            continue
+        frm = c.get("from_num")
+        if not frm:
+            continue
+        seen.add(c["id"])
+        counts[frm] = counts.get(frm, 0) + 1
+    st["seen"] = sorted(seen)[-4000:]
+    st["counts"] = counts
+
+    active = None  # número de saída ATUAL do Eugene (lcPhone — leitura via API)
+    try:
+        r = ghl.get(f"/users/?locationId={ghl.LOCATION_ID}")
+        for u in (r.json().get("users") or []):
+            nome = f"{u.get('name') or ''} {u.get('firstName') or ''}".lower()
+            if "eugene" in nome:
+                active = (u.get("lcPhone") or {}).get(ghl.LOCATION_ID)
+    except Exception:
+        pass
+
+    notice_rows = sb._sb("GET", "config?key=eq.board_notice&select=value") or []
+    notice = notice_rows[0]["value"] if notice_rows else None
+    # banner se limpa sozinho: dia virou OU Eugene já está no número recomendado
+    if notice and (notice.get("day") != day or (active and active == notice.get("next"))):
+        sb._sb("POST", "config?on_conflict=key",
+               headers_extra={"Prefer": "resolution=merge-duplicates"},
+               json={"key": "board_notice", "value": {}})
+        log("rodízio: troca detectada/dia novo — banner limpo")
+
+    if active and counts.get(active, 0) >= 45 and active not in (st.get("notified") or []):
+        cands = [p for p in pool if p != active]
+        nxt = min(cands, key=lambda p: counts.get(p, 0)) if cands else None
+        if nxt:
+            st.setdefault("notified", []).append(active)
+            sb._sb("POST", "config?on_conflict=key",
+                   headers_extra={"Prefer": "resolution=merge-duplicates"},
+                   json={"key": "board_notice",
+                         "value": {"kind": "rotate_number", "day": day, "active": active,
+                                   "next": nxt, "count": counts.get(active, 0),
+                                   "created": iso(now_utc())}})
+            aviso = (f"ELITE: o numero de saida {active} bateu {counts.get(active, 0)} "
+                     f"calls hoje. TROCA AGORA para {nxt} — Settings > My Staff > "
+                     "Eugene > Phone. O board esta avisando no topo tambem.")
+            for phone, who in ((os.environ.get("EUGENE_PHONE"), "Eugene"),
+                               (os.environ.get("RAFAEL_PHONE"), "Rafael")):
+                if phone:
+                    cid = _staff_contact_id(phone, who)
+                    if cid:
+                        ghl.post("/conversations/messages",
+                                 {"type": "SMS", "contactId": cid, "message": aviso})
+            log(f"rodízio: {active} bateu {counts.get(active, 0)} — trocar pra {nxt}, avisos enviados")
+
+    sb._sb("POST", "config?on_conflict=key",
+           headers_extra={"Prefer": "resolution=merge-duplicates"},
+           json={"key": "rotation_counts", "value": st})
 
 
 def confirm_digest_d2():

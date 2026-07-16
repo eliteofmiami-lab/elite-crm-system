@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabaseClient";
 const GHL = "https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/";
 const COLS = [
   { n: 1, title: "Return · Reply · Hot", cap: "missed calls, unanswered SMS, HOT LEADS · oldest first" },
-  { n: 2, title: "New Leads — Call ASAP", cap: "stage New Lead · oldest first" },
+  { n: 2, title: "New Leads — Call ASAP", cap: "new + never called · newest first" },
   { n: 3, title: "Today's tasks — Quotes · Follow-ups", cap: "quote tasks first, then follow-ups, then other tasks · Urable no reply" },
   { n: 4, title: "Pipeline — Contact 1/2/3", cap: "newest first · 1–2 calls/day · 2 moves today = done till tomorrow" },
   { n: 7, title: "Needs attention — no task", cap: "Quote Sent & Follow Up without a task — create task + date" },
@@ -478,8 +478,26 @@ export default function BoardView({ session, data, reload, role }) {
   const aging = open.filter((c) => (Date.now() - new Date(c.origem_ts || c.created_at)) / 86400000 >= 2 && c.coluna !== 5);
   const act = (data.config.board_activity || {}).users || {};
 
+  const notice = data.config.board_notice || {};
+  const fmtPhone = (p) => {
+    const d = String(p || "").replace(/\D/g, "").replace(/^1/, "");
+    return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : p;
+  };
   return (
     <div className="wrap">
+      {notice.kind === "rotate_number" && notice.day === today && (
+        <div style={{ background: "#FFFCF5", border: "1.5px solid #FEDF89",
+          borderLeft: "5px solid #F79009", borderRadius: 10, padding: "12px 16px",
+          marginBottom: 12, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <b style={{ color: "#B54708", letterSpacing: ".4px", fontSize: 14 }}>
+            SWITCH OUTBOUND NUMBER NOW → use {fmtPhone(notice.next)}
+          </b>
+          <span style={{ color: "var(--sub)", fontSize: 13 }}>
+            {fmtPhone(notice.active)} hit {notice.count} calls today ·
+            Settings → My Staff → Eugene → Phone. This banner clears itself once switched.
+          </span>
+        </div>
+      )}
       <div className="topbar">
         <div className="tt"><h1>Daily Board</h1>
           <span className="d">{now.toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
