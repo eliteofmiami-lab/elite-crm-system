@@ -505,6 +505,22 @@ export default function BoardView({ session, data, reload, role }) {
   const aging = open.filter((c) => (Date.now() - new Date(c.origem_ts || c.created_at)) / 86400000 >= 2 && c.coluna !== 5);
   const act = (data.config.board_activity || {}).users || {};
 
+  // BOARD DESLIGADO (ordem do Rafael 16/07): tela estática, sem fila, sem clock-in.
+  const boardMode = data.config.board_mode || {};
+  if (boardMode.enabled === false) {
+    return (
+      <div className="wrap" style={{ maxWidth: 520, textAlign: "center", paddingTop: 80 }}>
+        <img src="/elite-logo.png" alt="Elite" style={{ height: 34, marginBottom: 18 }} />
+        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Board desativado</h1>
+        <p style={{ color: "var(--sub)", fontSize: 14, lineHeight: 1.6 }}>
+          O board está fora do ar por decisão do Rafael (16/07).
+          O trabalho de leads segue direto no GHL.
+          As automações de SMS (confirmações, resgate de no-show e rodízio de números)
+          continuam ativas.
+        </p>
+      </div>
+    );
+  }
   const notice = data.config.board_notice || {};
   const fmtPhone = (p) => {
     const d = String(p || "").replace(/\D/g, "").replace(/^1/, "");

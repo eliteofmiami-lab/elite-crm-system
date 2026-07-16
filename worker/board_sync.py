@@ -608,6 +608,27 @@ def cycle(full_task_pass=False):
     lookback = min(since, now_utc() - dt.timedelta(minutes=30))
     today = f"{dt.datetime.now(ET):%Y-%m-%d}"
 
+    # BOARD DESLIGADO (ordem do Rafael 16/07 à tarde: "não serviu, tá mais atrapalhando
+    # que ajudando" — só volta depois de muitos testes, SE voltar). O ciclo roda em modo
+    # MÍNIMO: nenhum card criado/movido/envelhecido — ficam só as automações de SMS que
+    # ele pediu hoje (confirmações D-2, resgate de no-show, vigia do rodízio).
+    bm_rows = sb._sb("GET", "config?key=eq.board_mode&select=value") or []
+    if not bool(((bm_rows[0]["value"] if bm_rows else None) or {}).get("enabled", True)):
+        calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback)
+        for nome, fn in (("digest D-2", confirm_digest_d2),
+                         ("resgate no-show", noshow_rescue),
+                         ("vigia rodízio", lambda: rotation_watch(calls))):
+            try:
+                fn()
+            except Exception as e:
+                log(f"[warn] {nome} falhou: {e}")
+        sb._sb("POST", "config?on_conflict=key",
+               headers_extra={"Prefer": "resolution=merge-duplicates"},
+               json={"key": "board_state", "value": {"last_scan": iso(now_utc())}})
+        log("board OFF — ciclo mínimo (só automações de SMS)")
+        _cache_save()
+        return
+
     def ok_contact(cid, brief=None):
         if cid in test_ids or cid in silent:
             return False
@@ -1736,7 +1757,7 @@ def rotation_watch(calls):
                                    "created": iso(now_utc())}})
             aviso = (f"ELITE: o numero de saida {active} bateu {counts.get(active, 0)} "
                      f"calls hoje. TROCA AGORA para {nxt} — Settings > My Staff > "
-                     "Eugene > Phone. O board esta avisando no topo tambem.")
+                     "Eugene > Phone.")
             for phone, who in ((os.environ.get("EUGENE_PHONE"), "Eugene"),
                                (os.environ.get("RAFAEL_PHONE"), "Rafael")):
                 if phone:
