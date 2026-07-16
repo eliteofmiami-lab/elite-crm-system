@@ -756,9 +756,14 @@ def cycle(full_task_pass=False):
                "hot": W["col1_days"], "new_lead": W["col2_days"],
                "urable": W["urable_days"], "pipeline": W["pipeline_days"],
                "followup_notask": W["pipeline_days"], "quote_notask": W["pipeline_days"]}
-    # 16/jul: quem nunca recebeu call é tratado diferente em TODO o ciclo (reclassificação
-    # pra col 2 + topo do reaquecimento). None = leitura falhou → sem reclassificação hoje.
-    called_cids = called_contact_ids()
+    # 16/jul: quem nunca recebeu call seria tratado diferente (reclassificação col 2 +
+    # topo do reaquecimento). DESLIGADO 16/07 à tarde (config board_reclassify): as
+    # fontes locais (calls/attempts/disposições) estão INCOMPLETAS vs o GHL real —
+    # leads com 3-4 calls apareciam como NEVER CALLED (report Rafael). Religar SÓ
+    # depois do backfill completo de conversas provar cobertura.
+    _rc = sb._sb("GET", "config?key=eq.board_reclassify&select=value") or []
+    _rc_on = bool(((_rc[0]["value"] if _rc else None) or {}).get("enabled"))
+    called_cids = called_contact_ids() if _rc_on else None
     aged_n = 0
     for c in list(oc):
         win_d = AGE_WIN.get(c["kind"])
