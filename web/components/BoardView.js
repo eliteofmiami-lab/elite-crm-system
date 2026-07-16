@@ -406,6 +406,33 @@ export default function BoardView({ session, data, reload, role }) {
     }
     reload && reload();
   }
+  // PLAY (regra Rafael 16/07): sessão de chamadas por coluna. O board NÃO move
+  // stage — disposição no GHL segue mandando na cadência; aqui só registra a
+  // rodada, resolve o card do dia e avança. Card resolvido por fora (webhook de
+  // disposição) também avança sozinho.
+  const [playCol, setPlayCol] = useState(null);
+  const [playQueue, setPlayQueue] = useState([]);
+  const [playDone, setPlayDone] = useState(0);
+  const cardById = new Map(open.map((c) => [c.id, c]));
+  function playStart(n, items) {
+    setPlayCol(n); setPlayQueue(items.map((c) => c.id)); setPlayDone(0);
+  }
+  const playCurrent = playCol != null
+    ? (playQueue.map((id) => cardById.get(id)).find(Boolean) || null) : null;
+  async function playLog(c, outcome) {
+    await supabase.from("manual_logs").insert({
+      contact_id: c.contact_id, card_id: c.id,
+      fields: { outcome, via: "play_session", coluna: playCol }, logged_by: email, status: "logged" });
+    await supabase.from("board_cards").update({
+      status: "resolved", resolved_by: `play session — ${outcome}`,
+      resolved_at: new Date().toISOString(), unres: false }).eq("id", c.id);
+    setPlayQueue((q) => q.filter((id) => id !== c.id));
+    setPlayDone((d) => d + 1);
+    reload && reload();
+  }
+  function playSkip(c) {
+    setPlayQueue((q) => [...q.filter((id) => id !== c.id), c.id]);
+  }
   const openByCol = (n) => {
     const arr = open.filter((c) => c.coluna === n)
     .filter((c) => (isOwner ? true : !spanishSet.has(c.contact_id)))
@@ -496,6 +523,78 @@ export default function BoardView({ session, data, reload, role }) {
             {fmtPhone(notice.active)} hit {notice.count} calls today ·
             Settings → My Staff → Eugene → Phone. This banner clears itself once switched.
           </span>
+        </div>
+      )}
+      {playCol != null && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(16,24,40,.55)", zIndex: 60,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "var(--card, #fff)", borderRadius: 14, width: "100%", maxWidth: 560,
+            padding: "22px 26px", boxShadow: "0 20px 60px rgba(16,24,40,.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <b style={{ color: "#1849A9", letterSpacing: ".4px", fontSize: 13 }}>
+                CALL SESSION — {COLS.find((c) => c.n === playCol)?.title}
+              </b>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>
+                {playDone} done · {playQueue.length} to go
+              </span>
+            </div>
+            {playCurrent ? (
+              <>
+                <div style={{ margin: "14px 0 2px", fontSize: 22, fontWeight: 700 }}>
+                  {playCurrent.nome || "—"}
+                  {playCurrent.grupo === "great_car" && (
+                    <span style={{ marginLeft: 8, background: "#EFF4FF", color: "#1849A9",
+                      border: "1px solid #B2CCFF", borderRadius: 6, padding: "1px 8px",
+                      font: "700 10px Inter", letterSpacing: ".4px", verticalAlign: "middle" }}>
+                      GREAT CAR — CALL FIRST</span>
+                  )}
+                </div>
+                {playCurrent.veh && <div style={{ color: "var(--sub)", fontSize: 14 }}>{playCurrent.veh}</div>}
+                <a href={`tel:${playCurrent.phone || ""}`}
+                  style={{ display: "block", fontSize: 30, fontWeight: 800, color: "#1849A9",
+                    textDecoration: "none", margin: "8px 0 2px" }}>
+                  {playCurrent.phone || "no phone on file"}
+                </a>
+                <div style={{ color: "var(--sub)", fontSize: 12.5, marginBottom: 10 }}>{playCurrent.origem}</div>
+                {playCurrent.last_note && (
+                  <div style={{ background: "#F9FAFB", border: "1px solid var(--line, #EAECF0)", borderRadius: 8,
+                    padding: "8px 10px", fontSize: 12.5, color: "var(--sub)", marginBottom: 12 }}>
+                    {playCurrent.last_note}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                  <a className="btn primary" href={GHL + playCurrent.contact_id} target="_blank" rel="noreferrer"
+                    style={{ textDecoration: "none" }}>Open in GHL — call &amp; details ↗</a>
+                  <button className="btn ghost" onClick={() => playSkip(playCurrent)}>Skip for now</button>
+                </div>
+                <div style={{ borderTop: "1px solid var(--line, #EAECF0)", paddingTop: 10 }}>
+                  <div style={{ fontSize: 11.5, color: "var(--sub)", marginBottom: 6 }}>
+                    Round result (stage moves stay with the GHL disposition — this only clears today&apos;s card):
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {["Answered", "No answer", "Voicemail", "Follow up"].map((o) => (
+                      <button key={o} className="btn" onClick={() => playLog(playCurrent, o)}
+                        style={{ border: "1px solid #B2CCFF", background: "#F5F9FF", color: "#1849A9", fontWeight: 700 }}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: "26px 0", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--green-text, #067647)" }}>
+                  Column cleared — {playDone} calls logged.
+                </div>
+                <div style={{ color: "var(--sub)", fontSize: 13, marginTop: 4 }}>
+                  Board updates and recategorizes on its own. Pick the next column and hit PLAY.
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop: 14, textAlign: "right" }}>
+              <button className="btn out" onClick={() => { setPlayCol(null); setPlayQueue([]); }}>End session</button>
+            </div>
+          </div>
         </div>
       )}
       <div className="topbar">
@@ -593,7 +692,16 @@ export default function BoardView({ session, data, reload, role }) {
               const confd = items.filter((c) => c.grupo === "confirmed");
               return (
                 <div className="col" key={col.n}>
-                  <h2>{col.title} <span className="n">{items.length}</span></h2>
+                  <h2>{col.title} <span className="n">{items.length}</span>
+                    {[1, 2, 4, 6].includes(col.n) && items.length > 0 && (
+                      <button onClick={() => playStart(col.n, items)}
+                        style={{ marginLeft: 8, padding: "2px 12px", borderRadius: 6, cursor: "pointer",
+                          border: "1px solid #B2CCFF", background: "#EFF4FF", color: "#1849A9",
+                          font: "700 11px Inter", letterSpacing: ".5px", verticalAlign: "middle" }}>
+                        PLAY
+                      </button>
+                    )}
+                  </h2>
                   <div className="cap">{col.cap}</div>
                   {col.n === 5 ? (
                     <>
