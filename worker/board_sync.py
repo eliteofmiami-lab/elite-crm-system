@@ -1676,7 +1676,10 @@ def rotation_watch(calls):
     day = f"{dt.datetime.now(ET):%Y-%m-%d}"
     pool_rows = sb._sb("GET", "config?key=eq.rotation_pool&select=value") or []
     pool = (pool_rows[0]["value"] if pool_rows else None) or \
-        ["+19543353693", "+19543145029", "+19543352725"]
+        ["+19543145029", "+19543352725", "+17543317204", "+19547383458"]
+    # teto por número (config rotation_caps): número novo aquece com teto menor
+    caps_rows = sb._sb("GET", "config?key=eq.rotation_caps&select=value") or []
+    caps = (caps_rows[0]["value"] if caps_rows else None) or {}
     st_rows = sb._sb("GET", "config?key=eq.rotation_counts&select=value") or []
     st = (st_rows[0]["value"] if st_rows else None) or {}
     if st.get("day") != day:
@@ -1713,8 +1716,10 @@ def rotation_watch(calls):
                json={"key": "board_notice", "value": {}})
         log("rodízio: troca detectada/dia novo — banner limpo")
 
-    if active and counts.get(active, 0) >= 45 and active not in (st.get("notified") or []):
-        cands = [p for p in pool if p != active]
+    cap_active = caps.get(active, 45) if active else 45
+    if active and counts.get(active, 0) >= cap_active and active not in (st.get("notified") or []):
+        # próximo: número do pool ainda ABAIXO do próprio teto, com menor uso hoje
+        cands = [p for p in pool if p != active and counts.get(p, 0) < caps.get(p, 45)]
         nxt = min(cands, key=lambda p: counts.get(p, 0)) if cands else None
         if nxt:
             st.setdefault("notified", []).append(active)
