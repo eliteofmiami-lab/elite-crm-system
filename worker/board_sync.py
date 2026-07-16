@@ -565,6 +565,29 @@ def age_out(card, dest_note):
         "status": "aged_out", "resolved_by": dest_note, "resolved_at": iso(now_utc())})
 
 
+def called_contact_ids():
+    """Contatos que JÁ receberam alguma tentativa de call (16/jul): calls outbound +
+    board_attempts + disposições. Retorna None se a leitura parecer falha (proteção:
+    nunca reclassificar o board inteiro por causa de uma resposta vazia do Supabase)."""
+    cids = set()
+    total = 0
+    for table, filt in (("calls", "direction=eq.outbound"),
+                        ("board_attempts", None),
+                        ("ghl_events", "type=eq.disposition")):
+        offset = 0
+        while True:
+            q = f"{table}?select=contact_id" + (f"&{filt}" if filt else "") \
+                + f"&limit=1000&offset={offset}"
+            rows = sb._sb("GET", q) or []
+            total += len(rows)
+            cids.update(r["contact_id"] for r in rows if r.get("contact_id"))
+            if len(rows) < 1000:
+                break
+            offset += 1000
+    # a base tem centenas de calls históricas — 0 linhas = leitura quebrada, não realidade
+    return cids if total > 0 else None
+
+
 # -------------------- ciclo --------------------
 def cycle(full_task_pass=False):
     # TRAVA DE HORÁRIO (Lote 1): a varredura completa só roda em horário comercial
@@ -731,12 +754,18 @@ def cycle(full_task_pass=False):
                "hot": W["col1_days"], "new_lead": W["col2_days"],
                "urable": W["urable_days"], "pipeline": W["pipeline_days"],
                "followup_notask": W["pipeline_days"], "quote_notask": W["pipeline_days"]}
+    # 16/jul: quem nunca recebeu call é tratado diferente em TODO o ciclo (reclassificação
+    # pra col 2 + topo do reaquecimento). None = leitura falhou → sem reclassificação hoje.
+    called_cids = called_contact_ids()
     aged_n = 0
     for c in list(oc):
         win_d = AGE_WIN.get(c["kind"])
         ots = parse_ts(c.get("origem_ts"))
         if win_d and ots and (now_utc() - ots).days > win_d and not c.get("unres"):
-            age_out(c, f"aged out of window ({win_d}d) → warm-up ration")
+            nc = (called_cids is not None and c["kind"] in ("new_lead", "pipeline")
+                  and c["contact_id"] not in called_cids)
+            age_out(c, "NEVER CALLED — aged out → top of warm-up" if nc
+                    else f"aged out of window ({win_d}d) → warm-up ration")
             oc.remove(c)
             aged_n += 1
     if aged_n:
@@ -780,6 +809,16 @@ def cycle(full_task_pass=False):
             continue  # regra Peter: appointment marcado → coluna 5 governa
         for stage, o in lst:
             col, kind = STAGE_COLS[stage]
+            # 16/jul: lead SEM nenhuma call outbound não é "cadência" — é NEW LEAD.
+            # A automação move lead novo direto pra Contact 1/2/3 e ele se disfarçava
+            # de pipeline (col 4, "2 moves/dia = completo"). Ninguém ligava.
+            reclassified = (called_cids is not None and kind == "pipeline"
+                            and cid not in called_cids)
+            if reclassified:
+                col, kind = 2, "new_lead"
+                # (>7d cai na janela da col 2 e não cria card novo — o card de pipeline
+                # antigo segue vivo na col 4 até envelhecer pro topo do warm-up; por
+                # isso o supersede do card antigo acontece SÓ na criação, lá embaixo.)
             ots = parse_ts(o.get("lastStageChangeAt") or o.get("updatedAt") or o.get("createdAt")) or now
             age_days = (now - ots).days
             # PLANO §A: fora da janela viva → não vira card do dia (vira ração do warm-up)
@@ -803,8 +842,16 @@ def cycle(full_task_pass=False):
                     brief.setdefault("tags", []).append(GREAT_CARS_TAG)
             origem = ("Great Cars (qualified) · call FIRST" if stage == "Great Cars" else
                       f"HOT LEADS · in stage since {ots:%b %d}" if kind == "hot" else
+                      f"NEVER CALLED · {stage} since {ots:%b %d}" if reclassified else
                       f"New Lead · came in {ots:%b %d %H:%M}" if kind == "new_lead" else
                       f"{stage} · since {ots:%b %d}")
+            if reclassified and (cid, "pipeline") in existing:
+                # a col 2 assume — o card de cadência do mesmo lead sai de cena
+                sb._sb("PATCH", f"board_cards?status=eq.open&contact_id=eq.{cid}"
+                                "&kind=eq.pipeline",
+                       json={"status": "resolved", "resolved_at": iso(now_utc()),
+                             "resolved_by": "reclassified — never called → NEW LEAD (col 2)"})
+                existing.discard((cid, "pipeline"))
             n_new += upsert_card(col, kind, cid, origem, ots, brief, grupo=grupo,
                                  opportunity_id=o["id"], stage=stage, existing=existing)
 
@@ -1130,6 +1177,16 @@ def cycle(full_task_pass=False):
                 veh, nm = b.get("veh"), nm or b.get("nome")
                 fetches += 1
             ots = parse_ts(ots_s) or now
+            # 16/jul: nunca-ligado NÃO mora no fundo — topo do reaquecimento, logo
+            # depois dos reschedules. (faxina "never responded" = respondido por SMS
+            # é outra coisa; nunca-LIGADO é lead que a loja nunca tentou por voz.)
+            if called_cids is not None and cid not in called_cids:
+                pool.append({"cid": cid, "tier": 1,
+                             "score": 10**9 + ots.timestamp(), "ots": iso(ots),
+                             "nome": nm, "veh": veh, "grupo": "never_called",
+                             "origem": f"NEVER CALLED · lead from {ots:%b %d}",
+                             "opp": opp_id})
+                continue
             if cid in faxina_cids:
                 # faxina de hoje mudou o updatedAt — usar a criação da opp como idade
                 # real e mandar pro FUNDO da fila (tier 3): mora aqui, sem furar fila
@@ -1178,7 +1235,7 @@ def cycle(full_task_pass=False):
                 continue
             made = upsert_card(6, "warmup", cid, p["origem"],
                                parse_ts(p.get("ots")) or now, brief,
-                               grupo=GRUPOS[p["tier"]],
+                               grupo=p.get("grupo") or GRUPOS[p["tier"]],
                                opportunity_id=p.get("opp"), existing=existing)
             if made:
                 open_cids.add(cid)
