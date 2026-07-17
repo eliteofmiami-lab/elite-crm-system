@@ -1,10 +1,28 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-16 07:33
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-07-17 07:29
 
-**37 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
+**40 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
 | Tipo | Reportes |
 |---|---|
-| card_indevido | 37 |
+| card_indevido | 40 |
+
+## 2026-07-16T15:51 · card_indevido · por eugenebaruelova@gmail.com
+- Card: J MARTINEZ · Task · task "Call to reschedule" · upcoming Jul 20 (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/SAxEgdZFMEsy6J92EUZ9)
+
+## 2026-07-16T15:32 · card_indevido · por eugenebaruelova@gmail.com
+- Card: null · Missed inbound · called 6:28 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/pVWIeJyfFzlrOSOXJkn7)
+
+## 2026-07-16T15:32 · card_indevido · por eugenebaruelova@gmail.com
+- Card: Cesar Jimenez · Missed inbound · called 6:37 PM, no answer (live) (C?, `?`)
+- Contexto no momento: score None/None [None] · estado `None` · breakdown `None`
+- Texto: “(no reason given)”
+- [Contato no GHL](https://app.gohighlevel.com/v2/location/Ao5ER8XBg3AtCJMccesF/contacts/detail/EJAtkYPc1u28PxUVJRz1)
 
 ## 2026-07-15T16:06 · card_indevido · por eugenebaruelova@gmail.com
 - Card: Roderick Mobley · Missed inbound · called 11:13 AM, no answer (live) (C?, `?`)
