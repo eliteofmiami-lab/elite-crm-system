@@ -621,7 +621,8 @@ def cycle(full_task_pass=False):
         calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback, max_pages=12)
         for nome, fn in (("digest D-2", confirm_digest_d2),
                          ("resgate no-show", noshow_rescue),
-                         ("vigia rodízio", lambda: rotation_watch(calls))):
+                         ("vigia rodízio", lambda: rotation_watch(calls)),
+                         ("motor de alertas", alerts_engine)):
             try:
                 fn()
             except Exception as e:
@@ -1716,16 +1717,28 @@ def rotation_watch(calls):
         st = {"day": day, "counts": {}, "seen": [], "notified": []}
     seen = set(st.get("seen") or [])
     counts = st.get("counts") or {}
+    stats = st.get("stats") or {"out": 0, "a30": 0, "a60": 0}
     for c in calls:
         if c.get("direction") != "outbound" or not c.get("id") or c["id"] in seen:
             continue
-        frm = c.get("from_num")
-        if not frm:
-            continue
         seen.add(c["id"])
-        counts[frm] = counts.get(frm, 0) + 1
+        dur = c.get("duration") or 0
+        stats["out"] += 1
+        if dur >= 30: stats["a30"] += 1
+        if dur >= 60: stats["a60"] += 1
+        frm = c.get("from_num")
+        if frm:
+            counts[frm] = counts.get(frm, 0) + 1
     st["seen"] = sorted(seen)[-4000:]
     st["counts"] = counts
+    st["stats"] = stats
+    # série diária pro gráfico de conexão (histórico semeado pelo backfill 17/07)
+    h_rows = sb._sb("GET", "config?key=eq.call_stats_history&select=value") or []
+    hist = (h_rows[0]["value"] if h_rows else None) or {}
+    hist[day] = [stats["out"], stats["a30"], stats["a60"]]
+    sb._sb("POST", "config?on_conflict=key",
+           headers_extra={"Prefer": "resolution=merge-duplicates"},
+           json={"key": "call_stats_history", "value": hist})
 
     active = None  # número de saída ATUAL do Eugene (lcPhone — leitura via API)
     try:
@@ -1790,6 +1803,155 @@ def rotation_watch(calls):
            json={"key": "rotation_counts", "value": st})
 
 
+# ==================== BOARD V2 — MOTOR DE ALERTAS (spec Rafael 17/07) ====================
+# O board não é fila nem decisão: é ponto de ALERTA sobre regras não seguidas.
+# Cards fecháveis (dismiss não volta), 100% dado direto do GHL, auto-resolve
+# quando a condição é corrigida na fonte.
+
+def _alert_upsert(existing_keys, tipo, chave, titulo, detalhe, contact_id):
+    key = f"alert:{tipo}:{chave}"
+    if key in existing_keys:
+        return 0
+    sb._sb("POST", "board_cards", json={
+        "coluna": 0, "kind": "alert", "grupo": tipo, "status": "open",
+        "contact_id": contact_id, "event_id": key, "origem": titulo,
+        "last_note": detalhe, "origem_ts": iso(now_utc()),
+        "day_created": f"{dt.datetime.now(ET):%Y-%m-%d}"})
+    existing_keys.add(key)
+    return 1
+
+
+def alerts_engine():
+    """Detectores GHL-direto. Cada alerta nasce UMA vez (event_id); dismiss é final;
+    auto-resolve quando a condição some."""
+    rows = sb._sb("GET", "board_cards?kind=eq.alert&select=id,event_id,status,grupo,contact_id") or []
+    existing_keys = {r["event_id"] for r in rows if r.get("event_id")}
+    open_alerts = {r["event_id"]: r for r in rows if r["status"] == "open"}
+    now = now_utc()
+    novos = 0
+    ainda_vale = set()
+
+    # ---- 1/2. Quote Sent / Follow Up sem task + tasks vencidas ----
+    open_tasks = location_open_tasks()
+    if open_tasks is not None:
+        com_task = {t.get("contactId") for t in open_tasks if t.get("contactId")}
+        for stage_name in ("Quote Sent", "Follow Up"):
+            for o in paged_opps(rules.STAGES[stage_name]):
+                if o.get("status") != "open":
+                    continue
+                key = f"alert:sem_task:{o['id']}"
+                if o["contactId"] not in com_task:
+                    ainda_vale.add(key)
+                    novos += _alert_upsert(existing_keys, "sem_task", o["id"],
+                        f"{stage_name} sem task — {(o.get('name') or '?')[:34]}",
+                        "Quote/follow-up parado sem ninguém cobrando. Criar task com data.",
+                        o["contactId"])
+        for t in open_tasks:
+            due = parse_ts(str(t.get("dueDate") or ""))
+            if due and (now - due).days >= 1 and t.get("contactId"):
+                key = f"alert:task_vencida:{t.get('_id') or t.get('id')}"
+                ainda_vale.add(key)
+                novos += _alert_upsert(existing_keys, "task_vencida",
+                    t.get("_id") or t.get("id"),
+                    f"Task vencida há {(now - due).days}d — {(t.get('title') or 'task')[:34]}",
+                    "Concluir ou reagendar a task no GHL.", t["contactId"])
+
+    # ---- 3/4. Appointments: amanhã não confirmado (após 18h) + no-show sem reschedule ----
+    ini = now - dt.timedelta(days=7)
+    fim = now + dt.timedelta(days=30)
+    eventos, futuros = [], {}
+    for cal_id in sb.CALENDARS.values():
+        r = ghl.get("/calendars/events", {"locationId": ghl.LOCATION_ID, "calendarId": cal_id,
+                                          "startTime": int(ini.timestamp() * 1000),
+                                          "endTime": int(fim.timestamp() * 1000)})
+        if r.status_code != 200:
+            continue
+        for e in r.json().get("events", []):
+            cid, stt = e.get("contactId"), parse_ts(str(e.get("startTime")))
+            if not cid or not stt:
+                continue
+            eventos.append((e.get("id"), cid, stt, e.get("appointmentStatus")))
+            if stt > now and e.get("appointmentStatus") not in ("cancelled", "invalid", "noshow"):
+                futuros[cid] = True
+    et_now = dt.datetime.now(ET)
+    amanha = (et_now + dt.timedelta(days=1)).date()
+    for eid, cid, stt, status in eventos:
+        stt_et = stt.astimezone(ET)
+        if et_now.hour >= 18 and stt_et.date() == amanha and status not in \
+                ("confirmed", "showed", "cancelled", "invalid", "noshow"):
+            key = f"alert:appt_nao_confirmado:{eid}"
+            ainda_vale.add(key)
+            b = contact_brief(cid)
+            novos += _alert_upsert(existing_keys, "appt_nao_confirmado", eid,
+                f"Amanhã {stt_et:%I:%M%p} sem confirmação — {(b.get('nome') or '?')[:26]}",
+                "Ligar e confirmar HOJE. No-show custa job.", cid)
+        elif status == "noshow" and (now - stt) > dt.timedelta(hours=24) and not futuros.get(cid):
+            key = f"alert:noshow_sem_reschedule:{eid}"
+            ainda_vale.add(key)
+            b = contact_brief(cid)
+            novos += _alert_upsert(existing_keys, "noshow_sem_reschedule", eid,
+                f"No-show {stt_et:%d/%m} sem remarcação — {(b.get('nome') or '?')[:26]}",
+                "Resgate por SMS já foi; falta remarcar ou dar disposição.", cid)
+
+    # ---- 5. Lead novo sem NENHUM contato nosso em 1h (verificação GHL-direto) ----
+    st_rows = sb._sb("GET", "config?key=eq.alerts_state&select=value") or []
+    ast = (st_rows[0]["value"] if st_rows else None) or {}
+    lead_ok = set(ast.get("lead_ok") or [])
+    r = ghl.get("/opportunities/search", {"location_id": ghl.LOCATION_ID, "limit": 100})
+    if r.status_code == 200:
+        for o in r.json().get("opportunities", []):
+            created = parse_ts(o.get("createdAt"))
+            if not created or o.get("id") in lead_ok:
+                continue
+            idade = now - created
+            if idade < dt.timedelta(hours=1) or idade > dt.timedelta(hours=24):
+                continue
+            key = f"alert:lead_1h:{o['id']}"
+            if key in existing_keys:
+                ainda_vale.add(key)
+                continue
+            cid = (o.get("contact") or {}).get("id") or o.get("contactId")
+            if not cid:
+                continue
+            cv = ghl.get("/conversations/search",
+                         {"locationId": ghl.LOCATION_ID, "contactId": cid})
+            contatado = False
+            if cv.status_code == 200:
+                for c in (cv.json().get("conversations") or [])[:3]:
+                    m = ghl.get(f"/conversations/{c['id']}/messages?limit=40")
+                    if m.status_code != 200:
+                        continue
+                    for msg in (m.json().get("messages", {}).get("messages") or []):
+                        if msg.get("direction") == "outbound" and \
+                                (parse_ts(msg.get("dateAdded")) or created) >= created:
+                            contatado = True
+                            break
+                    if contatado:
+                        break
+            if contatado:
+                lead_ok.add(o["id"])
+            else:
+                ainda_vale.add(key)
+                novos += _alert_upsert(existing_keys, "lead_1h", o["id"],
+                    f"Lead novo há {int(idade.total_seconds() // 3600)}h sem contato — "
+                    f"{(o.get('name') or '?')[:26]}",
+                    "Nenhuma call/SMS nosso desde que entrou. Speed-to-lead.", cid)
+    sb._sb("POST", "config?on_conflict=key",
+           headers_extra={"Prefer": "resolution=merge-duplicates"},
+           json={"key": "alerts_state", "value": {"lead_ok": sorted(lead_ok)[-500:],
+                                                  "updated": iso(now)}})
+
+    # ---- auto-resolve: condição corrigida na fonte → card some sozinho ----
+    fechados = 0
+    for key, card in open_alerts.items():
+        if key not in ainda_vale:
+            sb._sb("PATCH", f"board_cards?id=eq.{card['id']}",
+                   json={"status": "resolved", "resolved_at": iso(now),
+                         "resolved_by": "auto: corrigido na fonte"})
+            fechados += 1
+    log(f"alertas: +{novos} novos · {fechados} auto-resolvidos · {len(ainda_vale)} ativos")
+
+
 def confirm_digest_d2():
     """SMS diário pro Rafael com os appointments de D+2 (confirmação pessoal)."""
     import os
@@ -1830,16 +1992,28 @@ def confirm_digest_d2():
            headers_extra={"Prefer": "resolution=merge-duplicates"},
            json={"key": "confirm_digest_d2",
                  "value": {"day": day_key, "count": len(linhas), "sent_at": iso(now_utc())}})
-    if not linhas:
+    # lembretes avulsos do Rafael (config digest_notes) pegam carona no SMS das 8h
+    nt_rows = sb._sb("GET", "config?key=eq.digest_notes&select=value") or []
+    notas = (nt_rows[0]["value"] if nt_rows else None) or []
+    if notas:
+        sb._sb("POST", "config?on_conflict=key",
+               headers_extra={"Prefer": "resolution=merge-duplicates"},
+               json={"key": "digest_notes", "value": []})
+    if not linhas and not notas:
         log(f"digest D-2: sem appointments em {alvo:%d/%m} — nada a enviar")
         return
     cid = _staff_contact_id(rafael, "Rafael")
     if not cid:
         log("digest D-2: upsert do contato do Rafael falhou")
         return
-    msg = (f"ELITE — CONFIRMACOES {alvo:%a %d/%m} (D-2):\n" + "\n".join(linhas[:12])
-           + (f"\n(+{len(linhas)-12} mais no board)" if len(linhas) > 12 else "")
-           + "\nLigar e confirmar cada um. No-show custa job.")
+    corpo = []
+    if linhas:
+        corpo.append(f"CONFIRMACOES {alvo:%a %d/%m} (D-2):\n" + "\n".join(linhas[:12])
+                     + (f"\n(+{len(linhas)-12} mais)" if len(linhas) > 12 else "")
+                     + "\nLigar e confirmar cada um. No-show custa job.")
+    if notas:
+        corpo.append("LEMBRETES:\n" + "\n".join(f"- {n}" for n in notas))
+    msg = "ELITE — " + "\n\n".join(corpo)
     r = ghl.post("/conversations/messages",
                  {"type": "SMS", "contactId": cid, "message": msg})
     log(f"digest D-2 enviado ({len(linhas)} appointments, status {r.status_code})")

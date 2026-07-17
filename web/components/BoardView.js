@@ -505,18 +505,104 @@ export default function BoardView({ session, data, reload, role }) {
   const aging = open.filter((c) => (Date.now() - new Date(c.origem_ts || c.created_at)) / 86400000 >= 2 && c.coluna !== 5);
   const act = (data.config.board_activity || {}).users || {};
 
-  // BOARD DESLIGADO (ordem do Rafael 16/07): tela estática, sem fila, sem clock-in.
+  // BOARD V2 (spec Rafael 17/07): NÃO é fila — é ponto de ALERTA (cards fecháveis,
+  // regras não seguidas, link direto pro GHL) + análise ao vivo. Fila/cards antigos
+  // seguem desligados (board_mode.enabled=false).
   const boardMode = data.config.board_mode || {};
+  const ALERT_LABEL = {
+    sem_task: "QUOTE / FOLLOW-UP SEM TASK",
+    task_vencida: "TASK VENCIDA",
+    appt_nao_confirmado: "AMANHÃ SEM CONFIRMAÇÃO",
+    noshow_sem_reschedule: "NO-SHOW SEM REMARCAÇÃO",
+    lead_1h: "LEAD NOVO SEM CONTATO",
+  };
+  async function dismissAlert(c) {
+    await supabase.from("board_cards").update({
+      status: "resolved", resolved_by: `dismissed — não faz sentido (${email})`,
+      resolved_at: new Date().toISOString() }).eq("id", c.id);
+    reload && reload();
+  }
   if (boardMode.enabled === false) {
+    const alerts = cards.filter((c) => c.kind === "alert" && c.status === "open")
+      .sort((a, b) => new Date(b.origem_ts || b.created_at) - new Date(a.origem_ts || a.created_at));
+    const hist = data.config.call_stats_history || {};
+    const semanas = {};
+    Object.entries(hist).forEach(([d, v]) => {
+      const dt0 = new Date(d + "T12:00:00");
+      const seg = new Date(dt0); seg.setDate(dt0.getDate() - ((dt0.getDay() + 6) % 7));
+      const k = seg.toISOString().slice(0, 10);
+      const s = semanas[k] || (semanas[k] = [0, 0, 0]);
+      s[0] += v[0] || 0; s[1] += v[1] || 0; s[2] += v[2] || 0;
+    });
+    const serie = Object.entries(semanas).sort().slice(-16);
+    const maxOut = Math.max(1, ...serie.map(([, v]) => v[0]));
     return (
-      <div className="wrap" style={{ maxWidth: 520, textAlign: "center", paddingTop: 80 }}>
-        <img src="/elite-logo.png" alt="Elite" style={{ height: 34, marginBottom: 18 }} />
-        <h1 style={{ fontSize: 20, marginBottom: 8 }}>Board desativado</h1>
-        <p style={{ color: "var(--sub)", fontSize: 14, lineHeight: 1.6 }}>
-          O board está fora do ar por decisão do Rafael (16/07).
-          O trabalho de leads segue direto no GHL.
-          As automações de SMS (confirmações, resgate de no-show e rodízio de números)
-          continuam ativas.
+      <div className="wrap" style={{ maxWidth: 860 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "18px 0 4px" }}>
+          <img src="/elite-logo.png" alt="Elite" style={{ height: 28 }} />
+          <h1 style={{ fontSize: 19 }}>Alertas &amp; Análise</h1>
+          <span style={{ color: "var(--sub)", fontSize: 12.5 }}>
+            regras não seguidas · dado direto do GHL · card corrigido some sozinho
+          </span>
+        </div>
+        <p style={{ color: "var(--sub)", fontSize: 12.5, marginBottom: 14 }}>
+          Isto não é uma fila: o trabalho acontece no GHL. Feche (X) o que não fizer sentido — não volta.
+        </p>
+        {alerts.length === 0 ? (
+          <div style={{ border: "1.5px solid var(--green-border, #ABEFC6)", background: "var(--green-soft, #F6FEF9)",
+            color: "var(--green-text, #067647)", borderRadius: 10, padding: "14px 18px",
+            fontWeight: 700, marginBottom: 18 }}>
+            Nenhuma regra sendo quebrada agora. Tudo com task, confirmado e remarcado.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(380px,1fr))",
+            gap: 10, marginBottom: 20 }}>
+            {alerts.map((c) => (
+              <div key={c.id} style={{ border: "1.5px solid #FEDF89", borderLeft: "5px solid #F79009",
+                background: "#FFFCF5", borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ font: "700 10px Inter", letterSpacing: ".5px", color: "#B54708" }}>
+                    {ALERT_LABEL[c.grupo] || c.grupo}
+                  </span>
+                  <button onClick={() => dismissAlert(c)} title="Não faz sentido — fechar de vez"
+                    style={{ border: "1px solid var(--line, #EAECF0)", background: "#fff", color: "var(--sub)",
+                      borderRadius: 6, font: "700 11px Inter", padding: "1px 8px", cursor: "pointer" }}>
+                    X
+                  </button>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 13.5, margin: "4px 0 2px" }}>{c.origem}</div>
+                <div style={{ color: "var(--sub)", fontSize: 12 }}>{c.last_note}</div>
+                {c.contact_id && (
+                  <a href={GHL + c.contact_id} target="_blank" rel="noreferrer"
+                    style={{ display: "inline-block", marginTop: 6, color: "#1849A9",
+                      fontWeight: 700, fontSize: 12.5, textDecoration: "none" }}>
+                    Corrigir no GHL ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <h2 style={{ fontSize: 14, color: "#1849A9", margin: "8px 0 6px" }}>
+          Conexão de voz por semana <span style={{ color: "var(--sub)", fontWeight: 400, fontSize: 12 }}>
+          — barras: ligações feitas · azul: conversas de 60s+ (a régua do Spam Likely)</span>
+        </h2>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 120,
+          border: "1px solid var(--line, #EAECF0)", borderRadius: 10, padding: "10px 12px", background: "#fff" }}>
+          {serie.map(([w, v]) => (
+            <div key={w} title={`${w}: ${v[0]} calls · ${v[2]} conversas 60s+ (${v[0] ? Math.round(100 * v[2] / v[0]) : 0}%)`}
+              style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
+              <div style={{ background: "#EFF4FF", border: "1px solid #B2CCFF", borderRadius: "3px 3px 0 0",
+                height: `${Math.round(100 * v[0] / maxOut)}%`, position: "relative" }}>
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#1849A9",
+                  borderRadius: "0 0 0 0", height: `${v[0] ? Math.round(100 * v[2] / v[0]) : 0}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p style={{ color: "var(--sub)", fontSize: 11.5, marginTop: 6 }}>
+          Automações ativas: confirmações D-2 (SMS 8h) · resgate de no-show · rodízio de números com teto.
+          Fila antiga do board segue desligada.
         </p>
       </div>
     );
