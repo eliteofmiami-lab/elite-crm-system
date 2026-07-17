@@ -596,7 +596,9 @@ def cycle(full_task_pass=False):
     # (seg-sáb, 9h-17h ET). Fora disso o webhook mantém o board vivo em tempo real —
     # varrer ~400 contatos de madrugada/domingo só queima a cota diária do GHL.
     et_now = dt.datetime.now(ET)
-    if et_now.weekday() == 6 or not (9 <= et_now.hour < 17):
+    # 17/jul: 8-18 ET (era 9-17) — Eugene começa a discar 8h e o rodízio precisa
+    # contar desde a primeira chamada (report Rafael: aviso chegou nas 70 calls).
+    if et_now.weekday() == 6 or not (8 <= et_now.hour < 18):
         log(f"fora do horário comercial ({et_now:%a %H:%M} ET) — ciclo pulado (webhook mantém o board)")
         return
     cfg = load_cfg()
@@ -614,7 +616,9 @@ def cycle(full_task_pass=False):
     # ele pediu hoje (confirmações D-2, resgate de no-show, vigia do rodízio).
     bm_rows = sb._sb("GET", "config?key=eq.board_mode&select=value") or []
     if not bool(((bm_rows[0]["value"] if bm_rows else None) or {}).get("enabled", True)):
-        calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback)
+        # max_pages alto: o 1º ciclo do dia precisa engolir a madrugada inteira
+        # pra conta do rodízio não nascer atrasada
+        calls, sms_out, sms_in, comments, conv_last = scan_conversations(lookback, max_pages=12)
         for nome, fn in (("digest D-2", confirm_digest_d2),
                          ("resgate no-show", noshow_rescue),
                          ("vigia rodízio", lambda: rotation_watch(calls))):
@@ -1742,30 +1746,44 @@ def rotation_watch(calls):
                json={"key": "board_notice", "value": {}})
         log("rodízio: troca detectada/dia novo — banner limpo")
 
-    cap_active = caps.get(active, 45) if active else 45
-    if active and counts.get(active, 0) >= cap_active and active not in (st.get("notified") or []):
-        # próximo: número do pool ainda ABAIXO do próprio teto, com menor uso hoje
-        cands = [p for p in pool if p != active and counts.get(p, 0) < caps.get(p, 45)]
+    # 17/jul (report Rafael — aviso só nas 70 calls): vigiar TODOS os números que
+    # discam, cada um contra o PRÓPRIO teto — não só o número ativo do Eugene.
+    # Teto 0 = número que NUNCA deveria discar (ex.: 3693, número do site).
+    notified = st.setdefault("notified", [])
+    avisos = []
+    for num, qtd in sorted(counts.items(), key=lambda x: -x[1]):
+        cap = caps.get(num, 45)
+        if qtd < max(cap, 1) and not (cap == 0 and qtd > 0):
+            continue
+        if num in notified:
+            continue
+        notified.append(num)
+        cands = [p for p in pool if p != num and counts.get(p, 0) < caps.get(p, 45)]
         nxt = min(cands, key=lambda p: counts.get(p, 0)) if cands else None
-        if nxt:
-            st.setdefault("notified", []).append(active)
+        if cap == 0:
+            avisos.append(f"ELITE: {qtd} calls saindo de {num} — esse e numero do "
+                          f"SITE, nao e pra discar dele. Troca para {nxt or 'um numero do pool'} "
+                          "em Settings > My Staff > (usuario) > Phone.")
+        else:
+            avisos.append(f"ELITE: {num} bateu {qtd} calls hoje (teto {cap}). "
+                          f"TROCA AGORA para {nxt or 'outro numero do pool'} — "
+                          "Settings > My Staff > (usuario) > Phone.")
+        if num == active and nxt:
             sb._sb("POST", "config?on_conflict=key",
                    headers_extra={"Prefer": "resolution=merge-duplicates"},
                    json={"key": "board_notice",
-                         "value": {"kind": "rotate_number", "day": day, "active": active,
-                                   "next": nxt, "count": counts.get(active, 0),
-                                   "created": iso(now_utc())}})
-            aviso = (f"ELITE: o numero de saida {active} bateu {counts.get(active, 0)} "
-                     f"calls hoje. TROCA AGORA para {nxt} — Settings > My Staff > "
-                     "Eugene > Phone.")
-            for phone, who in ((os.environ.get("EUGENE_PHONE"), "Eugene"),
-                               (os.environ.get("RAFAEL_PHONE"), "Rafael")):
-                if phone:
-                    cid = _staff_contact_id(phone, who)
-                    if cid:
-                        ghl.post("/conversations/messages",
-                                 {"type": "SMS", "contactId": cid, "message": aviso})
-            log(f"rodízio: {active} bateu {counts.get(active, 0)} — trocar pra {nxt}, avisos enviados")
+                         "value": {"kind": "rotate_number", "day": day, "active": num,
+                                   "next": nxt, "count": qtd, "created": iso(now_utc())}})
+    if avisos:
+        msg = "\n".join(avisos)
+        for phone, who in ((os.environ.get("EUGENE_PHONE"), "Eugene"),
+                           (os.environ.get("RAFAEL_PHONE"), "Rafael")):
+            if phone:
+                cid = _staff_contact_id(phone, who)
+                if cid:
+                    ghl.post("/conversations/messages",
+                             {"type": "SMS", "contactId": cid, "message": msg})
+        log(f"rodízio: {len(avisos)} números no teto — avisos enviados")
 
     sb._sb("POST", "config?on_conflict=key",
            headers_extra={"Prefer": "resolution=merge-duplicates"},
