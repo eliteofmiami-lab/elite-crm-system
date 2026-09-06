@@ -1,4 +1,4 @@
-# BETA_FEEDBACK — reportes do beta · regenerado 2026-09-05 00:44
+# BETA_FEEDBACK — reportes do beta · regenerado 2026-09-06 00:43
 
 **0 reporte(s).** Erro vira dado: nada muda automaticamente — este arquivo é a matéria-prima das rodadas de correção com o Rafael.
 
