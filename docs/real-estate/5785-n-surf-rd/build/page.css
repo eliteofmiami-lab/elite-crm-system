@@ -116,3 +116,6 @@ html{scroll-behavior:smooth}
 .sline{stroke:var(--atl);stroke-width:1;stroke-dasharray:8 5;opacity:.8} .rail{fill:var(--ink-2);opacity:.6;stroke:none} .keycirc{fill:var(--sheet);stroke:var(--ink);stroke-width:0.8} .scalebar{stroke:var(--ink);stroke-width:3} .dim{stroke:currentColor;stroke-width:0.8;fill:none}
 .ftxt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:7.5px;fill:var(--ink-2)}
 .plan.arch{max-width:1100px}
+
+.reg td:nth-child(2){min-width:34ch;max-width:60ch} .reg .fine{margin:4px 0 0}
+.sheet ol{padding-left:22px;max-width:90ch} .sheet ol li{margin-bottom:6px}

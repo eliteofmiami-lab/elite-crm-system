@@ -63,6 +63,14 @@ const matrix = `<div class="tablewrap"><table class="matrix"><thead><tr><th>Desi
 ${C.approvals.map(a => `<tr><td>${esc(a.element)}</td><td>${a.requires.map(r => `<span class="req req-${r}">${C.reqLabel[r]}</span>`).join(' ')}</td><td><span class="st st-${a.status}">${C.statusLabel[a.status]}</span></td><td>${a.why}</td></tr>`).join('\n')}
 </tbody></table></div>`;
 
+const digest = JSON.parse(fs.readFileSync('digest.json', 'utf8'));
+const EV = { code_snippet: 'Code snippet', city_staff_report_snippet: 'Staff-report snippet', state_rule: 'State rule (full text)', federal: 'Federal', county_record: 'County record', listing: 'Listing', secondary: 'Secondary', none: 'Not obtained' };
+const ST = { verified: 'Verified', partially_verified: 'Partially verified', refuted: 'Refuted', unverifiable: 'Unverifiable' };
+const register = `<div class="tablewrap"><table class="matrix reg"><thead><tr><th>Topic</th><th>Finding</th><th>Status</th><th>Evidence</th><th>Effect on the drawings</th></tr></thead><tbody>
+${digest.facts.map(f => `<tr><td class="mono">${esc(f.topic)}</td><td>${esc(f.statement)}${f.corrected_statement ? `<div class="fine">Adversarial pass: ${esc(f.corrected_statement)}</div>` : ''}${f.quote ? `<div class="fine">“${esc(f.quote)}”</div>` : ''}<div class="fine"><a href="${esc(f.source_url)}">${esc(f.source_url.replace(/^https?:\/\//, '').slice(0, 60))}…</a></div></td><td><span class="st st-${f.status === 'verified' ? 'byright' : f.status === 'partially_verified' ? 'confirm' : f.status === 'refuted' ? 'risk' : 'variance'}">${ST[f.status] || f.status}</span></td><td class="note">${EV[f.evidence_level] || f.evidence_level}</td><td class="note">${esc(f.design_effect)}</td></tr>`).join('\n')}
+</tbody></table></div>
+<h3>Open questions, most consequential first</h3><ol>${digest.open_questions_ranked.map(q => `<li>${esc(q)}</li>`).join('')}</ol>
+<h3>Contradictions between sources</h3><ul>${digest.contradictions.map(q => `<li>${esc(q)}</li>`).join('')}</ul>`;
 const css = fs.readFileSync('page.css', 'utf8');
 const html = `<title>Surf Road 5785</title>
 <meta name="description" content="Conceptual floor-plan study and feasibility check for a new oceanfront residence at 5785 N Surf Rd, Hollywood FL">
@@ -99,6 +107,7 @@ ${planSheet('A-105', 'roof', 'Infinity pool east · covered gourmet and swim-up 
 ${sheet('A-201', 'Area schedule', 'All figures derive from the plan rectangles on sheets A-101 to A-105', sched)}
 ${sheet('A-301', 'Approvals matrix', 'Every element that needs a variance, a confirmation or an agency approval', matrix)}
 ${sheet('A-401', 'Sources and method', 'Primary sources checked, and what an adversarial re-check changed', C.sources)}
+${sheet('A-402', 'Findings register', '26 facts from the verification, each with status, evidence level and source', register)}
 </main>
 <footer class="foot"><p>${C.footer}</p></footer>
 </div>`;
