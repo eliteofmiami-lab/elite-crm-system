@@ -1,10 +1,11 @@
 // Assembles the final HTML page from design.json (geometry), content.js (verdict, findings, approvals) and the renderers.
 const fs = require('fs');
-const { build, ftin, fmt, esc, NET_FACTOR } = require('./render.js');
+const { ftin, fmt, esc, NET_FACTOR } = require('./render.js');
+const { build } = require('./render2.js');
 const { siteSvg, sectionSvg } = require('./site.js');
 const C = require('./content.js');
 
-const design = JSON.parse(fs.readFileSync(process.argv[2] || 'design.json', 'utf8'));
+const design = require('./plan.js');
 const levels = build(design);
 const L = levels;
 
@@ -22,7 +23,7 @@ function planSheet(num, key, sub, notes) {
   ].filter(([, n]) => n > 0).map(([k, n]) => `<div class="chip"><span>${k}</span><b>${fmt(n)} sf</b></div>`).join('');
   const net = key === 'ground' ? null : Math.round(t.enclosed * NET_FACTOR);
   return sheet(num, v.title, sub, `
-  <figure class="fig"><div class="figwrap">${v.svg}</div><figcaption>${esc(v.title)} · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S${design.structural_lines_x.length} stack through every level · numbers key to the room table.</figcaption></figure>
+  <figure class="fig"><div class="figwrap">${v.svg}</div><figcaption>${esc(v.title)} · walls, doors, glazing and furniture drawn to scale inside the 30' × 55' envelope · exterior walls 9 in, interior 6 in · S1–S2 are the transverse structural lines that stack through every level · numbers key to the room table.</figcaption></figure>
   <div class="chips">${chips}${net !== null ? `<div class="chip net"><span>Net usable (enclosed × ${NET_FACTOR})</span><b>≈ ${fmt(net)} sf</b></div>` : ''}</div>
   ${notes ? `<div class="notes">${notes}</div>` : ''}
   ${v.table}`);

@@ -10,7 +10,7 @@ Estudo conceitual e verificação de viabilidade para uma nova residência unifa
 - `build/` — scripts de geração: `validate.js` (checagem geométrica e de programa), `render.js`
   (plantas SVG e tabelas), `site.js` (implantação e cortes), `content.js` (textos), `build.js` (monta a página).
 
-Regerar: `cd build && node -e "const {validate}=require('./validate.js');console.log(validate(require('../design.json')))" && node build.js ../design.json ../index.html`
+Regerar: `cd build && node build.js` (a geometria e o mobiliário vêm de `build/plan.js`; `design.json` é a exportação validada).
 
 Status: emissão preliminar P1 (14 set 2026). "CONCEPTUAL PLAN — ASSUMES SETBACK VARIANCES". Não é
 levantamento, determinação de zoneamento, desenho de licenciamento nem engenharia.

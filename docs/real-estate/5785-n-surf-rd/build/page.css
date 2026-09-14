@@ -101,3 +101,18 @@ a{color:var(--atl-ink)} a:focus-visible{outline:2px solid var(--atl);outline-off
 }
 @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
 html{scroll-behavior:smooth}
+
+/* architectural plan symbols */
+.f-enclosed{fill:var(--enc)} .f-stair{fill:var(--core)} .f-elevator{fill:var(--lobby)} .f-lobby{fill:var(--lobby)} .f-outdoor{fill:var(--out)} .f-covered_outdoor{fill:var(--cov)} .f-pool{fill:var(--pool)} .f-garage{fill:var(--gar)} .f-storage{fill:var(--sto)} .f-mechanical{fill:var(--mech)} .f-void{fill:none}
+.wall{fill:var(--ink);stroke:none}
+.leaf{stroke:var(--ink);stroke-width:1.4;fill:none} .arc{stroke:var(--ink);stroke-width:0.7;fill:none;stroke-dasharray:2 2} .leafrect{fill:var(--sheet);stroke:var(--ink);stroke-width:0.8}
+.glassline{stroke:var(--atl);stroke-width:1.1;fill:none} .winband{fill:var(--sheet);stroke:var(--ink);stroke-width:0.6} .glassband{fill:var(--pool);stroke:var(--atl);stroke-width:0.6;opacity:.9}
+.garagedoor{stroke:var(--ink);stroke-width:0.9;stroke-dasharray:5 3;fill:none}
+.openline{stroke:var(--line);stroke-width:0.6;stroke-dasharray:3 3;fill:none}
+.furn{fill:var(--sheet);stroke:var(--ink-2);stroke-width:0.8} .furn-dark{fill:var(--ink-2);stroke:none;opacity:.55} .furn-light{stroke:var(--ink-2);stroke-width:0.6;fill:none;opacity:.7}
+.furn-counter{fill:var(--core);stroke:var(--ink-2);stroke-width:0.8} .furn-wet{fill:var(--pool);stroke:var(--ink-2);stroke-width:0.8} .furn-closet{fill:var(--paper);stroke:var(--ink-2);stroke-width:0.7} .furn-hanger{stroke:var(--ink-2);stroke-width:0.5;opacity:.6}
+.furn-car{fill:var(--sheet);stroke:var(--ink-2);stroke-width:0.9} .furn-car2{fill:var(--core);stroke:none} .furn-green{fill:var(--ok-bg);stroke:var(--ok);stroke-width:0.7} .furn-fire{fill:var(--warn);stroke:none;opacity:.8}
+.furn-landing{fill:var(--core);stroke:none} .furn-cab{fill:var(--sheet);stroke:var(--ink);stroke-width:0.9} .tread{stroke:var(--ink);stroke-width:0.7} .stairarrow{stroke:var(--ink);stroke-width:1.2;fill:none;marker-end:none}
+.sline{stroke:var(--atl);stroke-width:1;stroke-dasharray:8 5;opacity:.8} .rail{fill:var(--ink-2);opacity:.6;stroke:none} .keycirc{fill:var(--sheet);stroke:var(--ink);stroke-width:0.8} .scalebar{stroke:var(--ink);stroke-width:3} .dim{stroke:currentColor;stroke-width:0.8;fill:none}
+.ftxt{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:7.5px;fill:var(--ink-2)}
+.plan.arch{max-width:1100px}

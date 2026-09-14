@@ -14,8 +14,8 @@ const verdict = `
   <div class="vcard warn"><h3>Envelope 30' × 55'</h3><p>Not by right. Needs four setback variances: front 25'→20', both sides 7'-6"→5', rear 15'→5'. The plan is drawn to this envelope and labeled accordingly.</p></div>
   <div class="vcard bad"><h3>Height and story count</h3><p>Garage + three residential floors + roof deck reaches ≈42' above grade with 8' parking clearance and 10–10'-6" ceilings. Fits 33' only if the City measures from the first habitable floor or a flood datum. Unconfirmed; treat as the project's main risk.</p></div>
   <div class="vcard ok"><h3>Floor-plan geometry</h3><p>All five levels tile the envelope exactly; core identical on every level; two structural lines (x = 26', x = 40') plus the east face stack from roof to foundation and bound the pool.</p></div>
-  <div class="vcard warn"><h3>Rooftop covered area</h3><p>Option A (161 sf, ≈10% of ground floor) matches the by-right scenery-loft allowance. Option B as drawn (308 sf, 18.7%) requires a rooftop-coverage variance; 5405 N Surf Rd obtained a larger one in July 2024 (snippet-level evidence, to be confirmed).</p></div>
-  <div class="vcard info"><h3>Rooftop pool</h3><p>≈353 sf of water, ≈70,500 lb of water (≈35 t), ≈130,000 lb with the concrete shell, ≈370 psf over the pool area. Sits between structural lines x = 40' and the east face; needs structural, FDEP (pools are outside the CCCL general permit) and height-projection review.</p></div>
+  <div class="vcard warn"><h3>Rooftop covered area</h3><p>Option A (126 sf, 7.6% of ground floor) sits under the reported 10% scenery-loft allowance. Option B as drawn (266 sf, 16.1%) requires a rooftop-coverage variance; 5405 N Surf Rd obtained a larger one in July 2024 (snippet-level evidence, to be confirmed).</p></div>
+  <div class="vcard info"><h3>Rooftop pool</h3><p>≈360 sf of water, ≈72,000 lb of water (≈36 t), ≈135,000 lb with the concrete shell, ≈375 psf over the pool area. Sits between structural lines x = 40' and the east face; needs structural, FDEP (pools are outside the CCCL general permit) and height-projection review.</p></div>
   <div class="vcard info"><h3>Ground level</h3><p>Parking, access, one storage room, elevated mechanical only. No bathroom, no habitable room. If the lot is in a VE zone: pile foundation, breakaway enclosures, elevator per FEMA TB-4.</p></div>
   <div class="vcard warn"><h3>Lot area 3,146 sf vs 5,800 sf minimum</h3><p>Buildability depends on the "or as platted" / lot-of-record clause. Get it confirmed in writing before design spend.</p></div>
   <div class="vcard info"><h3>Coastal jurisdiction</h3><p>A lot east of N Surf Rd is expected to be entirely seaward of the CCCL: FDEP permit, 30-year erosion projection, turtle lighting, and pool rules apply. Exact CCCL position must come from FDEP Map Direct / survey.</p></div>
@@ -27,7 +27,7 @@ const verdict = `
 </ul>
 <h3>Decisions the drawings already make</h3>
 <ul>
-  <li><b>Core on the north side, mid-depth</b> (x 8'–26'), keeping the full 30' ocean face free on every level. The glass elevator looks east through the interior on L1–L3 and directly at the ocean at the roof stop.</li>
+  <li><b>Core on the north side</b> (x 8'–32': stair, lobby-landing, glass elevator), keeping the full 30' ocean face free on every level. The glass elevator looks east through the interior on L1–L3 and directly at the ocean at the roof stop.</li>
   <li><b>Balconies carved from the envelope</b>: the L1 ocean terrace is 5' × 30' inside the 30' × 55' box. No projections beyond the box are assumed on any level.</li>
   <li><b>Pool recessed 2'-6" into the Level 3 ceiling zone</b> under the master bed and bath (ceiling there drops to ≈8'-6"), so the coping sits ≈2'-6" above the deck instead of 5'. The fully raised alternative with a grand stair is possible but adds height to the projection review.</li>
   <li><b>Level 3 west side</b> is drawn as a private gym and a sauna/steam spa. It is optional program and can become a sunset terrace or a second dressing room without touching the core.</li>
@@ -88,30 +88,30 @@ const sectionNotes = `<h3>Arithmetic behind the sections</h3>
 
 const levelNotes = {
   ground: `<ul>
-    <li>Four cars in two tandem pairs (9'-0" bays, 20'-0" per car) entered from two doors on the west face; a fifth open bay behind them for a golf cart, bikes and beach gear.</li>
+    <li>Four cars in two tandem pairs (9'-9" bays, 20'-0" per car) entered from two 8' overhead doors on the west face; a fifth open bay behind them for a golf cart, bikes and beach gear, with a breakaway beach door east.</li>
     <li>Only one storage room. The mechanical/pool-equipment room is drawn on an elevated platform (equipment at or above BFE + 1'); the alternative is a screened closet in the rooftop stair block.</li>
-    <li>Entry breezeway and nook are open under the house so the flood-open area stays large; enclosures use breakaway construction if the lot is VE.</li>
+    <li>A 3'-6" open gallery along the north side of the parking leads from the driveway to the lobby door, the storage room and the mechanical room; enclosures use breakaway construction if the lot is VE.</li>
     <li>Nothing habitable and no plumbing fixtures at this level.</li>
   </ul>`,
   L1: `<ul>
-    <li>Kitchen (12' × 18', 4' × 10' island) → dining (14' × 18') → living (10' × 30') → 5' ocean terrace read as one 41' long great room with the entire east face glazed.</li>
+    <li>Kitchen (12' × 18', range wall south, column fridge west, 4' × 10' island with sink and four stools) → dining for eight (14' × 18') → living (10' × 30') → 5' ocean terrace: one 41' long great room with a 28' sliding-glass wall on the east face.</li>
     <li>Guest suite 14' × 13' on the city side with its own bath and closet; a door to the foyer lets it work as a home office.</li>
-    <li>Powder room and mechanical closet next to the front door; scullery and laundry tucked behind the core so no service room takes the ocean face.</li>
+    <li>Front door opens into a 26' entry gallery along the north side that leads past the powder room to the lobby, stair and elevator. Laundry, butler's pantry and walk-in pantry sit behind the core so no service room takes the ocean face.</li>
   </ul>`,
   L2: `<ul>
-    <li>Family lounge (6' + 14' zones, 360 sf) is the circulation: City Suite 1 enters through a dressing vestibule from the lounge, City Suite 2 directly from the lobby, the Ocean Suite from the lounge's east wall.</li>
-    <li>Mini bar / beverage center with undercounter fridge occupies the 14' × 12' north pocket beside the elevator, opening to the lounge.</li>
+    <li>Family lounge (6' + 14' zones, 460 sf, sofa facing a media wall, reading chairs and games table) is the circulation: City Suite 1 enters through a dressing vestibule from the lounge, City Suite 2 through a short hall, the Ocean Suite from the lounge's east wall.</li>
+    <li>Mini bar / beverage center (8' × 7' pocket beside the elevator) with cabinetry, undercounter fridge, sink and a three-stool peninsula opening to the lounge through a 6' cased opening.</li>
     <li>Ocean suite 15' × 18' with floor-to-ceiling glass; its bath also takes 8' of the ocean face and stacks under the master bath.</li>
   </ul>`,
   L3: `<ul>
-    <li>Arrival lobby → dressing room → bed, or lobby → master lounge → sitting → bed. Bed (15' × 18') and the 5' × 12' ocean shower both touch the east face; the double-vanity bath with tub sits between them at the glass.</li>
-    <li>No office, no second bedroom. The west 14' strip (gym, sauna/steam, laundry, mechanical) is optional program.</li>
-    <li>Ceiling under the pool zone (x 40'–55') drops to ≈8'-6" to recess the pool shell 2'-6".</li>
+    <li>Arrival lobby → master lounge (fireplace, sofa) → dressing gallery with closets on both sides → bed (15' × 18', king bed facing the ocean through a 16' sliding-glass wall). The 5' × 12' ocean shower and the double-vanity bath with tub and private WC sit south of the bed at the glass; the bath also opens from the sitting room with its morning bar.</li>
+    <li>No office, no second bedroom. The west 14' strip (gym, spa wet room, sauna and steam) is optional program; laundry and air handlers sit behind the elevator.</li>
+    <li>Ceiling under the pool zone (x 40'–55') drops to ≈8'-6" to recess the pool shell 2'-6". The U-stair has 18 risers per floor; the lobby is its floor landing on every level.</li>
   </ul>`,
   roof: `<ul>
     <li>Three experiences: fire pit lounge and planters on the west (sunset, city), covered gourmet in the center, water on the east.</li>
-    <li>The granite counter runs along the pool edge at x = 40': bar seating on the deck side, swim-up stools in the water on the pool side. Option A (161 sf) is the covered kitchen/counter bay; Option B adds the 147 sf covered dining bay south of it.</li>
-    <li>Pool: wide in-water steps (5' × 8') into a 10' × 8' Baja shelf with loungers, a 10' × 19' main pool 4'–5' deep, and a 5' × 8'-6" swim-up bar; infinity edge along the full east face with a 3' walkway on the north to reach it.</li>
+    <li>The granite counter runs 10' along the pool edge at x = 40': two stools on the deck side per bay, four swim-up stools in the water. Option A (126 sf) is the counter bay plus the outdoor kitchen behind the elevator (grill, sink, fridge); Option B adds the 140 sf covered dining lounge south of it.</li>
+    <li>Pool (360 sf of water): four wide in-water steps (5' × 8') down into a 10' × 8' Baja shelf with two in-water loungers, a 10' × 19' main pool 4'–5' deep, and a 5' × 10' swim-up bar; infinity edge and overflow trough along the full east face with a 3' walkway on the north to reach it.</li>
     <li>Rooftop bath (8' × 7') sits west of the stair, out of the ocean frontage. Bulkhead, bath and canopy heights are subject to the projection review.</li>
   </ul>`,
 };
@@ -124,18 +124,18 @@ const approvals = [
   { element: 'Lot of 3,146 sf below the 5,800 sf minimum', requires: ['zoning'], status: 'confirm', why: 'Rely on the "or as platted" / lot-of-record provision; get a written determination.' },
   { element: 'Exterior entry stair and driveway apron in the 20\' front zone', requires: ['zoning'], status: 'confirm', why: 'Open stairs are usually an allowed projection (§4.23, 25% of yard up to 6\'); the stair is drawn deeper than 6\' into the yard.' },
   { element: 'L1 ocean terrace 5\' × 30\'', requires: ['zoning'], status: 'byright', why: 'Carved inside the envelope; no projection assumed. Only the envelope variance applies.' },
-  { element: 'Rooftop covered gourmet · Option A 161 sf', requires: ['zoning'], status: 'byright', why: '≈10% of the 1,650 sf ground floor, matching the scenery-loft allowance reported for §4.22(E). Confirm that the bulkhead and bath do not count against it.' },
-  { element: 'Rooftop covered gourmet · Option B 308 sf', requires: ['variance'], status: 'variance', why: '18.7% of ground floor. Precedent: 5405 N Surf Rd rooftop-coverage variance 24-V-45 (July 2024, snippet-level evidence).' },
+  { element: 'Rooftop covered gourmet · Option A 126 sf', requires: ['zoning'], status: 'byright', why: '7.6% of the 1,650 sf ground floor, under the 10% scenery-loft allowance reported for §4.22(E). Confirm that the bulkhead and bath do not count against it.' },
+  { element: 'Rooftop covered gourmet · Option B 266 sf', requires: ['variance'], status: 'variance', why: '16.1% of ground floor. Precedent: 5405 N Surf Rd rooftop-coverage variance 24-V-45 (July 2024, snippet-level evidence).' },
   { element: 'Rooftop bath enclosure (8\' × 7\')', requires: ['zoning', 'building'], status: 'confirm', why: 'Enclosed rooftop space may count toward coverage or read as a story; plumbing on the roof needs building review.' },
   { element: 'Elevator bulkhead ≈12\' above the deck', requires: ['zoning', 'building'], status: 'confirm', why: 'Height-exemption rules for non-occupiable projections must be read for NBDD-CZ specifically, not the §4.6 beach-CRA rule.' },
-  { element: 'Rooftop infinity pool (353 sf water, ≈130,000 lb with shell)', requires: ['structural', 'fdep', 'building', 'zoning'], status: 'confirm', why: 'Transfer beams on lines x = 40\' and the east face; FDEP treats pools outside the general permit; pool barrier, coping height and overflow trough need review.' },
+  { element: 'Rooftop infinity pool (360 sf water, ≈135,000 lb with shell)', requires: ['structural', 'fdep', 'building', 'zoning'], status: 'confirm', why: 'Transfer beams on lines x = 40\' and the east face; FDEP treats pools outside the general permit; pool barrier, coping height and overflow trough need review.' },
   { element: 'Pool equipment at ground level', requires: ['flood', 'building'], status: 'confirm', why: 'Equipment must sit at or above BFE + 1\' (City §154.50 per snippet); alternative rooftop closet.' },
   { element: 'Ground-level enclosures: garage, storage, mechanical', requires: ['flood', 'building'], status: 'confirm', why: 'VE zone: breakaway walls, flood openings not applicable, no finished space; AE / Coastal A: flood vents. Zone to be read from the FIRM.' },
   { element: 'Glass elevator serving the flood level', requires: ['flood', 'building'], status: 'confirm', why: 'FEMA Technical Bulletin 4: cab, controls and pit below DFE need flood-resistant design or a landing above DFE.' },
   { element: 'Pile foundation and 30-year erosion siting', requires: ['fdep', 'structural'], status: 'confirm', why: 'Rule 62B-33 siting and foundation criteria; exact CCCL and erosion-projection lines from FDEP.' },
   { element: 'Grade sun deck east of the house', requires: ['zoning', 'fdep', 'flood'], status: 'confirm', why: 'Minor structure seaward of the CCCL; must stay landward of dune/vegetation lines and within the rear setback rules.' },
   { element: 'Ocean-facing glazing and rooftop lighting', requires: ['fdep', 'building'], status: 'confirm', why: 'Marine-turtle lighting rules (tinted glass, shielded fixtures) for all seaward-facing openings.' },
-  { element: 'Two 9\' garage bays behind two doors on a 20\' apron', requires: ['zoning'], status: 'confirm', why: 'Confirm the parking count required for a single-family home and that tandem stalls satisfy it (5405 N Surf Rd needed a parking variance).' },
+  { element: 'Two 9\'-9" garage bays behind two 8\' doors on a 20\' apron', requires: ['zoning'], status: 'confirm', why: 'Confirm the parking count required for a single-family home and that tandem stalls satisfy it (5405 N Surf Rd needed a parking variance).' },
 ];
 
 const sources = `<p class="fine">Evidence level: the session's network policy blocked direct access to the primary hosts listed below, so the research agents could read search-engine snippets of those pages but not the full text. Every finding is therefore labelled at most "partially verified" until the next issue, when the workflow's adversarial re-check is complete.</p>
