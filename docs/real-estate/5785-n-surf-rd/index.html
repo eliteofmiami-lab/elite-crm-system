@@ -1,0 +1,1102 @@
+<title>Surf Road 5785</title>
+<meta name="description" content="Conceptual floor-plan study and feasibility check for a new oceanfront residence at 5785 N Surf Rd, Hollywood FL">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>:root{
+  --paper:#F4F6F7; --sheet:#FFFFFF; --ink:#1A2227; --ink-2:#4B5860; --line:#B9C3C9; --line-2:#DDE3E6;
+  --atl:#0E6B78; --atl-ink:#0A525C; --pool:#CDE7EC; --sand:#E7DCC3; --road:#E6E9EB; --drive:#EEF1F2;
+  --enc:#FBFCFC; --core:#E9EEF0; --lobby:#E3EEF0; --out:#F2F4EC; --cov:#F4EBDD; --gar:#E4E8EA; --sto:#D8DEE1; --mech:#CFD6DA;
+  --ok:#2C7A4B; --ok-bg:#E1F1E7; --warn:#9A6A12; --warn-bg:#F8EBCF; --bad:#A83A2C; --bad-bg:#F6DEDA; --info:#2F5F9E; --info-bg:#E0E9F5;
+  --shadow:0 1px 0 rgba(26,34,39,.06), 0 8px 24px -12px rgba(26,34,39,.18);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#11171A; --sheet:#171E22; --ink:#E4E9EC; --ink-2:#A7B3BA; --line:#4A585F; --line-2:#2C363B;
+  --atl:#5CBFCB; --atl-ink:#8AD3DC; --pool:#1F4A52; --sand:#4A4331; --road:#1F272B; --drive:#1B2327;
+  --enc:#1B2327; --core:#25313A; --lobby:#233A40; --out:#20261B; --cov:#31281B; --gar:#232C31; --sto:#2A353B; --mech:#33404A;
+  --ok:#7ED39B; --ok-bg:#1B3526; --warn:#E5B85A; --warn-bg:#3A2E12; --bad:#F09383; --bad-bg:#3E1E19; --info:#8DB6EE; --info-bg:#1C2C44;
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --paper:#11171A; --sheet:#171E22; --ink:#E4E9EC; --ink-2:#A7B3BA; --line:#4A585F; --line-2:#2C363B;
+  --atl:#5CBFCB; --atl-ink:#8AD3DC; --pool:#1F4A52; --sand:#4A4331; --road:#1F272B; --drive:#1B2327;
+  --enc:#1B2327; --core:#25313A; --lobby:#233A40; --out:#20261B; --cov:#31281B; --gar:#232C31; --sto:#2A353B; --mech:#33404A;
+  --ok:#7ED39B; --ok-bg:#1B3526; --warn:#E5B85A; --warn-bg:#3A2E12; --bad:#F09383; --bad-bg:#3E1E19; --info:#8DB6EE; --info-bg:#1C2C44;
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+html{color-scheme:light dark}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Serif 4",Georgia,"Times New Roman",serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 48px;padding-inline:20px}
+h1,h2,h3,.eyebrow,.sheet-num,.stamp,.chip span,.index a,th,.req,.st,dt{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif}
+h1{font-size:clamp(36px,6vw,58px);font-weight:700;letter-spacing:.005em;line-height:1;margin:6px 0 10px;text-wrap:balance}
+h2{font-size:26px;font-weight:600;margin:0;line-height:1.1;text-wrap:balance}
+h3{font-size:19px;font-weight:600;margin:22px 0 8px;letter-spacing:.01em;text-transform:uppercase;color:var(--ink-2)}
+p{margin:0 0 12px;max-width:72ch}
+.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:13px;font-weight:600;color:var(--atl);margin:0}
+.lede{font-size:17px;color:var(--ink-2);max-width:none}
+.mono,.rl-dim,.rl-chain,.rl-tag,.rl-key,td.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.titleblock{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:22px;border-bottom:2px solid var(--ink)}
+.tb-meta{display:grid;grid-template-columns:repeat(2,minmax(150px,auto));gap:8px 22px;margin:0}
+.tb-meta div{display:grid;gap:2px}
+.tb-meta dt{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2);font-weight:600}
+.tb-meta dd{margin:0;font-size:14px}
+.index{display:flex;flex-wrap:wrap;gap:6px 14px;padding:14px 0;border-bottom:1px solid var(--line);margin-bottom:8px;position:sticky;top:0;background:var(--paper);z-index:2}
+.index a{text-decoration:none;color:var(--ink);font-size:14px;font-weight:600;letter-spacing:.02em;display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:3px}
+.index a:hover,.index a:focus-visible{background:var(--core);outline:2px solid var(--atl);outline-offset:1px}
+.sheet-num{font-weight:600;letter-spacing:.06em;color:var(--atl);font-size:14px}
+.sheet{background:var(--sheet);border:1px solid var(--line-2);box-shadow:var(--shadow);margin:26px 0;padding:22px 24px 24px}
+.sheet-head{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:start;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.sheet-head .sheet-num{font-size:22px;line-height:1.15}
+.sheet-sub{color:var(--ink-2);margin:4px 0 0;font-size:15px}
+.stamp{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--warn);border:1.5px solid var(--warn);padding:5px 9px;border-radius:2px;white-space:nowrap;transform:rotate(-2deg);align-self:center}
+.fig{margin:0 0 14px}
+.figwrap{overflow-x:auto}
+.plan{width:100%;max-width:1040px;height:auto;display:block;color:var(--ink)}
+.plan.site{max-width:900px}
+.plan.section{max-width:560px}
+.section-fig{display:inline-block;vertical-align:top;width:min(100%,560px);margin-right:20px}
+figcaption{font-size:14px;color:var(--ink-2);margin-top:8px;max-width:80ch}
+.rl-name{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;font-size:11px;font-weight:600;fill:currentColor;letter-spacing:.02em}
+.rl-dim{font-size:9px;fill:currentColor}
+.rl-chain{font-size:8.5px;fill:currentColor}
+.rl-tag{font-size:8px;fill:currentColor;opacity:.7}
+.rl-key{font-size:11px;font-weight:500;fill:currentColor}
+.rl-orient{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:.12em;fill:var(--atl)}
+.k-enclosed{fill:var(--enc)} .k-stair{fill:var(--core)} .k-elevator{fill:var(--lobby)} .k-lobby{fill:var(--lobby)} .k-outdoor{fill:var(--out)} .k-covered_outdoor{fill:var(--cov)} .k-pool{fill:var(--pool)} .k-garage{fill:var(--gar)} .k-storage{fill:var(--sto)} .k-mechanical{fill:var(--mech)} .k-void{fill:none} .k-road{fill:var(--road)} .k-drive{fill:var(--drive)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chip{display:grid;gap:1px;border:1px solid var(--line-2);background:var(--paper);padding:6px 10px;min-width:120px}
+.chip span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2);font-weight:600}
+.chip b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:500;font-size:14px;font-variant-numeric:tabular-nums}
+.chip.net{border-color:var(--atl)}
+.notes{margin:0 0 14px}
+.notes ul,.verdict ul,.sheet ul{padding-left:20px;margin:0 0 12px;max-width:80ch}
+.notes li,.sheet li{margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:0 0 6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding:8px 8px;border-bottom:1.5px solid var(--ink);font-weight:600}
+td{padding:7px 8px;border-bottom:1px solid var(--line-2);vertical-align:top}
+td.num,th.num{text-align:right}
+td.note{color:var(--ink-2);font-size:13px}
+tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom:none}
+.sched td:first-child{max-width:60ch}
+.fine{font-size:13px;color:var(--ink-2);max-width:80ch}
+.req,.st{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap;margin:1px 0}
+.req{background:var(--core);color:var(--ink)}
+.req-variance{background:var(--warn-bg);color:var(--warn)} .req-fdep{background:var(--info-bg);color:var(--info)} .req-flood{background:var(--info-bg);color:var(--info)} .req-structural{background:var(--core);color:var(--ink)} .req-zoning{background:var(--core);color:var(--ink)} .req-building{background:var(--core);color:var(--ink)}
+.st-variance{background:var(--warn-bg);color:var(--warn)} .st-confirm{background:var(--info-bg);color:var(--info)} .st-byright{background:var(--ok-bg);color:var(--ok)} .st-risk{background:var(--bad-bg);color:var(--bad)}
+.verdict-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:0 0 18px}
+.vcard{border-left:4px solid var(--line);padding:8px 12px;background:var(--paper)}
+.vcard.ok{border-color:var(--ok)} .vcard.warn{border-color:var(--warn)} .vcard.bad{border-color:var(--bad)} .vcard.info{border-color:var(--info)}
+.vcard h3{margin:0 0 4px;font-size:16px;color:var(--ink);text-transform:none;letter-spacing:0}
+.vcard p{font-size:14px;margin:0;color:var(--ink-2)}
+.pt{font-style:italic;color:var(--ink-2)}
+.callout{border:1px solid var(--line);border-left:4px solid var(--atl);padding:10px 14px;margin:0 0 14px;background:var(--paper);max-width:90ch}
+.callout p{margin:0 0 6px}
+.src{font-size:14px}
+.src li{margin-bottom:6px;overflow-wrap:anywhere}
+a{color:var(--atl-ink)} a:focus-visible{outline:2px solid var(--atl);outline-offset:2px}
+.foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+@media (max-width:760px){
+  .titleblock{grid-template-columns:1fr}
+  .tb-meta{grid-template-columns:1fr 1fr}
+  .sheet{padding:16px 14px 18px}
+  .sheet-head{grid-template-columns:auto 1fr}
+  .stamp{grid-column:1/-1;justify-self:start;transform:none}
+  .section-fig{width:100%;margin-right:0}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+<div class="wrap">
+<header class="titleblock">
+  <div class="tb-main">
+    <p class="eyebrow">Conceptual floor-plan study · feasibility check</p>
+    <h1>5785 N Surf Road</h1>
+    <p class="lede">New oceanfront single-family residence · Hollywood, Florida 33019 · Broward County · Parcel 514201027042 · Zoning NBDD-CZ</p>
+  </div>
+  <dl class="tb-meta">
+    <div><dt>Issue</dt><dd>14 Sep 2026 · Preliminary issue P1</dd></div>
+    <div><dt>Status</dt><dd>Conceptual · assumes setback variances · not for construction</dd></div>
+    <div><dt>Lot (MLS)</dt><dd>40' × 80' · 3,146 sf</dd></div>
+    <div><dt>Envelope</dt><dd>30' × 55' · 1,650 sf/level</dd></div>
+    <div><dt>Orientation</dt><dd>West = N Surf Rd · East = Atlantic</dd></div>
+  </dl>
+</header>
+<nav class="index" aria-label="Sheet index">
+  <a href="#a-000"><span class="sheet-num">A-000</span>Feasibility verdict</a><a href="#a-001"><span class="sheet-num">A-001</span>Site plan</a><a href="#a-002"><span class="sheet-num">A-002</span>Height section</a><a href="#a-101"><span class="sheet-num">A-101</span>Ground / garage</a><a href="#a-102"><span class="sheet-num">A-102</span>Level 1</a><a href="#a-103"><span class="sheet-num">A-103</span>Level 2</a><a href="#a-104"><span class="sheet-num">A-104</span>Level 3 · primary</a><a href="#a-105"><span class="sheet-num">A-105</span>Rooftop</a><a href="#a-201"><span class="sheet-num">A-201</span>Area schedule</a><a href="#a-301"><span class="sheet-num">A-301</span>Approvals matrix</a><a href="#a-401"><span class="sheet-num">A-401</span>Sources</a>
+</nav>
+<main>
+<section class="sheet" id="a-000">
+  <header class="sheet-head"><span class="sheet-num">A-000</span><div><h2>Feasibility verdict</h2><p class="sheet-sub">What is real, what needs a variance, what could stop the project</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+<div class="callout"><p><b>Resumo em português.</b> As plantas abaixo cabem no envelope-alvo de 30' × 55' com o núcleo de escada/elevador fixo em todos os pavimentos e passam na validação geométrica automática (sem sobreposições, 1.650 sf exatos por nível, mínimos de escada, elevador, quartos e banheiros). O que ainda não está resolvido não é a planta: é a <b>altura</b>. Com a garagem embaixo da casa exigida pela zona de inundação, três pavimentos residenciais mais o roof deck ficam a cerca de 42 ft acima do nível da rua. Se Hollywood medir os 33 ft a partir do terreno (a definição encontrada até agora diz "established grade of the plot"), o programa pedido não cabe e precisaria de variance de altura e de número de pavimentos, muito mais difícil que a variance de recuo. Se a Cidade medir a partir do primeiro piso habitável ou da cota de inundação, cabe com folga pequena. Essa é a primeira pergunta a levar ao Planning Department. As demais confirmações (setbacks do §4.2(E), precedente 5405, CCCL, FEMA) estão em verificação e entram na próxima emissão.</p></div>
+<div class="verdict-grid">
+  <div class="vcard warn"><h3>Envelope 30' × 55'</h3><p>Not by right. Needs four setback variances: front 25'→20', both sides 7'-6"→5', rear 15'→5'. The plan is drawn to this envelope and labeled accordingly.</p></div>
+  <div class="vcard bad"><h3>Height and story count</h3><p>Garage + three residential floors + roof deck reaches ≈42' above grade with 8' parking clearance and 10–10'-6" ceilings. Fits 33' only if the City measures from the first habitable floor or a flood datum. Unconfirmed; treat as the project's main risk.</p></div>
+  <div class="vcard ok"><h3>Floor-plan geometry</h3><p>All five levels tile the envelope exactly; core identical on every level; two structural lines (x = 26', x = 40') plus the east face stack from roof to foundation and bound the pool.</p></div>
+  <div class="vcard warn"><h3>Rooftop covered area</h3><p>Option A (161 sf, ≈10% of ground floor) matches the by-right scenery-loft allowance. Option B as drawn (308 sf, 18.7%) requires a rooftop-coverage variance; 5405 N Surf Rd obtained a larger one in July 2024 (snippet-level evidence, to be confirmed).</p></div>
+  <div class="vcard info"><h3>Rooftop pool</h3><p>≈353 sf of water, ≈70,500 lb of water (≈35 t), ≈130,000 lb with the concrete shell, ≈370 psf over the pool area. Sits between structural lines x = 40' and the east face; needs structural, FDEP (pools are outside the CCCL general permit) and height-projection review.</p></div>
+  <div class="vcard info"><h3>Ground level</h3><p>Parking, access, one storage room, elevated mechanical only. No bathroom, no habitable room. If the lot is in a VE zone: pile foundation, breakaway enclosures, elevator per FEMA TB-4.</p></div>
+  <div class="vcard warn"><h3>Lot area 3,146 sf vs 5,800 sf minimum</h3><p>Buildability depends on the "or as platted" / lot-of-record clause. Get it confirmed in writing before design spend.</p></div>
+  <div class="vcard info"><h3>Coastal jurisdiction</h3><p>A lot east of N Surf Rd is expected to be entirely seaward of the CCCL: FDEP permit, 30-year erosion projection, turtle lighting, and pool rules apply. Exact CCCL position must come from FDEP Map Direct / survey.</p></div>
+</div>
+<h3>What this issue is and is not</h3>
+<ul>
+  <li><b>Is:</b> a dimensioned conceptual plan set that satisfies the owner's program inside the target envelope, with every number on the drawings generated from one geometry file, so plans and the area schedule cannot disagree.</li>
+  <li><b>Is not:</b> a code determination. The regulatory verification workflow is still running, and this session's network policy blocks the primary code sites (amlegal.com for the Hollywood ZLDR, Legistar, FDEP, FEMA, the property appraiser). Claims below are marked by evidence level; the next issue replaces this section with the verified findings.</li>
+</ul>
+<h3>Decisions the drawings already make</h3>
+<ul>
+  <li><b>Core on the north side, mid-depth</b> (x 8'–26'), keeping the full 30' ocean face free on every level. The glass elevator looks east through the interior on L1–L3 and directly at the ocean at the roof stop.</li>
+  <li><b>Balconies carved from the envelope</b>: the L1 ocean terrace is 5' × 30' inside the 30' × 55' box. No projections beyond the box are assumed on any level.</li>
+  <li><b>Pool recessed 2'-6" into the Level 3 ceiling zone</b> under the master bed and bath (ceiling there drops to ≈8'-6"), so the coping sits ≈2'-6" above the deck instead of 5'. The fully raised alternative with a grand stair is possible but adds height to the projection review.</li>
+  <li><b>Level 3 west side</b> is drawn as a private gym and a sauna/steam spa. It is optional program and can become a sunset terrace or a second dressing room without touching the core.</li>
+</ul>
+</section>
+<section class="sheet" id="a-001">
+  <header class="sheet-head"><span class="sheet-num">A-001</span><div><h2>Site plan</h2><p class="sheet-sub">Lot 40' × 80' · target envelope vs by-right envelope</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  <figure class="fig"><div class="figwrap"><svg class="plan site" viewBox="0 0 820 450" role="img" aria-label="Site plan: 40 by 80 foot lot, target 30 by 55 building envelope assuming variances, by-right 25 by 40 envelope dashed, driveway west, ocean east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-site" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-site" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.7" opacity="0.35"/></pattern>
+  <pattern id="sand" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.8" fill="currentColor" opacity="0.35"/><circle cx="7" cy="6" r="0.8" fill="currentColor" opacity="0.35"/></pattern></defs>
+<rect x="2" y="50" width="48" height="360" class="k-road" stroke="none"/>
+<text transform="translate(26 230) rotate(-90)" text-anchor="middle" class="rl-orient">N SURF RD · WEST</text>
+<rect x="730" y="50" width="80" height="360" fill="url(#sand)" stroke="none"/>
+<text transform="translate(770 230) rotate(90)" text-anchor="middle" class="rl-orient">BEACH · ATLANTIC · EAST</text>
+<rect x="90" y="70" width="640" height="320" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="90" y="70" width="160" height="320" class="k-drive" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text x="170" y="294" text-anchor="middle" class="rl-name">Driveway / apron</text>
+<text x="170" y="306" text-anchor="middle" class="rl-dim">20'-0" front zone</text>
+<text x="170" y="318" text-anchor="middle" class="rl-dim">(by-right setback 25'-0")</text>
+<rect x="154" y="166" width="96" height="48" class="k-stair" stroke="currentColor" stroke-width="1"/>
+<line x1="162" y1="166" x2="162" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="170" y1="166" x2="170" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="178" y1="166" x2="178" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="186" y1="166" x2="186" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="194" y1="166" x2="194" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="202" y1="166" x2="202" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="210" y1="166" x2="210" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="218" y1="166" x2="218" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="226" y1="166" x2="226" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="234" y1="166" x2="234" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<line x1="242" y1="166" x2="242" y2="214" stroke="currentColor" stroke-width="0.6"/>
+<text x="154" y="161" text-anchor="start" class="rl-dim">Entry stair 12'-0"×6'-0"</text>
+<rect x="250" y="110" width="440" height="240" class="k-enclosed" stroke="currentColor" stroke-width="2"/>
+<text x="470" y="212" text-anchor="middle" class="rl-name">TARGET ENVELOPE 30' × 55' = 1,650 sf</text>
+<text x="470" y="225" text-anchor="middle" class="rl-dim">SUBJECT TO VARIANCE · front 20' · sides 5' · rear 5'</text>
+<rect x="290" y="130" width="320" height="200" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="7 4"/>
+<text x="450" y="242" text-anchor="middle" class="rl-dim">by-right envelope 25' × 40' = 1,000 sf (dashed)</text>
+<text x="450" y="254" text-anchor="middle" class="rl-dim">setbacks 25' / 7.5' / 7.5' / 15'</text>
+<rect x="690" y="110" width="40" height="240" fill="url(#hatch-site)" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 3"/>
+<text transform="translate(710 230) rotate(90)" text-anchor="middle" class="rl-dim">Grade sun deck · extent subject to City / FDEP / flood</text>
+<text x="470" y="93" text-anchor="middle" class="rl-dim">5'-0" north side (by-right 7'-6")</text>
+<text x="470" y="373" text-anchor="middle" class="rl-dim">5'-0" south side (by-right 7'-6")</text>
+<line x1="90" y1="46" x2="730" y2="46" stroke="currentColor" stroke-width="1" marker-start="url(#arr-site)" marker-end="url(#arr-site)"/>
+<text x="410" y="41" text-anchor="middle" class="rl-dim">80'-0" lot depth (MLS) · 3,146 sf reported ⇒ verify by survey</text>
+<line x1="64" y1="70" x2="64" y2="390" stroke="currentColor" stroke-width="1" marker-start="url(#arr-site)" marker-end="url(#arr-site)"/>
+<text transform="translate(58 230) rotate(-90)" text-anchor="middle" class="rl-dim">40'-0" lot width</text>
+<line x1="90" y1="416" x2="730" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="90" y1="412" x2="90" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<line x1="250" y1="412" x2="250" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<line x1="290" y1="412" x2="290" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<line x1="610" y1="412" x2="610" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<line x1="690" y1="412" x2="690" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="412" x2="730" y2="420" stroke="currentColor" stroke-width="0.8"/>
+<text x="170" y="410" text-anchor="middle" class="rl-chain">20'-0"</text>
+<text x="270" y="410" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text x="450" y="410" text-anchor="middle" class="rl-chain">40'-0"</text>
+<text x="650" y="410" text-anchor="middle" class="rl-chain">10'-0"</text>
+<text x="710" y="410" text-anchor="middle" class="rl-chain">5'-0"</text>
+<g><circle cx="780" cy="40" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M780,29 L785,46 L780,42 L775,46 z" fill="currentColor"/><text x="780" y="66" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Site plan. Solid box: 30' × 55' target envelope assuming variances (front 20', sides 5', rear 5'). Dashed box: 25' × 40' by-right envelope (front 25', sides 7'-6", rear 15'). Hatched strip: grade sun deck, extent subject to City setback, FDEP CCCL and flood rules.</figcaption></figure><ul>
+  <li>Lot depth is taken as 80' for concept only; 3,146 sf ÷ 40' = 78.65', so the east line is probably shorter or irregular (erosion control line). A boundary and topographic survey governs.</li>
+  <li>The 20' front zone holds the driveway apron for the two garage doors and the exterior entry stair to Level 1 (drawn 12' × 6'). Open stairs are normally an allowed projection; confirm under §4.23 and confirm the driveway width the City accepts.</li>
+  <li>The grade sun deck east of the house is shown only as a hatched strip. Its extent depends on the rear setback, the CCCL and flood rules; it must not be assumed to reach the property line.</li>
+</ul>
+</section>
+<section class="sheet" id="a-002">
+  <header class="sheet-head"><span class="sheet-num">A-002</span><div><h2>Height section</h2><p class="sheet-sub">Three residential stories over parking inside 33 ft — datum scenarios</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  <p>Two questions decide whether three residential stories fit: how high the first floor must sit, and where the City starts measuring the 33'. The first is largely physics. A car needs 7'-0" of clear height by code and 8'-0" for comfort; with 1'-6" of floor structure, Level 1 lands about 9'-6" above the driveway regardless of the flood map, which is above the FBC minimum for a VE zone (bottom of lowest horizontal member at BFE + 1'). The second is the open item. Elevations below use an assumed grade of +5.5 ft NAVD88 and an assumed BFE of +10 ft NAVD88; both must be replaced by survey and FIRM values.</p><figure class="fig section-fig"><div class="figwrap"><svg class="plan section" viewBox="0 0 520 476" role="img" aria-label="Section, three residential stories over parking; roof deck about 42 feet above grade" xmlns="http://www.w3.org/2000/svg">
+<rect x="110" y="432" width="380" height="14" class="k-road" stroke="none"/>
+<text x="22" y="444" class="rl-dim">grade ≈ +5.5 ft</text>
+<text x="22" y="455" class="rl-dim">NAVD88 (assumed)</text>
+<line x1="20" y1="400.5" x2="462" y2="400.5" stroke="currentColor" stroke-width="1" stroke-dasharray="5 3"/>
+<text x="22" y="396.5" class="rl-dim">BFE +10.0 (assumed)</text>
+<line x1="20" y1="201" x2="462" y2="201" stroke="currentColor" stroke-width="1.4"/>
+<text x="22" y="197" class="rl-name">33'-0" limit</text>
+<text x="22" y="212" class="rl-dim">from grade → +38.5</text>
+<rect x="166" y="432" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<rect x="296" y="432" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<rect x="426" y="432" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<text x="300" y="426" text-anchor="middle" class="rl-dim">Parking · 8'-0&quot; clear · breakaway walls</text>
+<rect x="150" y="432" width="300" height="10.5" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="365.5" width="300" height="66.5" class="k-garage" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="426" class="rl-name">Ground · parking</text>
+<text x="442" y="426" text-anchor="end" class="rl-dim">clear ≈ 8'-0" under beams</text>
+<rect x="150" y="365.5" width="300" height="7" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="288.5" width="300" height="77" class="k-enclosed" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="359.5" class="rl-name">Level 1</text>
+<text x="442" y="359.5" text-anchor="end" class="rl-dim">FF +15.0 · f-to-f 11'-0" · clear ≈ 10'-0"</text>
+<rect x="150" y="288.5" width="300" height="7" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="215" width="300" height="73.5" class="k-enclosed" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="282.5" class="rl-name">Level 2</text>
+<text x="442" y="282.5" text-anchor="end" class="rl-dim">FF +26.0 · f-to-f 10'-6" · clear ≈ 9'-6"</text>
+<rect x="150" y="215" width="300" height="7" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="138" width="300" height="77" class="k-enclosed" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="209" class="rl-name">Level 3</text>
+<text x="442" y="209" text-anchor="end" class="rl-dim">FF +36.5 · f-to-f 11'-0" · clear ≈ 10'-0"</text>
+<rect x="150" y="138" width="300" height="6.3" fill="currentColor" opacity="0.85"/>
+<text x="442" y="156.3" text-anchor="end" class="rl-name">Roof deck +47.5</text>
+<rect x="150" y="113.5" width="6" height="24.5" fill="currentColor" opacity="0.6"/>
+<rect x="350" y="120.5" width="90" height="17.5" class="k-pool" stroke="currentColor" stroke-width="0.8"/>
+<text x="395" y="116.5" text-anchor="middle" class="rl-dim">pool shell top +50.0</text>
+<rect x="162" y="54" width="64" height="84" class="k-elevator" stroke="currentColor" stroke-width="0.8"/>
+<text x="194" y="50" text-anchor="middle" class="rl-dim">elevator bulkhead +59.5</text>
+<rect x="246" y="68" width="88" height="70" class="k-covered_outdoor" stroke="currentColor" stroke-width="0.8"/>
+<text x="290" y="64" text-anchor="middle" class="rl-dim">gourmet canopy +57.5</text>
+<line x1="482" y1="439" x2="482" y2="369" stroke="currentColor" stroke-width="2"/><text transform="translate(478 404) rotate(-90)" text-anchor="middle" class="rl-dim">10 ft</text>
+<text x="260" y="18" text-anchor="middle" class="rl-name">Scenario 1 · program as requested (3 residential + roof)</text>
+</svg></div><figcaption>Scenario 1: as requested. Roof deck at +47.5 = 42'-0&quot; above grade, 37'-6&quot; above BFE, 32'-6&quot; above the Level 1 floor. Passes 33' only against a first-floor / DFE datum.</figcaption></figure><figure class="fig section-fig"><div class="figwrap"><svg class="plan section" viewBox="0 0 520 406" role="img" aria-label="Section, two residential stories over parking; roof deck 32 feet above grade" xmlns="http://www.w3.org/2000/svg">
+<rect x="110" y="362" width="380" height="14" class="k-road" stroke="none"/>
+<text x="22" y="374" class="rl-dim">grade ≈ +5.5 ft</text>
+<text x="22" y="385" class="rl-dim">NAVD88 (assumed)</text>
+<line x1="20" y1="330.5" x2="462" y2="330.5" stroke="currentColor" stroke-width="1" stroke-dasharray="5 3"/>
+<text x="22" y="326.5" class="rl-dim">BFE +10.0 (assumed)</text>
+<line x1="20" y1="131" x2="462" y2="131" stroke="currentColor" stroke-width="1.4"/>
+<text x="22" y="127" class="rl-name">33'-0" limit</text>
+<text x="22" y="142" class="rl-dim">from grade → +38.5</text>
+<rect x="166" y="362" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<rect x="296" y="362" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<rect x="426" y="362" width="8" height="14" class="k-stair" stroke="currentColor" stroke-width="0.8"/>
+<text x="300" y="356" text-anchor="middle" class="rl-dim">Parking · 8'-0&quot; clear · breakaway walls</text>
+<rect x="150" y="362" width="300" height="10.5" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="295.5" width="300" height="66.5" class="k-garage" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="356" class="rl-name">Ground · parking</text>
+<text x="442" y="356" text-anchor="end" class="rl-dim">clear ≈ 8'-0" under beams</text>
+<rect x="150" y="295.5" width="300" height="7" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="215" width="300" height="80.5" class="k-enclosed" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="289.5" class="rl-name">Level 1</text>
+<text x="442" y="289.5" text-anchor="end" class="rl-dim">FF +15.0 · f-to-f 11'-6" · clear ≈ 10'-6"</text>
+<rect x="150" y="215" width="300" height="7" fill="currentColor" opacity="0.85"/>
+<rect x="150" y="138" width="300" height="77" class="k-enclosed" stroke="currentColor" stroke-width="0.8"/>
+<text x="158" y="209" class="rl-name">Level 2</text>
+<text x="442" y="209" text-anchor="end" class="rl-dim">FF +26.5 · f-to-f 11'-0" · clear ≈ 10'-0"</text>
+<rect x="150" y="138" width="300" height="6.3" fill="currentColor" opacity="0.85"/>
+<text x="442" y="156.3" text-anchor="end" class="rl-name">Roof deck +37.5</text>
+<rect x="150" y="113.5" width="6" height="24.5" fill="currentColor" opacity="0.6"/>
+<rect x="350" y="120.5" width="90" height="17.5" class="k-pool" stroke="currentColor" stroke-width="0.8"/>
+<text x="395" y="116.5" text-anchor="middle" class="rl-dim">pool shell top +40.0</text>
+<rect x="162" y="54" width="64" height="84" class="k-elevator" stroke="currentColor" stroke-width="0.8"/>
+<text x="194" y="50" text-anchor="middle" class="rl-dim">elevator bulkhead +49.5</text>
+<rect x="246" y="68" width="88" height="70" class="k-covered_outdoor" stroke="currentColor" stroke-width="0.8"/>
+<text x="290" y="64" text-anchor="middle" class="rl-dim">gourmet canopy +47.5</text>
+<line x1="482" y1="369" x2="482" y2="299" stroke="currentColor" stroke-width="2"/><text transform="translate(478 334) rotate(-90)" text-anchor="middle" class="rl-dim">10 ft</text>
+<text x="260" y="18" text-anchor="middle" class="rl-name">Scenario 2 · by-right fallback (2 residential + roof)</text>
+</svg></div><figcaption>Scenario 2: two residential stories with 10'-6&quot; and 10'-0&quot; clear ceilings. Roof deck at +37.5 = 32'-0&quot; above grade; fits the 33' limit measured from grade with 1' to spare. Rooftop projections still need review.</figcaption></figure><h3>Arithmetic behind the sections</h3>
+<div class="tablewrap"><table class="sched"><thead><tr><th>Item</th><th class="num">Scenario 1</th><th class="num">Scenario 2</th></tr></thead><tbody>
+<tr><td>Grade / driveway (assumed)</td><td class="mono num">+5.5</td><td class="mono num">+5.5</td></tr>
+<tr><td>Parking clear height + floor structure</td><td class="mono num">8.0 + 1.5</td><td class="mono num">8.0 + 1.5</td></tr>
+<tr><td>Level 1 finished floor</td><td class="mono num">+15.0</td><td class="mono num">+15.0</td></tr>
+<tr><td>Floor-to-floor L1 / L2 / L3</td><td class="mono num">11.0 / 10.5 / 11.0</td><td class="mono num">11.5 / 11.0 / —</td></tr>
+<tr><td>Top of roof deck</td><td class="mono num">+47.5</td><td class="mono num">+37.5</td></tr>
+<tr><td>Height above grade</td><td class="mono num">42.0</td><td class="mono num">32.0</td></tr>
+<tr><td>Height above BFE (assumed +10)</td><td class="mono num">37.5</td><td class="mono num">27.5</td></tr>
+<tr><td>Height above Level 1 floor</td><td class="mono num">32.5</td><td class="mono num">22.5</td></tr>
+<tr><td>Pool coping (recessed 2'-6")</td><td class="mono num">+50.0</td><td class="mono num">+40.0</td></tr>
+<tr><td>Elevator bulkhead top (≈12' over deck)</td><td class="mono num">+59.5</td><td class="mono num">+49.5</td></tr>
+</tbody></table></div>
+<ul>
+  <li>Compressing Scenario 1 to 9'-0" ceilings everywhere only brings the deck to ≈+44.5 (39' above grade). The shortfall is structural, not decorative: the parking level under the house is what pushes everything up.</li>
+  <li>Lowering Level 1 to the FBC minimum (≈+12.0) leaves ≈5' under the beams, so cars do not fit. A partly sunken garage is not realistic on a beach lot with a high water table and CCCL excavation limits.</li>
+  <li>Therefore the height datum question goes first to the City: written zoning determination on (a) the measuring point for the 33' limit on an elevated coastal house and (b) whether the parking level counts as one of the three stories.</li>
+</ul>
+</section>
+<section class="sheet" id="a-101">
+  <header class="sheet-head"><span class="sheet-num">A-101</span><div><h2>Ground / flood / garage level</h2><p class="sheet-sub">Flood / garage level · parking, access, one storage room · nothing habitable</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+  <figure class="fig"><div class="figwrap"><svg class="plan" viewBox="0 0 800 472" role="img" aria-label="Ground / flood / garage level plan, 55 by 30 foot envelope, ocean to the east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-ground" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-ground" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern>
+  <pattern id="water-ground" width="14" height="6" patternUnits="userSpaceOnUse"><path d="M0,3 q3.5,-3 7,0 t7,0" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern></defs>
+<rect x="70" y="56" width="660" height="360" class="env" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="70" y="200" width="480" height="216" class="room k-garage" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="300.5" text-anchor="middle" class="rl-name">Garage · 4 cars, 2 wide × 2 deep tandem</text>
+<text x="310" y="311.5" text-anchor="middle" class="rl-dim">40'-0" × 18'-0"</text>
+<text x="310" y="322.5" text-anchor="middle" class="rl-dim">720 sf</text>
+<text x="73" y="209" class="rl-tag">1</text>
+<rect x="550" y="200" width="180" height="216" class="room k-garage" stroke="currentColor" stroke-width="1"/>
+<text x="640" y="295" text-anchor="middle" class="rl-name">Garage bay C · golf cart,</text>
+<text x="640" y="306" text-anchor="middle" class="rl-name">bikes, beach gear</text>
+<text x="640" y="317" text-anchor="middle" class="rl-dim">15'-0" × 18'-0"</text>
+<text x="640" y="328" text-anchor="middle" class="rl-dim">270 sf</text>
+<text x="553" y="209" class="rl-tag">2</text>
+<rect x="70" y="140" width="168" height="60" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="157" text-anchor="middle" class="rl-name">Entry breezeway (open, under</text>
+<text x="154" y="168" text-anchor="middle" class="rl-name">house)</text>
+<text x="154" y="179" text-anchor="middle" class="rl-dim">14'-0" × 5'-0"</text>
+<text x="154" y="190" text-anchor="middle" class="rl-dim">70 sf</text>
+<text x="73" y="149" class="rl-tag">3</text>
+<rect x="70" y="56" width="96" height="84" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="118" y="85" text-anchor="middle" class="rl-name">Bike / trash</text>
+<text x="118" y="96" text-anchor="middle" class="rl-name">nook (open)</text>
+<text x="118" y="107" text-anchor="middle" class="rl-dim">8'-0" × 7'-0"</text>
+<text x="118" y="118" text-anchor="middle" class="rl-dim">56 sf</text>
+<text x="73" y="65" class="rl-tag">4</text>
+<rect x="166" y="56" width="144" height="84" class="room k-stair" stroke="currentColor" stroke-width="1"/>
+<text x="238" y="90.5" text-anchor="middle" class="rl-name">Stair</text>
+<text x="238" y="101.5" text-anchor="middle" class="rl-dim">12'-0" × 7'-0"</text>
+<text x="238" y="112.5" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="169" y="65" class="rl-tag">5</text>
+<rect x="310" y="56" width="72" height="84" class="room k-elevator" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="85" text-anchor="middle" class="rl-name">Elevator</text>
+<text x="346" y="96" text-anchor="middle" class="rl-name">(glass)</text>
+<text x="346" y="107" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="346" y="118" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="313" y="65" class="rl-tag">6</text>
+<rect x="238" y="140" width="144" height="60" class="room k-lobby" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="162.5" text-anchor="middle" class="rl-name">Lobby</text>
+<text x="310" y="173.5" text-anchor="middle" class="rl-dim">12'-0" × 5'-0"</text>
+<text x="310" y="184.5" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="241" y="149" class="rl-tag">7</text>
+<rect x="382" y="56" width="168" height="144" class="room k-storage" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="120.5" text-anchor="middle" class="rl-name">Storage (single room)</text>
+<text x="466" y="131.5" text-anchor="middle" class="rl-dim">14'-0" × 12'-0"</text>
+<text x="466" y="142.5" text-anchor="middle" class="rl-dim">168 sf</text>
+<text x="385" y="65" class="rl-tag">8</text>
+<rect x="550" y="56" width="180" height="144" class="room k-mechanical" stroke="currentColor" stroke-width="1"/>
+<text x="640" y="115" text-anchor="middle" class="rl-name">Mechanical / pool equipment</text>
+<text x="640" y="126" text-anchor="middle" class="rl-name">(elevated platform)</text>
+<text x="640" y="137" text-anchor="middle" class="rl-dim">15'-0" × 12'-0"</text>
+<text x="640" y="148" text-anchor="middle" class="rl-dim">180 sf</text>
+<text x="553" y="65" class="rl-tag">9</text>
+<line x1="382" y1="46" x2="382" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="382" y="438" text-anchor="middle" class="rl-dim">S1 · 26'-0"</text>
+<line x1="550" y1="46" x2="550" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="550" y="438" text-anchor="middle" class="rl-dim">S2 · 40'-0"</text>
+<line x1="70" y1="34" x2="730" y2="34" stroke="currentColor" stroke-width="1" marker-start="url(#arr-ground)" marker-end="url(#arr-ground)"/>
+<text x="400" y="29" text-anchor="middle" class="rl-dim">55'-0" overall (E–W)</text>
+<line x1="48" y1="56" x2="48" y2="416" stroke="currentColor" stroke-width="1" marker-start="url(#arr-ground)" marker-end="url(#arr-ground)"/>
+<text transform="translate(42 236) rotate(-90)" text-anchor="middle" class="rl-dim">30'-0" overall (N–S)</text>
+<line x1="70" y1="460" x2="730" y2="460" stroke="currentColor" stroke-width="0.8"/>
+<line x1="70" y1="456" x2="70" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="166" y1="456" x2="166" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="238" y1="456" x2="238" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="310" y1="456" x2="310" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="382" y1="456" x2="382" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="550" y1="456" x2="550" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="456" x2="730" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<text x="118" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text x="202" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="274" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="346" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="466" y="454" text-anchor="middle" class="rl-chain">14'-0"</text>
+<text x="640" y="454" text-anchor="middle" class="rl-chain">15'-0"</text>
+<line x1="756" y1="56" x2="756" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="416" x2="760" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="200" x2="760" y2="200" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="140" x2="760" y2="140" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="56" x2="760" y2="56" stroke="currentColor" stroke-width="0.8"/>
+<text transform="translate(764 308) rotate(90)" text-anchor="middle" class="rl-chain">18'-0"</text>
+<text transform="translate(764 170) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 98) rotate(90)" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text x="738" y="26" text-anchor="end" class="rl-orient">ATLANTIC OCEAN · EAST →</text>
+<text x="62" y="26" text-anchor="start" class="rl-orient">← N SURF RD · CITY · WEST</text>
+<g class="north"><circle cx="766" cy="432" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M766,421 L771,438 L766,434 L761,438 z" fill="currentColor"/><text x="766" y="458" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Ground / flood / garage level · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S2 stack through every level · numbers key to the room table.</figcaption></figure>
+  <div class="chips"><div class="chip"><span>Envelope</span><b>1,650 sf</b></div><div class="chip"><span>Core (stair · elevator · lobby)</span><b>186 sf</b></div><div class="chip"><span>Open outdoor</span><b>126 sf</b></div><div class="chip"><span>Garage</span><b>990 sf</b></div><div class="chip"><span>Storage</span><b>168 sf</b></div><div class="chip"><span>Mechanical</span><b>180 sf</b></div><div class="chip"><span>Circulation (lobby · foyer · halls)</span><b>60 sf</b></div></div>
+  <div class="notes"><ul>
+    <li>Four cars in two tandem pairs (9'-0" bays, 20'-0" per car) entered from two doors on the west face; a fifth open bay behind them for a golf cart, bikes and beach gear.</li>
+    <li>Only one storage room. The mechanical/pool-equipment room is drawn on an elevated platform (equipment at or above BFE + 1'); the alternative is a screened closet in the rooftop stair block.</li>
+    <li>Entry breezeway and nook are open under the house so the flood-open area stays large; enclosures use breakaway construction if the lot is VE.</li>
+    <li>Nothing habitable and no plumbing fixtures at this level.</li>
+  </ul></div>
+  <div class="tablewrap"><table class="rooms"><thead><tr><th>#</th><th>Room</th><th>Type</th><th>Gross dims</th><th class="num">Gross sf</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1</td><td>Garage · 4 cars, 2 wide × 2 deep tandem</td><td class="mono">Garage</td><td class="mono">40'-0" × 18'-0"</td><td class="mono num">720</td><td class="note">Two 9-ft bays, 20 ft per car; doors on the west face</td></tr>
+<tr><td class="num">2</td><td>Garage bay C · golf cart, bikes, beach gear</td><td class="mono">Garage</td><td class="mono">15'-0" × 18'-0"</td><td class="mono num">270</td><td class="note">Open bay behind the tandem stalls</td></tr>
+<tr><td class="num">3</td><td>Entry breezeway (open, under house)</td><td class="mono">Open outdoor</td><td class="mono">14'-0" × 5'-0"</td><td class="mono num">70</td><td class="note">Flood-open access from the driveway to the lobby</td></tr>
+<tr><td class="num">4</td><td>Bike / trash nook (open)</td><td class="mono">Open outdoor</td><td class="mono">8'-0" × 7'-0"</td><td class="mono num">56</td><td class="note"></td></tr>
+<tr><td class="num">5</td><td>Stair</td><td class="mono">Stair</td><td class="mono">12'-0" × 7'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">6</td><td>Elevator (glass)</td><td class="mono">Elevator</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note">FEMA TB-4 elevator rules apply below DFE</td></tr>
+<tr><td class="num">7</td><td>Lobby</td><td class="mono">Lobby</td><td class="mono">12'-0" × 5'-0"</td><td class="mono num">60</td><td class="note"></td></tr>
+<tr><td class="num">8</td><td>Storage (single room)</td><td class="mono">Storage</td><td class="mono">14'-0" × 12'-0"</td><td class="mono num">168</td><td class="note">Breakaway enclosure if V zone; storage only</td></tr>
+<tr><td class="num">9</td><td>Mechanical / pool equipment (elevated platform)</td><td class="mono">Mechanical</td><td class="mono">15'-0" × 12'-0"</td><td class="mono num">180</td><td class="note">Equipment at or above BFE+1 ft; subject to flood review</td></tr></tbody>
+<tfoot><tr><td></td><td colspan="3">Envelope total</td><td class="mono num">1,650</td><td></td></tr></tfoot></table></div>
+</section>
+<section class="sheet" id="a-102">
+  <header class="sheet-head"><span class="sheet-num">A-102</span><div><h2>Residential Level 1</h2><p class="sheet-sub">Living · dining · kitchen · powder · guest suite / home office</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+  <figure class="fig"><div class="figwrap"><svg class="plan" viewBox="0 0 800 472" role="img" aria-label="Residential Level 1 plan, 55 by 30 foot envelope, ocean to the east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-L1" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-L1" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern>
+  <pattern id="water-L1" width="14" height="6" patternUnits="userSpaceOnUse"><path d="M0,3 q3.5,-3 7,0 t7,0" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern></defs>
+<rect x="70" y="56" width="660" height="360" class="env" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="70" y="260" width="168" height="156" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="330.5" text-anchor="middle" class="rl-name">Guest Suite / Home Office</text>
+<text x="154" y="341.5" text-anchor="middle" class="rl-dim">14'-0" × 13'-0"</text>
+<text x="154" y="352.5" text-anchor="middle" class="rl-dim">182 sf</text>
+<text x="73" y="269" class="rl-tag">1</text>
+<rect x="70" y="200" width="96" height="60" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="118" y="222.5" text-anchor="middle" class="rl-name">Guest Bath</text>
+<text x="118" y="233.5" text-anchor="middle" class="rl-dim">8'-0" × 5'-0"</text>
+<text x="118" y="244.5" text-anchor="middle" class="rl-dim">40 sf</text>
+<text x="73" y="209" class="rl-tag">2</text>
+<rect x="166" y="200" width="72" height="60" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="202" y="217" text-anchor="middle" class="rl-name">Guest</text>
+<text x="202" y="228" text-anchor="middle" class="rl-name">Closet</text>
+<text x="202" y="239" text-anchor="middle" class="rl-dim">6'-0" × 5'-0"</text>
+<text x="202" y="250" text-anchor="middle" class="rl-dim">30 sf</text>
+<text x="169" y="209" class="rl-tag">3</text>
+<rect x="70" y="140" width="168" height="60" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="162.5" text-anchor="middle" class="rl-name">Entry Foyer</text>
+<text x="154" y="173.5" text-anchor="middle" class="rl-dim">14'-0" × 5'-0"</text>
+<text x="154" y="184.5" text-anchor="middle" class="rl-dim">70 sf</text>
+<text x="73" y="149" class="rl-tag">4</text>
+<rect x="70" y="56" width="54" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="97" y="101.5" text-anchor="middle" class="rl-key">5</text>
+<text x="73" y="65" class="rl-tag">5</text>
+<rect x="124" y="56" width="42" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="145" y="101.5" text-anchor="middle" class="rl-key">6</text>
+<text x="127" y="65" class="rl-tag">6</text>
+<rect x="166" y="56" width="144" height="84" class="room k-stair" stroke="currentColor" stroke-width="1"/>
+<text x="238" y="90.5" text-anchor="middle" class="rl-name">Stair</text>
+<text x="238" y="101.5" text-anchor="middle" class="rl-dim">12'-0" × 7'-0"</text>
+<text x="238" y="112.5" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="169" y="65" class="rl-tag">7</text>
+<rect x="310" y="56" width="72" height="84" class="room k-elevator" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="85" text-anchor="middle" class="rl-name">Elevator</text>
+<text x="346" y="96" text-anchor="middle" class="rl-name">(glass)</text>
+<text x="346" y="107" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="346" y="118" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="313" y="65" class="rl-tag">8</text>
+<rect x="238" y="140" width="144" height="60" class="room k-lobby" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="162.5" text-anchor="middle" class="rl-name">Lobby</text>
+<text x="310" y="173.5" text-anchor="middle" class="rl-dim">12'-0" × 5'-0"</text>
+<text x="310" y="184.5" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="241" y="149" class="rl-tag">9</text>
+<rect x="238" y="200" width="144" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="300.5" text-anchor="middle" class="rl-name">Kitchen · 4×10 island</text>
+<text x="310" y="311.5" text-anchor="middle" class="rl-dim">12'-0" × 18'-0"</text>
+<text x="310" y="322.5" text-anchor="middle" class="rl-dim">216 sf</text>
+<text x="241" y="209" class="rl-tag">10</text>
+<rect x="382" y="200" width="168" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="300.5" text-anchor="middle" class="rl-name">Dining</text>
+<text x="466" y="311.5" text-anchor="middle" class="rl-dim">14'-0" × 18'-0"</text>
+<text x="466" y="322.5" text-anchor="middle" class="rl-dim">252 sf</text>
+<text x="385" y="209" class="rl-tag">11</text>
+<rect x="382" y="56" width="96" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="430" y="115" text-anchor="middle" class="rl-name">Scullery /</text>
+<text x="430" y="126" text-anchor="middle" class="rl-name">Pantry</text>
+<text x="430" y="137" text-anchor="middle" class="rl-dim">8'-0" × 12'-0"</text>
+<text x="430" y="148" text-anchor="middle" class="rl-dim">96 sf</text>
+<text x="385" y="65" class="rl-tag">12</text>
+<rect x="478" y="56" width="72" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="514" y="120.5" text-anchor="middle" class="rl-name">Laundry</text>
+<text x="514" y="131.5" text-anchor="middle" class="rl-dim">6'-0" × 12'-0"</text>
+<text x="514" y="142.5" text-anchor="middle" class="rl-dim">72 sf</text>
+<text x="481" y="65" class="rl-tag">13</text>
+<rect x="550" y="56" width="120" height="360" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="610" y="223" text-anchor="middle" class="rl-name">Living · ocean</text>
+<text x="610" y="234" text-anchor="middle" class="rl-name">glazing</text>
+<text x="610" y="245" text-anchor="middle" class="rl-dim">10'-0" × 30'-0"</text>
+<text x="610" y="256" text-anchor="middle" class="rl-dim">300 sf</text>
+<text x="553" y="65" class="rl-tag">14</text>
+<rect x="670" y="56" width="60" height="360" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text transform="translate(692.5 236) rotate(-90)" text-anchor="middle" class="rl-name">Ocean Terrace (inside envelope)</text>
+<text transform="translate(703.5 236) rotate(-90)" text-anchor="middle" class="rl-dim">5'-0" × 30'-0"</text>
+<text transform="translate(714.5 236) rotate(-90)" text-anchor="middle" class="rl-dim">150 sf</text>
+<text x="673" y="65" class="rl-tag">15</text>
+<line x1="382" y1="46" x2="382" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="382" y="438" text-anchor="middle" class="rl-dim">S1 · 26'-0"</text>
+<line x1="550" y1="46" x2="550" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="550" y="438" text-anchor="middle" class="rl-dim">S2 · 40'-0"</text>
+<line x1="70" y1="34" x2="730" y2="34" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L1)" marker-end="url(#arr-L1)"/>
+<text x="400" y="29" text-anchor="middle" class="rl-dim">55'-0" overall (E–W)</text>
+<line x1="48" y1="56" x2="48" y2="416" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L1)" marker-end="url(#arr-L1)"/>
+<text transform="translate(42 236) rotate(-90)" text-anchor="middle" class="rl-dim">30'-0" overall (N–S)</text>
+<line x1="70" y1="460" x2="730" y2="460" stroke="currentColor" stroke-width="0.8"/>
+<line x1="70" y1="456" x2="70" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="124" y1="456" x2="124" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="166" y1="456" x2="166" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="238" y1="456" x2="238" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="310" y1="456" x2="310" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="382" y1="456" x2="382" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="478" y1="456" x2="478" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="550" y1="456" x2="550" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="670" y1="456" x2="670" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="456" x2="730" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<text x="97" y="454" text-anchor="middle" class="rl-chain">4'-6"</text>
+<text x="145" y="454" text-anchor="middle" class="rl-chain">3'-6"</text>
+<text x="202" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="274" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="346" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="430" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text x="514" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="610" y="454" text-anchor="middle" class="rl-chain">10'-0"</text>
+<text x="700" y="454" text-anchor="middle" class="rl-chain">5'-0"</text>
+<line x1="756" y1="56" x2="756" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="416" x2="760" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="260" x2="760" y2="260" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="200" x2="760" y2="200" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="140" x2="760" y2="140" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="56" x2="760" y2="56" stroke="currentColor" stroke-width="0.8"/>
+<text transform="translate(764 338) rotate(90)" text-anchor="middle" class="rl-chain">13'-0"</text>
+<text transform="translate(764 230) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 170) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 98) rotate(90)" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text x="738" y="26" text-anchor="end" class="rl-orient">ATLANTIC OCEAN · EAST →</text>
+<text x="62" y="26" text-anchor="start" class="rl-orient">← N SURF RD · CITY · WEST</text>
+<g class="north"><circle cx="766" cy="432" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M766,421 L771,438 L766,434 L761,438 z" fill="currentColor"/><text x="766" y="458" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Residential Level 1 · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S2 stack through every level · numbers key to the room table.</figcaption></figure>
+  <div class="chips"><div class="chip"><span>Envelope</span><b>1,650 sf</b></div><div class="chip"><span>Enclosed</span><b>1,314 sf</b></div><div class="chip"><span>Core (stair · elevator · lobby)</span><b>186 sf</b></div><div class="chip"><span>Open outdoor</span><b>150 sf</b></div><div class="chip"><span>Bathrooms</span><b>72 sf</b></div><div class="chip"><span>Closets</span><b>55 sf</b></div><div class="chip"><span>Circulation (lobby · foyer · halls)</span><b>130 sf</b></div><div class="chip net"><span>Net usable (enclosed × 0.88)</span><b>≈ 1,156 sf</b></div></div>
+  <div class="notes"><ul>
+    <li>Kitchen (12' × 18', 4' × 10' island) → dining (14' × 18') → living (10' × 30') → 5' ocean terrace read as one 41' long great room with the entire east face glazed.</li>
+    <li>Guest suite 14' × 13' on the city side with its own bath and closet; a door to the foyer lets it work as a home office.</li>
+    <li>Powder room and mechanical closet next to the front door; scullery and laundry tucked behind the core so no service room takes the ocean face.</li>
+  </ul></div>
+  <div class="tablewrap"><table class="rooms"><thead><tr><th>#</th><th>Room</th><th>Type</th><th>Gross dims</th><th class="num">Gross sf</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1</td><td>Guest Suite / Home Office</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 13'-0"</td><td class="mono num">182</td><td class="note">City-side windows; convertible flex room</td></tr>
+<tr><td class="num">2</td><td>Guest Bath</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 5'-0"</td><td class="mono num">40</td><td class="note"></td></tr>
+<tr><td class="num">3</td><td>Guest Closet</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 5'-0"</td><td class="mono num">30</td><td class="note"></td></tr>
+<tr><td class="num">4</td><td>Entry Foyer</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 5'-0"</td><td class="mono num">70</td><td class="note">Front door at the west face, arriving from the exterior entry stair</td></tr>
+<tr><td class="num">5</td><td>Powder Room</td><td class="mono">Enclosed</td><td class="mono">4'-6" × 7'-0"</td><td class="mono num">32</td><td class="note"></td></tr>
+<tr><td class="num">6</td><td>Mech / AC closet</td><td class="mono">Enclosed</td><td class="mono">3'-6" × 7'-0"</td><td class="mono num">25</td><td class="note"></td></tr>
+<tr><td class="num">7</td><td>Stair</td><td class="mono">Stair</td><td class="mono">12'-0" × 7'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">8</td><td>Elevator (glass)</td><td class="mono">Elevator</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note"></td></tr>
+<tr><td class="num">9</td><td>Lobby</td><td class="mono">Lobby</td><td class="mono">12'-0" × 5'-0"</td><td class="mono num">60</td><td class="note"></td></tr>
+<tr><td class="num">10</td><td>Kitchen · 4×10 island</td><td class="mono">Enclosed</td><td class="mono">12'-0" × 18'-0"</td><td class="mono num">216</td><td class="note">Open to dining and living</td></tr>
+<tr><td class="num">11</td><td>Dining</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 18'-0"</td><td class="mono num">252</td><td class="note">Part of the continuous great room</td></tr>
+<tr><td class="num">12</td><td>Scullery / Pantry</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 12'-0"</td><td class="mono num">96</td><td class="note"></td></tr>
+<tr><td class="num">13</td><td>Laundry</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 12'-0"</td><td class="mono num">72</td><td class="note"></td></tr>
+<tr><td class="num">14</td><td>Living · ocean glazing</td><td class="mono">Enclosed</td><td class="mono">10'-0" × 30'-0"</td><td class="mono num">300</td><td class="note">Full-width sliding glass to the terrace</td></tr>
+<tr><td class="num">15</td><td>Ocean Terrace (inside envelope)</td><td class="mono">Open outdoor</td><td class="mono">5'-0" × 30'-0"</td><td class="mono num">150</td><td class="note">Carved from the 30×55 box, not a projection</td></tr></tbody>
+<tfoot><tr><td></td><td colspan="3">Envelope total</td><td class="mono num">1,650</td><td></td></tr></tfoot></table></div>
+</section>
+<section class="sheet" id="a-103">
+  <header class="sheet-head"><span class="sheet-num">A-103</span><div><h2>Residential Level 2</h2><p class="sheet-sub">Family lounge with mini bar · one ocean suite · two city suites</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+  <figure class="fig"><div class="figwrap"><svg class="plan" viewBox="0 0 800 472" role="img" aria-label="Residential Level 2 plan, 55 by 30 foot envelope, ocean to the east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-L2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-L2" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern>
+  <pattern id="water-L2" width="14" height="6" patternUnits="userSpaceOnUse"><path d="M0,3 q3.5,-3 7,0 t7,0" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern></defs>
+<rect x="70" y="56" width="660" height="360" class="env" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="70" y="278" width="168" height="138" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="339.5" text-anchor="middle" class="rl-name">City Suite 1</text>
+<text x="154" y="350.5" text-anchor="middle" class="rl-dim">14'-0" × 11'-6"</text>
+<text x="154" y="361.5" text-anchor="middle" class="rl-dim">161 sf</text>
+<text x="73" y="287" class="rl-tag">1</text>
+<rect x="70" y="140" width="168" height="138" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="201.5" text-anchor="middle" class="rl-name">City Suite 2</text>
+<text x="154" y="212.5" text-anchor="middle" class="rl-dim">14'-0" × 11'-6"</text>
+<text x="154" y="223.5" text-anchor="middle" class="rl-dim">161 sf</text>
+<text x="73" y="149" class="rl-tag">2</text>
+<rect x="70" y="56" width="96" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="118" y="85" text-anchor="middle" class="rl-name">City Suite 2</text>
+<text x="118" y="96" text-anchor="middle" class="rl-name">Bath</text>
+<text x="118" y="107" text-anchor="middle" class="rl-dim">8'-0" × 7'-0"</text>
+<text x="118" y="118" text-anchor="middle" class="rl-dim">56 sf</text>
+<text x="73" y="65" class="rl-tag">3</text>
+<rect x="238" y="332" width="72" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="274" y="361" text-anchor="middle" class="rl-name">City Suite</text>
+<text x="274" y="372" text-anchor="middle" class="rl-name">1 Bath</text>
+<text x="274" y="383" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="274" y="394" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="241" y="341" class="rl-tag">4</text>
+<rect x="238" y="278" width="72" height="54" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="274" y="308.5" text-anchor="middle" class="rl-key">5</text>
+<text x="241" y="287" class="rl-tag">5</text>
+<rect x="238" y="200" width="72" height="78" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="274" y="226" text-anchor="middle" class="rl-name">City Suite</text>
+<text x="274" y="237" text-anchor="middle" class="rl-name">2 Closet</text>
+<text x="274" y="248" text-anchor="middle" class="rl-dim">6'-0" × 6'-6"</text>
+<text x="274" y="259" text-anchor="middle" class="rl-dim">39 sf</text>
+<text x="241" y="209" class="rl-tag">6</text>
+<rect x="166" y="56" width="144" height="84" class="room k-stair" stroke="currentColor" stroke-width="1"/>
+<text x="238" y="90.5" text-anchor="middle" class="rl-name">Stair</text>
+<text x="238" y="101.5" text-anchor="middle" class="rl-dim">12'-0" × 7'-0"</text>
+<text x="238" y="112.5" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="169" y="65" class="rl-tag">7</text>
+<rect x="310" y="56" width="72" height="84" class="room k-elevator" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="85" text-anchor="middle" class="rl-name">Elevator</text>
+<text x="346" y="96" text-anchor="middle" class="rl-name">(glass)</text>
+<text x="346" y="107" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="346" y="118" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="313" y="65" class="rl-tag">8</text>
+<rect x="238" y="140" width="144" height="60" class="room k-lobby" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="162.5" text-anchor="middle" class="rl-name">Lobby</text>
+<text x="310" y="173.5" text-anchor="middle" class="rl-dim">12'-0" × 5'-0"</text>
+<text x="310" y="184.5" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="241" y="149" class="rl-tag">9</text>
+<rect x="310" y="200" width="72" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="289.5" text-anchor="middle" class="rl-name">Family</text>
+<text x="346" y="300.5" text-anchor="middle" class="rl-name">Lounge ·</text>
+<text x="346" y="311.5" text-anchor="middle" class="rl-name">west zone</text>
+<text x="346" y="322.5" text-anchor="middle" class="rl-dim">6'-0" × 18'-0"</text>
+<text x="346" y="333.5" text-anchor="middle" class="rl-dim">108 sf</text>
+<text x="313" y="209" class="rl-tag">10</text>
+<rect x="382" y="200" width="168" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="295" text-anchor="middle" class="rl-name">Family Lounge · sofa + media</text>
+<text x="466" y="306" text-anchor="middle" class="rl-name">wall</text>
+<text x="466" y="317" text-anchor="middle" class="rl-dim">14'-0" × 18'-0"</text>
+<text x="466" y="328" text-anchor="middle" class="rl-dim">252 sf</text>
+<text x="385" y="209" class="rl-tag">11</text>
+<rect x="382" y="56" width="168" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="115" text-anchor="middle" class="rl-name">Mini Bar / Beverage Center +</text>
+<text x="466" y="126" text-anchor="middle" class="rl-name">media lounge</text>
+<text x="466" y="137" text-anchor="middle" class="rl-dim">14'-0" × 12'-0"</text>
+<text x="466" y="148" text-anchor="middle" class="rl-dim">168 sf</text>
+<text x="385" y="65" class="rl-tag">12</text>
+<rect x="550" y="272" width="84" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="592" y="331" text-anchor="middle" class="rl-name">Ocean Suite</text>
+<text x="592" y="342" text-anchor="middle" class="rl-name">Closet</text>
+<text x="592" y="353" text-anchor="middle" class="rl-dim">7'-0" × 12'-0"</text>
+<text x="592" y="364" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="553" y="281" class="rl-tag">13</text>
+<rect x="634" y="272" width="96" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="682" y="331" text-anchor="middle" class="rl-name">Ocean Suite</text>
+<text x="682" y="342" text-anchor="middle" class="rl-name">Bath</text>
+<text x="682" y="353" text-anchor="middle" class="rl-dim">8'-0" × 12'-0"</text>
+<text x="682" y="364" text-anchor="middle" class="rl-dim">96 sf</text>
+<text x="637" y="281" class="rl-tag">14</text>
+<rect x="550" y="56" width="180" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="640" y="156.5" text-anchor="middle" class="rl-name">Ocean Suite</text>
+<text x="640" y="167.5" text-anchor="middle" class="rl-dim">15'-0" × 18'-0"</text>
+<text x="640" y="178.5" text-anchor="middle" class="rl-dim">270 sf</text>
+<text x="553" y="65" class="rl-tag">15</text>
+<line x1="382" y1="46" x2="382" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="382" y="438" text-anchor="middle" class="rl-dim">S1 · 26'-0"</text>
+<line x1="550" y1="46" x2="550" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="550" y="438" text-anchor="middle" class="rl-dim">S2 · 40'-0"</text>
+<line x1="70" y1="34" x2="730" y2="34" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L2)" marker-end="url(#arr-L2)"/>
+<text x="400" y="29" text-anchor="middle" class="rl-dim">55'-0" overall (E–W)</text>
+<line x1="48" y1="56" x2="48" y2="416" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L2)" marker-end="url(#arr-L2)"/>
+<text transform="translate(42 236) rotate(-90)" text-anchor="middle" class="rl-dim">30'-0" overall (N–S)</text>
+<line x1="70" y1="460" x2="730" y2="460" stroke="currentColor" stroke-width="0.8"/>
+<line x1="70" y1="456" x2="70" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="166" y1="456" x2="166" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="238" y1="456" x2="238" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="310" y1="456" x2="310" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="382" y1="456" x2="382" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="550" y1="456" x2="550" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="634" y1="456" x2="634" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="456" x2="730" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<text x="118" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text x="202" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="274" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="346" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="466" y="454" text-anchor="middle" class="rl-chain">14'-0"</text>
+<text x="592" y="454" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text x="682" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<line x1="756" y1="56" x2="756" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="416" x2="760" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="332" x2="760" y2="332" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="278" x2="760" y2="278" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="272" x2="760" y2="272" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="200" x2="760" y2="200" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="140" x2="760" y2="140" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="56" x2="760" y2="56" stroke="currentColor" stroke-width="0.8"/>
+<text transform="translate(764 374) rotate(90)" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text transform="translate(764 305) rotate(90)" text-anchor="middle" class="rl-chain">4'-6"</text>
+<text transform="translate(764 236) rotate(90)" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text transform="translate(764 170) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 98) rotate(90)" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text x="738" y="26" text-anchor="end" class="rl-orient">ATLANTIC OCEAN · EAST →</text>
+<text x="62" y="26" text-anchor="start" class="rl-orient">← N SURF RD · CITY · WEST</text>
+<g class="north"><circle cx="766" cy="432" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M766,421 L771,438 L766,434 L761,438 z" fill="currentColor"/><text x="766" y="458" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Residential Level 2 · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S2 stack through every level · numbers key to the room table.</figcaption></figure>
+  <div class="chips"><div class="chip"><span>Envelope</span><b>1,650 sf</b></div><div class="chip"><span>Enclosed</span><b>1,464 sf</b></div><div class="chip"><span>Core (stair · elevator · lobby)</span><b>186 sf</b></div><div class="chip"><span>Bathrooms</span><b>194 sf</b></div><div class="chip"><span>Closets</span><b>150 sf</b></div><div class="chip"><span>Circulation (lobby · foyer · halls)</span><b>60 sf</b></div><div class="chip net"><span>Net usable (enclosed × 0.88)</span><b>≈ 1,288 sf</b></div></div>
+  <div class="notes"><ul>
+    <li>Family lounge (6' + 14' zones, 360 sf) is the circulation: City Suite 1 enters through a dressing vestibule from the lounge, City Suite 2 directly from the lobby, the Ocean Suite from the lounge's east wall.</li>
+    <li>Mini bar / beverage center with undercounter fridge occupies the 14' × 12' north pocket beside the elevator, opening to the lounge.</li>
+    <li>Ocean suite 15' × 18' with floor-to-ceiling glass; its bath also takes 8' of the ocean face and stacks under the master bath.</li>
+  </ul></div>
+  <div class="tablewrap"><table class="rooms"><thead><tr><th>#</th><th>Room</th><th>Type</th><th>Gross dims</th><th class="num">Gross sf</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1</td><td>City Suite 1</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 11'-6"</td><td class="mono num">161</td><td class="note">West-facing; entered through its dressing vestibule</td></tr>
+<tr><td class="num">2</td><td>City Suite 2</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 11'-6"</td><td class="mono num">161</td><td class="note">West-facing; door from the lobby</td></tr>
+<tr><td class="num">3</td><td>City Suite 2 Bath</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 7'-0"</td><td class="mono num">56</td><td class="note"></td></tr>
+<tr><td class="num">4</td><td>City Suite 1 Bath</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note"></td></tr>
+<tr><td class="num">5</td><td>City Suite 1 Entry / Closet</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 4'-6"</td><td class="mono num">27</td><td class="note">Walk-through dressing vestibule from the lounge</td></tr>
+<tr><td class="num">6</td><td>City Suite 2 Closet</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 6'-6"</td><td class="mono num">39</td><td class="note"></td></tr>
+<tr><td class="num">7</td><td>Stair</td><td class="mono">Stair</td><td class="mono">12'-0" × 7'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">8</td><td>Elevator (glass)</td><td class="mono">Elevator</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note"></td></tr>
+<tr><td class="num">9</td><td>Lobby</td><td class="mono">Lobby</td><td class="mono">12'-0" × 5'-0"</td><td class="mono num">60</td><td class="note"></td></tr>
+<tr><td class="num">10</td><td>Family Lounge · west zone</td><td class="mono">Enclosed</td><td class="mono">6'-0" × 18'-0"</td><td class="mono num">108</td><td class="note">Games table / reading; same room as the center zone</td></tr>
+<tr><td class="num">11</td><td>Family Lounge · sofa + media wall</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 18'-0"</td><td class="mono num">252</td><td class="note"></td></tr>
+<tr><td class="num">12</td><td>Mini Bar / Beverage Center + media lounge</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 12'-0"</td><td class="mono num">168</td><td class="note">Cabinetry, undercounter fridge, sink</td></tr>
+<tr><td class="num">13</td><td>Ocean Suite Closet</td><td class="mono">Enclosed</td><td class="mono">7'-0" × 12'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">14</td><td>Ocean Suite Bath</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 12'-0"</td><td class="mono num">96</td><td class="note">Ocean-facing bath; stacks under the master bath</td></tr>
+<tr><td class="num">15</td><td>Ocean Suite</td><td class="mono">Enclosed</td><td class="mono">15'-0" × 18'-0"</td><td class="mono num">270</td><td class="note">Floor-to-ceiling ocean glazing</td></tr></tbody>
+<tfoot><tr><td></td><td colspan="3">Envelope total</td><td class="mono num">1,650</td><td></td></tr></tfoot></table></div>
+</section>
+<section class="sheet" id="a-104">
+  <header class="sheet-head"><span class="sheet-num">A-104</span><div><h2>Residential Level 3 · Primary suite</h2><p class="sheet-sub">Full-floor primary suite · bed and shower on the ocean</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+  <figure class="fig"><div class="figwrap"><svg class="plan" viewBox="0 0 800 472" role="img" aria-label="Residential Level 3 · Primary suite plan, 55 by 30 foot envelope, ocean to the east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-L3" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-L3" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern>
+  <pattern id="water-L3" width="14" height="6" patternUnits="userSpaceOnUse"><path d="M0,3 q3.5,-3 7,0 t7,0" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern></defs>
+<rect x="70" y="56" width="660" height="360" class="env" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="70" y="284" width="168" height="132" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="342.5" text-anchor="middle" class="rl-name">Private Gym / Yoga</text>
+<text x="154" y="353.5" text-anchor="middle" class="rl-dim">14'-0" × 11'-0"</text>
+<text x="154" y="364.5" text-anchor="middle" class="rl-dim">154 sf</text>
+<text x="73" y="293" class="rl-tag">1</text>
+<rect x="70" y="200" width="168" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="234.5" text-anchor="middle" class="rl-name">Spa · sauna + steam</text>
+<text x="154" y="245.5" text-anchor="middle" class="rl-dim">14'-0" × 7'-0"</text>
+<text x="154" y="256.5" text-anchor="middle" class="rl-dim">98 sf</text>
+<text x="73" y="209" class="rl-tag">2</text>
+<rect x="70" y="140" width="168" height="60" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="162.5" text-anchor="middle" class="rl-name">Laundry 2 / Linen</text>
+<text x="154" y="173.5" text-anchor="middle" class="rl-dim">14'-0" × 5'-0"</text>
+<text x="154" y="184.5" text-anchor="middle" class="rl-dim">70 sf</text>
+<text x="73" y="149" class="rl-tag">3</text>
+<rect x="70" y="56" width="96" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="118" y="85" text-anchor="middle" class="rl-name">Mech / AC</text>
+<text x="118" y="96" text-anchor="middle" class="rl-name">closet</text>
+<text x="118" y="107" text-anchor="middle" class="rl-dim">8'-0" × 7'-0"</text>
+<text x="118" y="118" text-anchor="middle" class="rl-dim">56 sf</text>
+<text x="73" y="65" class="rl-tag">4</text>
+<rect x="166" y="56" width="144" height="84" class="room k-stair" stroke="currentColor" stroke-width="1"/>
+<text x="238" y="90.5" text-anchor="middle" class="rl-name">Stair</text>
+<text x="238" y="101.5" text-anchor="middle" class="rl-dim">12'-0" × 7'-0"</text>
+<text x="238" y="112.5" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="169" y="65" class="rl-tag">5</text>
+<rect x="310" y="56" width="72" height="84" class="room k-elevator" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="85" text-anchor="middle" class="rl-name">Elevator</text>
+<text x="346" y="96" text-anchor="middle" class="rl-name">(glass)</text>
+<text x="346" y="107" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="346" y="118" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="313" y="65" class="rl-tag">6</text>
+<rect x="238" y="140" width="144" height="60" class="room k-lobby" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="162.5" text-anchor="middle" class="rl-name">Private Arrival Lobby</text>
+<text x="310" y="173.5" text-anchor="middle" class="rl-dim">12'-0" × 5'-0"</text>
+<text x="310" y="184.5" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="241" y="149" class="rl-tag">7</text>
+<rect x="238" y="200" width="144" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="300.5" text-anchor="middle" class="rl-name">Master Lounge</text>
+<text x="310" y="311.5" text-anchor="middle" class="rl-dim">12'-0" × 18'-0"</text>
+<text x="310" y="322.5" text-anchor="middle" class="rl-dim">216 sf</text>
+<text x="241" y="209" class="rl-tag">8</text>
+<rect x="382" y="56" width="168" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="120.5" text-anchor="middle" class="rl-name">Dressing Room</text>
+<text x="466" y="131.5" text-anchor="middle" class="rl-dim">14'-0" × 12'-0"</text>
+<text x="466" y="142.5" text-anchor="middle" class="rl-dim">168 sf</text>
+<text x="385" y="65" class="rl-tag">9</text>
+<rect x="382" y="344" width="108" height="72" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="436" y="367" text-anchor="middle" class="rl-name">Morning Bar /</text>
+<text x="436" y="378" text-anchor="middle" class="rl-name">coffee</text>
+<text x="436" y="389" text-anchor="middle" class="rl-dim">9'-0" × 6'-0"</text>
+<text x="436" y="400" text-anchor="middle" class="rl-dim">54 sf</text>
+<text x="385" y="353" class="rl-tag">10</text>
+<rect x="490" y="344" width="60" height="72" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="520" y="367" text-anchor="middle" class="rl-name">Private</text>
+<text x="520" y="378" text-anchor="middle" class="rl-name">WC</text>
+<text x="520" y="389" text-anchor="middle" class="rl-dim">5'-0" × 6'-0"</text>
+<text x="520" y="400" text-anchor="middle" class="rl-dim">30 sf</text>
+<text x="493" y="353" class="rl-tag">11</text>
+<rect x="382" y="200" width="168" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="264.5" text-anchor="middle" class="rl-name">Master Sitting · fireplace</text>
+<text x="466" y="275.5" text-anchor="middle" class="rl-dim">14'-0" × 12'-0"</text>
+<text x="466" y="286.5" text-anchor="middle" class="rl-dim">168 sf</text>
+<text x="385" y="209" class="rl-tag">12</text>
+<rect x="550" y="272" width="120" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="610" y="331" text-anchor="middle" class="rl-name">Master Bath · double</text>
+<text x="610" y="342" text-anchor="middle" class="rl-name">vanity + tub</text>
+<text x="610" y="353" text-anchor="middle" class="rl-dim">10'-0" × 12'-0"</text>
+<text x="610" y="364" text-anchor="middle" class="rl-dim">120 sf</text>
+<text x="553" y="281" class="rl-tag">13</text>
+<rect x="670" y="272" width="60" height="144" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="700" y="331" text-anchor="middle" class="rl-name">Ocean</text>
+<text x="700" y="342" text-anchor="middle" class="rl-name">Shower</text>
+<text x="700" y="353" text-anchor="middle" class="rl-dim">5'-0" × 12'-0"</text>
+<text x="700" y="364" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="673" y="281" class="rl-tag">14</text>
+<rect x="550" y="56" width="180" height="216" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="640" y="156.5" text-anchor="middle" class="rl-name">Master Bed</text>
+<text x="640" y="167.5" text-anchor="middle" class="rl-dim">15'-0" × 18'-0"</text>
+<text x="640" y="178.5" text-anchor="middle" class="rl-dim">270 sf</text>
+<text x="553" y="65" class="rl-tag">15</text>
+<line x1="382" y1="46" x2="382" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="382" y="438" text-anchor="middle" class="rl-dim">S1 · 26'-0"</text>
+<line x1="550" y1="46" x2="550" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="550" y="438" text-anchor="middle" class="rl-dim">S2 · 40'-0"</text>
+<line x1="70" y1="34" x2="730" y2="34" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L3)" marker-end="url(#arr-L3)"/>
+<text x="400" y="29" text-anchor="middle" class="rl-dim">55'-0" overall (E–W)</text>
+<line x1="48" y1="56" x2="48" y2="416" stroke="currentColor" stroke-width="1" marker-start="url(#arr-L3)" marker-end="url(#arr-L3)"/>
+<text transform="translate(42 236) rotate(-90)" text-anchor="middle" class="rl-dim">30'-0" overall (N–S)</text>
+<line x1="70" y1="460" x2="730" y2="460" stroke="currentColor" stroke-width="0.8"/>
+<line x1="70" y1="456" x2="70" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="166" y1="456" x2="166" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="238" y1="456" x2="238" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="310" y1="456" x2="310" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="382" y1="456" x2="382" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="490" y1="456" x2="490" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="550" y1="456" x2="550" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="670" y1="456" x2="670" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="456" x2="730" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<text x="118" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text x="202" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="274" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="346" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="436" y="454" text-anchor="middle" class="rl-chain">9'-0"</text>
+<text x="520" y="454" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text x="610" y="454" text-anchor="middle" class="rl-chain">10'-0"</text>
+<text x="700" y="454" text-anchor="middle" class="rl-chain">5'-0"</text>
+<line x1="756" y1="56" x2="756" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="416" x2="760" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="344" x2="760" y2="344" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="284" x2="760" y2="284" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="272" x2="760" y2="272" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="200" x2="760" y2="200" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="140" x2="760" y2="140" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="56" x2="760" y2="56" stroke="currentColor" stroke-width="0.8"/>
+<text transform="translate(764 380) rotate(90)" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text transform="translate(764 314) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 236) rotate(90)" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text transform="translate(764 170) rotate(90)" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text transform="translate(764 98) rotate(90)" text-anchor="middle" class="rl-chain">7'-0"</text>
+<text x="738" y="26" text-anchor="end" class="rl-orient">ATLANTIC OCEAN · EAST →</text>
+<text x="62" y="26" text-anchor="start" class="rl-orient">← N SURF RD · CITY · WEST</text>
+<g class="north"><circle cx="766" cy="432" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M766,421 L771,438 L766,434 L761,438 z" fill="currentColor"/><text x="766" y="458" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Residential Level 3 · Primary suite · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S2 stack through every level · numbers key to the room table.</figcaption></figure>
+  <div class="chips"><div class="chip"><span>Envelope</span><b>1,650 sf</b></div><div class="chip"><span>Enclosed</span><b>1,464 sf</b></div><div class="chip"><span>Core (stair · elevator · lobby)</span><b>186 sf</b></div><div class="chip"><span>Bathrooms</span><b>210 sf</b></div><div class="chip"><span>Closets</span><b>224 sf</b></div><div class="chip"><span>Circulation (lobby · foyer · halls)</span><b>60 sf</b></div><div class="chip net"><span>Net usable (enclosed × 0.88)</span><b>≈ 1,288 sf</b></div></div>
+  <div class="notes"><ul>
+    <li>Arrival lobby → dressing room → bed, or lobby → master lounge → sitting → bed. Bed (15' × 18') and the 5' × 12' ocean shower both touch the east face; the double-vanity bath with tub sits between them at the glass.</li>
+    <li>No office, no second bedroom. The west 14' strip (gym, sauna/steam, laundry, mechanical) is optional program.</li>
+    <li>Ceiling under the pool zone (x 40'–55') drops to ≈8'-6" to recess the pool shell 2'-6".</li>
+  </ul></div>
+  <div class="tablewrap"><table class="rooms"><thead><tr><th>#</th><th>Room</th><th>Type</th><th>Gross dims</th><th class="num">Gross sf</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1</td><td>Private Gym / Yoga</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 11'-0"</td><td class="mono num">154</td><td class="note">Optional program: can become a west terrace or second dressing room</td></tr>
+<tr><td class="num">2</td><td>Spa · sauna + steam</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 7'-0"</td><td class="mono num">98</td><td class="note"></td></tr>
+<tr><td class="num">3</td><td>Laundry 2 / Linen</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 5'-0"</td><td class="mono num">70</td><td class="note"></td></tr>
+<tr><td class="num">4</td><td>Mech / AC closet</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 7'-0"</td><td class="mono num">56</td><td class="note">Stacks over the L2 bath and L1 powder</td></tr>
+<tr><td class="num">5</td><td>Stair</td><td class="mono">Stair</td><td class="mono">12'-0" × 7'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">6</td><td>Elevator (glass)</td><td class="mono">Elevator</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note"></td></tr>
+<tr><td class="num">7</td><td>Private Arrival Lobby</td><td class="mono">Lobby</td><td class="mono">12'-0" × 5'-0"</td><td class="mono num">60</td><td class="note"></td></tr>
+<tr><td class="num">8</td><td>Master Lounge</td><td class="mono">Enclosed</td><td class="mono">12'-0" × 18'-0"</td><td class="mono num">216</td><td class="note">Hub of the suite; opens to gym, spa, sitting and morning bar</td></tr>
+<tr><td class="num">9</td><td>Dressing Room</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 12'-0"</td><td class="mono num">168</td><td class="note">His &amp; hers; opens to the lobby and the bed</td></tr>
+<tr><td class="num">10</td><td>Morning Bar / coffee</td><td class="mono">Enclosed</td><td class="mono">9'-0" × 6'-0"</td><td class="mono num">54</td><td class="note"></td></tr>
+<tr><td class="num">11</td><td>Private WC</td><td class="mono">Enclosed</td><td class="mono">5'-0" × 6'-0"</td><td class="mono num">30</td><td class="note"></td></tr>
+<tr><td class="num">12</td><td>Master Sitting · fireplace</td><td class="mono">Enclosed</td><td class="mono">14'-0" × 12'-0"</td><td class="mono num">168</td><td class="note">Continuous with the sleeping area</td></tr>
+<tr><td class="num">13</td><td>Master Bath · double vanity + tub</td><td class="mono">Enclosed</td><td class="mono">10'-0" × 12'-0"</td><td class="mono num">120</td><td class="note">Tub at the glass; stacks over the ocean-suite bath</td></tr>
+<tr><td class="num">14</td><td>Ocean Shower</td><td class="mono">Enclosed</td><td class="mono">5'-0" × 12'-0"</td><td class="mono num">60</td><td class="note">Faces the Atlantic; fritted low band for privacy</td></tr>
+<tr><td class="num">15</td><td>Master Bed</td><td class="mono">Enclosed</td><td class="mono">15'-0" × 18'-0"</td><td class="mono num">270</td><td class="note">Bed faces the ocean; no walls to the sitting area</td></tr></tbody>
+<tfoot><tr><td></td><td colspan="3">Envelope total</td><td class="mono num">1,650</td><td></td></tr></tfoot></table></div>
+</section>
+<section class="sheet" id="a-105">
+  <header class="sheet-head"><span class="sheet-num">A-105</span><div><h2>Rooftop amenity deck</h2><p class="sheet-sub">Infinity pool east · covered gourmet and swim-up bar center · fire pit lounge west</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  
+  <figure class="fig"><div class="figwrap"><svg class="plan" viewBox="0 0 800 472" role="img" aria-label="Rooftop amenity deck plan, 55 by 30 foot envelope, ocean to the east" xmlns="http://www.w3.org/2000/svg">
+<defs><marker id="arr-roof" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  <pattern id="hatch-roof" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern>
+  <pattern id="water-roof" width="14" height="6" patternUnits="userSpaceOnUse"><path d="M0,3 q3.5,-3 7,0 t7,0" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.35"/></pattern></defs>
+<rect x="70" y="56" width="660" height="360" class="env" fill="none" stroke="currentColor" stroke-width="2.5"/>
+<rect x="70" y="56" width="96" height="84" class="room k-enclosed" stroke="currentColor" stroke-width="1"/>
+<text x="118" y="90.5" text-anchor="middle" class="rl-name">Rooftop Bath</text>
+<text x="118" y="101.5" text-anchor="middle" class="rl-dim">8'-0" × 7'-0"</text>
+<text x="118" y="112.5" text-anchor="middle" class="rl-dim">56 sf</text>
+<text x="73" y="65" class="rl-tag">1</text>
+<rect x="166" y="56" width="144" height="84" class="room k-stair" stroke="currentColor" stroke-width="1"/>
+<text x="238" y="90.5" text-anchor="middle" class="rl-name">Stair</text>
+<text x="238" y="101.5" text-anchor="middle" class="rl-dim">12'-0" × 7'-0"</text>
+<text x="238" y="112.5" text-anchor="middle" class="rl-dim">84 sf</text>
+<text x="169" y="65" class="rl-tag">2</text>
+<rect x="310" y="56" width="72" height="84" class="room k-elevator" stroke="currentColor" stroke-width="1"/>
+<text x="346" y="79.5" text-anchor="middle" class="rl-name">Elevator</text>
+<text x="346" y="90.5" text-anchor="middle" class="rl-name">bulkhead</text>
+<text x="346" y="101.5" text-anchor="middle" class="rl-name">(glass)</text>
+<text x="346" y="112.5" text-anchor="middle" class="rl-dim">6'-0" × 7'-0"</text>
+<text x="346" y="123.5" text-anchor="middle" class="rl-dim">42 sf</text>
+<text x="313" y="65" class="rl-tag">3</text>
+<rect x="238" y="140" width="144" height="60" class="room k-lobby" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="162.5" text-anchor="middle" class="rl-name">Lobby</text>
+<text x="310" y="173.5" text-anchor="middle" class="rl-dim">12'-0" × 5'-0"</text>
+<text x="310" y="184.5" text-anchor="middle" class="rl-dim">60 sf</text>
+<text x="241" y="149" class="rl-tag">4</text>
+<rect x="70" y="200" width="168" height="216" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="295" text-anchor="middle" class="rl-name">Fire Pit Lounge · sunset</text>
+<text x="154" y="306" text-anchor="middle" class="rl-name">deck</text>
+<text x="154" y="317" text-anchor="middle" class="rl-dim">14'-0" × 18'-0"</text>
+<text x="154" y="328" text-anchor="middle" class="rl-dim">252 sf</text>
+<text x="73" y="209" class="rl-tag">5</text>
+<rect x="70" y="140" width="168" height="60" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="154" y="162.5" text-anchor="middle" class="rl-name">Planters / sunset seating</text>
+<text x="154" y="173.5" text-anchor="middle" class="rl-dim">14'-0" × 5'-0"</text>
+<text x="154" y="184.5" text-anchor="middle" class="rl-dim">70 sf</text>
+<text x="73" y="149" class="rl-tag">6</text>
+<rect x="238" y="200" width="144" height="216" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="310" y="300.5" text-anchor="middle" class="rl-name">Central deck</text>
+<text x="310" y="311.5" text-anchor="middle" class="rl-dim">12'-0" × 18'-0"</text>
+<text x="310" y="322.5" text-anchor="middle" class="rl-dim">216 sf</text>
+<text x="241" y="209" class="rl-tag">7</text>
+<rect x="382" y="320" width="168" height="96" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="466" y="355" text-anchor="middle" class="rl-name">Pool-side dining terrace</text>
+<text x="466" y="366" text-anchor="middle" class="rl-name">(open)</text>
+<text x="466" y="377" text-anchor="middle" class="rl-dim">14'-0" × 8'-0"</text>
+<text x="466" y="388" text-anchor="middle" class="rl-dim">112 sf</text>
+<text x="385" y="329" class="rl-tag">8</text>
+<rect x="382" y="194" width="168" height="126" class="room k-covered_outdoor" stroke="currentColor" stroke-width="1"/>
+<rect x="385" y="197" width="162" height="120" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+<text x="466" y="244" text-anchor="middle" class="rl-name">Covered dining extension</text>
+<text x="466" y="255" text-anchor="middle" class="rl-name">(Option B only)</text>
+<text x="466" y="266" text-anchor="middle" class="rl-dim">14'-0" × 10'-6"</text>
+<text x="466" y="277" text-anchor="middle" class="rl-dim">147 sf</text>
+<text x="385" y="203" class="rl-tag">9</text>
+<rect x="382" y="56" width="168" height="138" class="room k-covered_outdoor" stroke="currentColor" stroke-width="1"/>
+<rect x="385" y="59" width="162" height="132" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+<text x="466" y="106.5" text-anchor="middle" class="rl-name">Covered Gourmet · outdoor</text>
+<text x="466" y="117.5" text-anchor="middle" class="rl-name">kitchen + granite wet-bar</text>
+<text x="466" y="128.5" text-anchor="middle" class="rl-name">counter (Option A core)</text>
+<text x="466" y="139.5" text-anchor="middle" class="rl-dim">14'-0" × 11'-6"</text>
+<text x="466" y="150.5" text-anchor="middle" class="rl-dim">161 sf</text>
+<text x="385" y="65" class="rl-tag">10</text>
+<rect x="550" y="320" width="60" height="96" class="room k-pool" stroke="currentColor" stroke-width="1"/>
+<rect x="550" y="320" width="60" height="96" fill="url(#water-roof)" stroke="none"/>
+<text transform="translate(561.5 368) rotate(-90)" text-anchor="middle" class="rl-name">Wide entry</text>
+<text transform="translate(572.5 368) rotate(-90)" text-anchor="middle" class="rl-name">steps (in</text>
+<text transform="translate(583.5 368) rotate(-90)" text-anchor="middle" class="rl-name">water)</text>
+<text transform="translate(594.5 368) rotate(-90)" text-anchor="middle" class="rl-dim">5'-0" × 8'-0"</text>
+<text transform="translate(605.5 368) rotate(-90)" text-anchor="middle" class="rl-dim">40 sf</text>
+<text x="553" y="329" class="rl-tag">11</text>
+<rect x="550" y="194" width="60" height="126" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="580" y="238.5" text-anchor="middle" class="rl-name">Pool</text>
+<text x="580" y="249.5" text-anchor="middle" class="rl-name">walkway</text>
+<text x="580" y="260.5" text-anchor="middle" class="rl-name">(west)</text>
+<text x="580" y="271.5" text-anchor="middle" class="rl-dim">5'-0" × 10'-6"</text>
+<text x="580" y="282.5" text-anchor="middle" class="rl-dim">53 sf</text>
+<text x="553" y="203" class="rl-tag">12</text>
+<rect x="550" y="92" width="60" height="102" class="room k-pool" stroke="currentColor" stroke-width="1"/>
+<rect x="550" y="92" width="60" height="102" fill="url(#water-roof)" stroke="none"/>
+<text transform="translate(561.5 143) rotate(-90)" text-anchor="middle" class="rl-name">Swim-up Bar</text>
+<text transform="translate(572.5 143) rotate(-90)" text-anchor="middle" class="rl-name">(water at the</text>
+<text transform="translate(583.5 143) rotate(-90)" text-anchor="middle" class="rl-name">counter)</text>
+<text transform="translate(594.5 143) rotate(-90)" text-anchor="middle" class="rl-dim">5'-0" × 8'-6"</text>
+<text transform="translate(605.5 143) rotate(-90)" text-anchor="middle" class="rl-dim">43 sf</text>
+<text x="553" y="101" class="rl-tag">13</text>
+<rect x="550" y="56" width="180" height="36" class="room k-outdoor" stroke="currentColor" stroke-width="1"/>
+<text x="640" y="77.5" text-anchor="middle" class="rl-key">14</text>
+<text x="553" y="65" class="rl-tag">14</text>
+<rect x="610" y="320" width="120" height="96" class="room k-pool" stroke="currentColor" stroke-width="1"/>
+<rect x="610" y="320" width="120" height="96" fill="url(#water-roof)" stroke="none"/>
+<text x="670" y="355" text-anchor="middle" class="rl-name">Baja Sun Shelf +</text>
+<text x="670" y="366" text-anchor="middle" class="rl-name">in-water loungers</text>
+<text x="670" y="377" text-anchor="middle" class="rl-dim">10'-0" × 8'-0"</text>
+<text x="670" y="388" text-anchor="middle" class="rl-dim">80 sf</text>
+<text x="613" y="329" class="rl-tag">15</text>
+<rect x="610" y="92" width="120" height="228" class="room k-pool" stroke="currentColor" stroke-width="1"/>
+<rect x="610" y="92" width="120" height="228" fill="url(#water-roof)" stroke="none"/>
+<text x="670" y="193" text-anchor="middle" class="rl-name">Main Pool · infinity</text>
+<text x="670" y="204" text-anchor="middle" class="rl-name">edge east</text>
+<text x="670" y="215" text-anchor="middle" class="rl-dim">10'-0" × 19'-0"</text>
+<text x="670" y="226" text-anchor="middle" class="rl-dim">190 sf</text>
+<text x="613" y="101" class="rl-tag">16</text>
+<line x1="382" y1="46" x2="382" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="382" y="438" text-anchor="middle" class="rl-dim">S1 · 26'-0"</text>
+<line x1="550" y1="46" x2="550" y2="426" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" opacity="0.7"/>
+<text x="550" y="438" text-anchor="middle" class="rl-dim">S2 · 40'-0"</text>
+<line x1="70" y1="34" x2="730" y2="34" stroke="currentColor" stroke-width="1" marker-start="url(#arr-roof)" marker-end="url(#arr-roof)"/>
+<text x="400" y="29" text-anchor="middle" class="rl-dim">55'-0" overall (E–W)</text>
+<line x1="48" y1="56" x2="48" y2="416" stroke="currentColor" stroke-width="1" marker-start="url(#arr-roof)" marker-end="url(#arr-roof)"/>
+<text transform="translate(42 236) rotate(-90)" text-anchor="middle" class="rl-dim">30'-0" overall (N–S)</text>
+<line x1="70" y1="460" x2="730" y2="460" stroke="currentColor" stroke-width="0.8"/>
+<line x1="70" y1="456" x2="70" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="166" y1="456" x2="166" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="238" y1="456" x2="238" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="310" y1="456" x2="310" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="382" y1="456" x2="382" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="550" y1="456" x2="550" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="610" y1="456" x2="610" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<line x1="730" y1="456" x2="730" y2="464" stroke="currentColor" stroke-width="0.8"/>
+<text x="118" y="454" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text x="202" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="274" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="346" y="454" text-anchor="middle" class="rl-chain">6'-0"</text>
+<text x="466" y="454" text-anchor="middle" class="rl-chain">14'-0"</text>
+<text x="580" y="454" text-anchor="middle" class="rl-chain">5'-0"</text>
+<text x="670" y="454" text-anchor="middle" class="rl-chain">10'-0"</text>
+<line x1="756" y1="56" x2="756" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="416" x2="760" y2="416" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="320" x2="760" y2="320" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="200" x2="760" y2="200" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="194" x2="760" y2="194" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="140" x2="760" y2="140" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="92" x2="760" y2="92" stroke="currentColor" stroke-width="0.8"/>
+<line x1="752" y1="56" x2="760" y2="56" stroke="currentColor" stroke-width="0.8"/>
+<text transform="translate(764 368) rotate(90)" text-anchor="middle" class="rl-chain">8'-0"</text>
+<text transform="translate(764 260) rotate(90)" text-anchor="middle" class="rl-chain">10'-0"</text>
+<text transform="translate(764 167) rotate(90)" text-anchor="middle" class="rl-chain">4'-6"</text>
+<text transform="translate(764 116) rotate(90)" text-anchor="middle" class="rl-chain">4'-0"</text>
+<text transform="translate(764 74) rotate(90)" text-anchor="middle" class="rl-chain">3'-0"</text>
+<text x="738" y="26" text-anchor="end" class="rl-orient">ATLANTIC OCEAN · EAST →</text>
+<text x="62" y="26" text-anchor="start" class="rl-orient">← N SURF RD · CITY · WEST</text>
+<g class="north"><circle cx="766" cy="432" r="14" fill="none" stroke="currentColor" stroke-width="1"/><path d="M766,421 L771,438 L766,434 L761,438 z" fill="currentColor"/><text x="766" y="458" text-anchor="middle" class="rl-dim">N</text></g>
+</svg></div><figcaption>Rooftop amenity deck · gross room dimensions inside the 30' × 55' envelope · structural lines S1–S2 stack through every level · numbers key to the room table.</figcaption></figure>
+  <div class="chips"><div class="chip"><span>Envelope</span><b>1,650 sf</b></div><div class="chip"><span>Enclosed</span><b>56 sf</b></div><div class="chip"><span>Core (stair · elevator · lobby)</span><b>186 sf</b></div><div class="chip"><span>Open outdoor</span><b>748 sf</b></div><div class="chip"><span>Covered outdoor</span><b>308 sf</b></div><div class="chip"><span>Pool</span><b>353 sf</b></div><div class="chip"><span>Bathrooms</span><b>56 sf</b></div><div class="chip"><span>Circulation (lobby · foyer · halls)</span><b>60 sf</b></div><div class="chip net"><span>Net usable (enclosed × 0.88)</span><b>≈ 49 sf</b></div></div>
+  <div class="notes"><ul>
+    <li>Three experiences: fire pit lounge and planters on the west (sunset, city), covered gourmet in the center, water on the east.</li>
+    <li>The granite counter runs along the pool edge at x = 40': bar seating on the deck side, swim-up stools in the water on the pool side. Option A (161 sf) is the covered kitchen/counter bay; Option B adds the 147 sf covered dining bay south of it.</li>
+    <li>Pool: wide in-water steps (5' × 8') into a 10' × 8' Baja shelf with loungers, a 10' × 19' main pool 4'–5' deep, and a 5' × 8'-6" swim-up bar; infinity edge along the full east face with a 3' walkway on the north to reach it.</li>
+    <li>Rooftop bath (8' × 7') sits west of the stair, out of the ocean frontage. Bulkhead, bath and canopy heights are subject to the projection review.</li>
+  </ul></div>
+  <div class="tablewrap"><table class="rooms"><thead><tr><th>#</th><th>Room</th><th>Type</th><th>Gross dims</th><th class="num">Gross sf</th><th>Notes</th></tr></thead><tbody><tr><td class="num">1</td><td>Rooftop Bath</td><td class="mono">Enclosed</td><td class="mono">8'-0" × 7'-0"</td><td class="mono num">56</td><td class="note">WC, vanity, shower; behind the stair</td></tr>
+<tr><td class="num">2</td><td>Stair</td><td class="mono">Stair</td><td class="mono">12'-0" × 7'-0"</td><td class="mono num">84</td><td class="note"></td></tr>
+<tr><td class="num">3</td><td>Elevator bulkhead (glass)</td><td class="mono">Elevator</td><td class="mono">6'-0" × 7'-0"</td><td class="mono num">42</td><td class="note"></td></tr>
+<tr><td class="num">4</td><td>Lobby</td><td class="mono">Lobby</td><td class="mono">12'-0" × 5'-0"</td><td class="mono num">60</td><td class="note"></td></tr>
+<tr><td class="num">5</td><td>Fire Pit Lounge · sunset deck</td><td class="mono">Open outdoor</td><td class="mono">14'-0" × 18'-0"</td><td class="mono num">252</td><td class="note">Built-in seating, fire pit, planters; city view</td></tr>
+<tr><td class="num">6</td><td>Planters / sunset seating</td><td class="mono">Open outdoor</td><td class="mono">14'-0" × 5'-0"</td><td class="mono num">70</td><td class="note"></td></tr>
+<tr><td class="num">7</td><td>Central deck</td><td class="mono">Open outdoor</td><td class="mono">12'-0" × 18'-0"</td><td class="mono num">216</td><td class="note"></td></tr>
+<tr><td class="num">8</td><td>Pool-side dining terrace (open)</td><td class="mono">Open outdoor</td><td class="mono">14'-0" × 8'-0"</td><td class="mono num">112</td><td class="note"></td></tr>
+<tr><td class="num">9</td><td>Covered dining extension (Option B only)</td><td class="mono">Covered outdoor</td><td class="mono">14'-0" × 10'-6"</td><td class="mono num">147</td><td class="note">Subject to rooftop-coverage variance</td></tr>
+<tr><td class="num">10</td><td>Covered Gourmet · outdoor kitchen + granite wet-bar counter (Option A core)</td><td class="mono">Covered outdoor</td><td class="mono">14'-0" × 11'-6"</td><td class="mono num">161</td><td class="note">161 sf ≈ 10% of ground floor; counter along the pool edge</td></tr>
+<tr><td class="num">11</td><td>Wide entry steps (in water)</td><td class="mono">Pool</td><td class="mono">5'-0" × 8'-0"</td><td class="mono num">40</td><td class="note">Full-width steps down into the sun shelf</td></tr>
+<tr><td class="num">12</td><td>Pool walkway (west)</td><td class="mono">Open outdoor</td><td class="mono">5'-0" × 10'-6"</td><td class="mono num">53</td><td class="note"></td></tr>
+<tr><td class="num">13</td><td>Swim-up Bar (water at the counter)</td><td class="mono">Pool</td><td class="mono">5'-0" × 8'-6"</td><td class="mono num">43</td><td class="note">Wet bar shares the granite counter with the gourmet area</td></tr>
+<tr><td class="num">14</td><td>Infinity-edge walkway (north)</td><td class="mono">Open outdoor</td><td class="mono">15'-0" × 3'-0"</td><td class="mono num">45</td><td class="note">Reaches the east edge for maintenance and views</td></tr>
+<tr><td class="num">15</td><td>Baja Sun Shelf + in-water loungers</td><td class="mono">Pool</td><td class="mono">10'-0" × 8'-0"</td><td class="mono num">80</td><td class="note">10-in deep; infinity edge continues along x=55</td></tr>
+<tr><td class="num">16</td><td>Main Pool · infinity edge east</td><td class="mono">Pool</td><td class="mono">10'-0" × 19'-0"</td><td class="mono num">190</td><td class="note">4'-0&quot; to 5'-0&quot; deep; overflow trough at the east face</td></tr></tbody>
+<tfoot><tr><td></td><td colspan="3">Envelope total</td><td class="mono num">1,650</td><td></td></tr></tfoot></table></div>
+</section>
+<section class="sheet" id="a-201">
+  <header class="sheet-head"><span class="sheet-num">A-201</span><div><h2>Area schedule</h2><p class="sheet-sub">All figures derive from the plan rectangles on sheets A-101 to A-105</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  <div class="tablewrap"><table class="sched"><thead><tr><th>Item</th><th class="num">sf</th></tr></thead><tbody><tr><td>Ground garage / access (garage + storage + mechanical + core)</td><td class="mono num">1,524</td></tr><tr><td>Level 1 enclosed (incl. core)</td><td class="mono num">1,500</td></tr><tr><td>Level 1 outdoor</td><td class="mono num">150</td></tr><tr><td>Level 2 enclosed (incl. core)</td><td class="mono num">1,650</td></tr><tr><td>Level 2 outdoor</td><td class="mono num">0</td></tr><tr><td>Level 3 enclosed (incl. core)</td><td class="mono num">1,650</td></tr><tr><td>Level 3 outdoor</td><td class="mono num">0</td></tr><tr><td>Rooftop open deck (walkways, lounges, fire pit)</td><td class="mono num">748</td></tr><tr><td>Rooftop pool (water surface incl. shelf and swim-up zone)</td><td class="mono num">353</td></tr><tr><td>Rooftop covered — Option B as drawn (gourmet canopy)</td><td class="mono num">308</td></tr><tr><td>Rooftop covered — Option A subset (code-conservative)</td><td class="mono num">161</td></tr><tr><td>Rooftop enclosed (bath + core at roof)</td><td class="mono num">242</td></tr></tbody><tfoot><tr><td>Total enclosed residential (L1 + L2 + L3, incl. core)</td><td class="mono num">4,800</td></tr><tr><td>Total garage / access</td><td class="mono num">1,524</td></tr><tr><td>Total covered rooftop (Option B)</td><td class="mono num">308</td></tr><tr><td>Total outdoor amenity (balconies + roof deck + pool)</td><td class="mono num">1,250</td></tr><tr><td>Total under roof, all levels incl. rooftop enclosures (gross)</td><td class="mono num">7,000</td></tr></tfoot></table></div>
+  <p class="fine">Gross figures are wall-centerline areas taken directly from the plan rectangles (the same numbers printed on each sheet). Net usable is estimated at 88% of enclosed gross to allow for walls, shafts and chases; the architect of record will replace it with measured net. Nothing outside the 30' × 55' envelope is counted.</p>
+</section>
+<section class="sheet" id="a-301">
+  <header class="sheet-head"><span class="sheet-num">A-301</span><div><h2>Approvals matrix</h2><p class="sheet-sub">Every element that needs a variance, a confirmation or an agency approval</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  <div class="tablewrap"><table class="matrix"><thead><tr><th>Design element</th><th>Requires</th><th>Status</th><th>Why / what to confirm</th></tr></thead><tbody>
+<tr><td>30' × 55' envelope (front 20', sides 5', rear 5')</td><td><span class="req req-variance">City variance</span></td><td><span class="st st-variance">Subject to variance</span></td><td>Four dimensional variances from the by-right 25' / 7'-6" / 15'. Precedent claimed at 5405 N Surf Rd (2023); exact numbers to be confirmed from the staff report.</td></tr>
+<tr><td>Three residential stories over parking, ≈42' above grade</td><td><span class="req req-zoning">Zoning confirmation</span> <span class="req req-variance">City variance</span></td><td><span class="st st-risk">Feasibility risk</span></td><td>Depends on the height datum and story-count rule. If measured from established grade, needs height and story variances.</td></tr>
+<tr><td>Lot of 3,146 sf below the 5,800 sf minimum</td><td><span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-confirm">To confirm</span></td><td>Rely on the "or as platted" / lot-of-record provision; get a written determination.</td></tr>
+<tr><td>Exterior entry stair and driveway apron in the 20' front zone</td><td><span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-confirm">To confirm</span></td><td>Open stairs are usually an allowed projection (§4.23, 25% of yard up to 6'); the stair is drawn deeper than 6' into the yard.</td></tr>
+<tr><td>L1 ocean terrace 5' × 30'</td><td><span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-byright">Expected by right</span></td><td>Carved inside the envelope; no projection assumed. Only the envelope variance applies.</td></tr>
+<tr><td>Rooftop covered gourmet · Option A 161 sf</td><td><span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-byright">Expected by right</span></td><td>≈10% of the 1,650 sf ground floor, matching the scenery-loft allowance reported for §4.22(E). Confirm that the bulkhead and bath do not count against it.</td></tr>
+<tr><td>Rooftop covered gourmet · Option B 308 sf</td><td><span class="req req-variance">City variance</span></td><td><span class="st st-variance">Subject to variance</span></td><td>18.7% of ground floor. Precedent: 5405 N Surf Rd rooftop-coverage variance 24-V-45 (July 2024, snippet-level evidence).</td></tr>
+<tr><td>Rooftop bath enclosure (8' × 7')</td><td><span class="req req-zoning">Zoning confirmation</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>Enclosed rooftop space may count toward coverage or read as a story; plumbing on the roof needs building review.</td></tr>
+<tr><td>Elevator bulkhead ≈12' above the deck</td><td><span class="req req-zoning">Zoning confirmation</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>Height-exemption rules for non-occupiable projections must be read for NBDD-CZ specifically, not the §4.6 beach-CRA rule.</td></tr>
+<tr><td>Rooftop infinity pool (353 sf water, ≈130,000 lb with shell)</td><td><span class="req req-structural">Structural</span> <span class="req req-fdep">FDEP / CCCL</span> <span class="req req-building">Building code</span> <span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-confirm">To confirm</span></td><td>Transfer beams on lines x = 40' and the east face; FDEP treats pools outside the general permit; pool barrier, coping height and overflow trough need review.</td></tr>
+<tr><td>Pool equipment at ground level</td><td><span class="req req-flood">FEMA / flood</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>Equipment must sit at or above BFE + 1' (City §154.50 per snippet); alternative rooftop closet.</td></tr>
+<tr><td>Ground-level enclosures: garage, storage, mechanical</td><td><span class="req req-flood">FEMA / flood</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>VE zone: breakaway walls, flood openings not applicable, no finished space; AE / Coastal A: flood vents. Zone to be read from the FIRM.</td></tr>
+<tr><td>Glass elevator serving the flood level</td><td><span class="req req-flood">FEMA / flood</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>FEMA Technical Bulletin 4: cab, controls and pit below DFE need flood-resistant design or a landing above DFE.</td></tr>
+<tr><td>Pile foundation and 30-year erosion siting</td><td><span class="req req-fdep">FDEP / CCCL</span> <span class="req req-structural">Structural</span></td><td><span class="st st-confirm">To confirm</span></td><td>Rule 62B-33 siting and foundation criteria; exact CCCL and erosion-projection lines from FDEP.</td></tr>
+<tr><td>Grade sun deck east of the house</td><td><span class="req req-zoning">Zoning confirmation</span> <span class="req req-fdep">FDEP / CCCL</span> <span class="req req-flood">FEMA / flood</span></td><td><span class="st st-confirm">To confirm</span></td><td>Minor structure seaward of the CCCL; must stay landward of dune/vegetation lines and within the rear setback rules.</td></tr>
+<tr><td>Ocean-facing glazing and rooftop lighting</td><td><span class="req req-fdep">FDEP / CCCL</span> <span class="req req-building">Building code</span></td><td><span class="st st-confirm">To confirm</span></td><td>Marine-turtle lighting rules (tinted glass, shielded fixtures) for all seaward-facing openings.</td></tr>
+<tr><td>Two 9' garage bays behind two doors on a 20' apron</td><td><span class="req req-zoning">Zoning confirmation</span></td><td><span class="st st-confirm">To confirm</span></td><td>Confirm the parking count required for a single-family home and that tandem stalls satisfy it (5405 N Surf Rd needed a parking variance).</td></tr>
+</tbody></table></div>
+</section>
+<section class="sheet" id="a-401">
+  <header class="sheet-head"><span class="sheet-num">A-401</span><div><h2>Sources and method</h2><p class="sheet-sub">Primary sources checked, and what an adversarial re-check changed</p></div><span class="stamp">Conceptual · assumes setback variances · not for construction</span></header>
+  <p class="fine">Evidence level: the session's network policy blocked direct access to the primary hosts listed below, so the research agents could read search-engine snippets of those pages but not the full text. Every finding is therefore labelled at most "partially verified" until the next issue, when the workflow's adversarial re-check is complete.</p>
+<ul class="src">
+  <li>City of Hollywood Zoning and Land Development Regulations, hosted on American Legal Publishing (codelibrary.amlegal.com/codes/hollywood): Art. 4 §4.2(E) NBDD (multiple-family districts group), §4.22(E) supplemental regulations / scenery loft, §2.2 definitions (height from "established grade of the plot"). Note: the code is not on Municode.</li>
+  <li>City of Hollywood Code §154.50 Flood Damage Prevention: lowest residential floor at the FBC-required elevation or at least 18 in above the highest adjacent street crown; mechanical equipment at BFE + 1 ft (snippet).</li>
+  <li>Hollywood Legistar staff reports: 5405 N Surf Rd rooftop-coverage variance 24-V-45 (approved 9 Jul 2024, snippet); 501 S Surf Rd scenery-loft variance (sought 41%).</li>
+  <li>Florida Building Code, Residential, 8th ed. (2023) R322.2 and R322.3: A-zone lowest floor at BFE + 1 ft or DFE; V-zone bottom of lowest horizontal member at BFE + 1 ft or DFE; enclosure limits.</li>
+  <li>FEMA Technical Bulletins 4, 5 and 9 (elevators, free-of-obstruction, breakaway walls) — to be cited from fema.gov once reachable.</li>
+  <li>Florida DEP Coastal Construction Control Line program and Rule 62B-33 F.A.C.; FDEP note that swimming pools are not covered by the CCCL general permit.</li>
+  <li>Listing data for 5785 N Surf Rd (Zillow / MLS): Lot 20, Hollywood Central Beach, 40 × 80 ft, 3,146 sf, NBDD-CZ, vacant oceanfront.</li>
+</ul>
+<h3>Method</h3>
+<ul>
+  <li>Geometry: every room is a rectangle on a 6-inch grid inside the 30' × 55' box; a script checks that each level tiles exactly 1,650 sf with no overlaps, that the core is identical on all five levels, that the program (suite counts, orientation, shower on the east face, storage count, pool bounds) is met, and that the structural lines coincide with room edges on every level. The drawings and the schedule are rendered from the same file.</li>
+  <li>Verification: eight parallel research agents per regulatory topic, a completeness critic, gap-fill agents and an adversarial refutation pass over the critical claims. Running at the time of this issue.</li>
+  <li>Design: four independent core strategies are being scored by a three-judge panel and synthesized; the result replaces or confirms this preliminary scheme in the next issue.</li>
+</ul>
+</section>
+</main>
+<footer class="foot"><p>Preliminary conceptual study for the owner's use in early feasibility conversations. It is not a survey, a zoning determination, a permit drawing or engineering. Setbacks, height, coverage, flood and coastal items are labelled by status on sheet A-301; nothing marked "subject to variance" or "to confirm" is represented as compliant.</p></footer>
+</div>
