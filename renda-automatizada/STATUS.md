@@ -1,6 +1,6 @@
 # STATUS — Fase 0 (Setup)
 
-Atualizado: 2026-09-17
+Atualizado: 2026-09-17 (v2)
 
 | Item | Estado | Observação |
 |---|---|---|
@@ -11,10 +11,20 @@ Atualizado: 2026-09-17
 | `config/score.yaml` (rascunho de pesos) | ✅ rascunho | Congelar antes do Gate 1 |
 | `config/licenses.md` | ✅ vazio por design | Preenche na Fase 2 |
 
+## Fase 1 — ferramentas prontas para rodar no Mac (decisão: coleta roda no Mac, respostas no chat)
+| Item | Estado | Arquivo |
+|---|---|---|
+| Coletor YouTube (descoberta, snapshots diários, vídeos, uploads, métricas derivadas) | ✅ testado com API simulada | `research/fase1_coleta.py`, `config/categorias.json` |
+| Coletor KDP (busca → página do produto → BSR, preço, avaliações, data, páginas, IA) | ✅ parser testado com HTML de exemplo; não testado contra a Amazon real | `research/kdp_coleta.py`, `config/kdp_nichos.json`, `research/KDP_MANUAL.md` |
+| Coletor de evidências de receita (Empire Flippers, Flippa, Motion Invest, Acquire) | ✅ escrito; páginas JS/login caem para manual | `research/evidencias_coleta.py`, `config/evidencias_fontes.json`, `research/EVIDENCIAS_MANUAL.md` |
+| Envio automático dos dados para o repositório | ✅ | `research/sync.sh` |
+| Agendador diário do Mac (launchd 08:00) | ✅ | `research/install_launchd.sh`, `research/diario.sh` |
+| Passo a passo | ✅ | `research/COMO_RODAR.md`, `research/rodar.sh` |
+
 ## O que depende de você (em ordem)
-1. Criar a chave da API seguindo `research/GUIA_YOUTUBE_API.md` (10 min) e rodar `python3 research/test_key.py`.
-2. Rodar `python3 research/fetch_policies.py` e me avisar. Eu leio os textos e fecho o `policies.md`.
-3. Dizer se prefere que a coleta da Fase 1 rode no seu Mac (cron/launchd) ou por aqui. A API do Google respondeu desta sessão, então dá para rodar por aqui também se você me passar a chave num canal seguro. Recomendação: rodar no Mac, como combinado.
+1. Seguir `research/COMO_RODAR.md`: chave da API → `bash research/rodar.sh` → `bash research/install_launchd.sh`.
+2. Me dizer "rodou" no chat. Eu leio os dados enviados e respondo aqui.
+3. Se o coletor de evidências marcar `[MAN]`, fazer a coleta manual dos marketplaces (`research/EVIDENCIAS_MANUAL.md`).
 
 ## Gates
 - **Gate 1** (fim da Fase 1): ranking em `reports/oportunidades.md` → você escolhe até 3 pilotos. Nada é criado antes.

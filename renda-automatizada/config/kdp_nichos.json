@@ -1,0 +1,20 @@
+{
+  "_comentario": "Nichos de livros de colorir e low-content para a coleta 1B. 'busca' é o termo digitado na Amazon.com (livros). O coletor pega os ASINs das 2 primeiras páginas de resultado (~96 títulos) e abre cada página de produto para ler BSR, preço, avaliações, data e nº de páginas.",
+  "marketplace": "https://www.amazon.com",
+  "paginas_de_busca": 2,
+  "pausa_segundos": 4,
+  "nichos": [
+    {"id": "colorir_adultos_geral", "busca": "adult coloring book"},
+    {"id": "colorir_adultos_mandala", "busca": "mandala coloring book for adults"},
+    {"id": "colorir_adultos_bold_easy", "busca": "bold and easy coloring book"},
+    {"id": "colorir_criancas_animais", "busca": "animal coloring book for kids ages 4-8"},
+    {"id": "colorir_criancas_unicornio", "busca": "unicorn coloring book for kids"},
+    {"id": "colorir_palavroes", "busca": "swear word coloring book"},
+    {"id": "atividades_criancas", "busca": "activity book for kids ages 4-8"},
+    {"id": "caca_palavras_idosos", "busca": "large print word search puzzle book seniors"},
+    {"id": "sudoku", "busca": "sudoku puzzle book for adults"},
+    {"id": "planner_diario", "busca": "daily planner undated"},
+    {"id": "diario_gratidao", "busca": "gratitude journal for women"},
+    {"id": "logbook", "busca": "password log book"}
+  ]
+}

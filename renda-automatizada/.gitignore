@@ -19,3 +19,7 @@ venv/
 
 # macOS
 .DS_Store
+
+# Coleta KDP: HTML bruto fica local; logs locais
+data/kdp/raw/
+data/logs/

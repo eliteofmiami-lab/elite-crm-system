@@ -1,0 +1,22 @@
+{
+  "_comentario": "Fontes do filtro zero (prova de existência de operações com receita). O coletor baixa cada URL e salva o texto; se a página for renderizada por JavaScript ou exigir login, ele avisa e a coleta é manual (research/EVIDENCIAS_MANUAL.md).",
+  "fontes": [
+    {"id": "ef_api_listings", "tipo": "api", "confianca": "verificado (P&L auditado pelo marketplace)",
+     "url": "https://api.empireflippers.com/api/v1/listings/list?limit=100&sort=-listing_number",
+     "nota": "API pública usada pelo site do Empire Flippers. Se responder JSON, salva tudo e filtramos por monetização (YouTube/Display Advertising, Amazon KDP, Amazon Merch, Etsy)."},
+    {"id": "ef_marketplace", "tipo": "html", "confianca": "verificado",
+     "url": "https://empireflippers.com/marketplace/", "nota": "Página é renderizada por JavaScript; provável coleta manual."},
+    {"id": "flippa_youtube", "tipo": "html", "confianca": "autodeclarado (Flippa verifica só parte)",
+     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=open&sort_alias=most_relevant"},
+    {"id": "flippa_youtube_sold", "tipo": "html", "confianca": "autodeclarado",
+     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=sold"},
+    {"id": "flippa_amazon_kdp", "tipo": "html", "confianca": "autodeclarado",
+     "url": "https://flippa.com/search?search_template=most_relevant&filter%5Bproperty_type%5D%5B%5D=content&query=KDP"},
+    {"id": "flippa_etsy", "tipo": "html", "confianca": "autodeclarado",
+     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=ecommerce&query=etsy%20print%20on%20demand"},
+    {"id": "motioninvest", "tipo": "html", "confianca": "verificado (Motion Invest checa receita)",
+     "url": "https://motioninvest.com/websites-for-sale/"},
+    {"id": "acquire", "tipo": "html", "confianca": "autodeclarado",
+     "url": "https://acquire.com/marketplace/", "nota": "Exige login para ver números; coleta manual."}
+  ]
+}
