@@ -1,0 +1,3 @@
+# Fase 0 não precisa de nada além da biblioteca padrão do Python 3.10+.
+# (macOS: python3 vem com o Xcode Command Line Tools.)
+# Dependências de Fase 1/2 serão adicionadas aqui quando entrarem.

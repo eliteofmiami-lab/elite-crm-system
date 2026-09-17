@@ -1,0 +1,21 @@
+# Segredos — NUNCA commitar
+.env
+.env.*
+!.env.example
+
+# Cache da API e contador de quota (regenerável)
+data/cache/*
+!data/cache/.gitkeep
+data/quota_ledger.jsonl
+
+# Snapshots brutos das páginas de política (grandes; o resumo vai em config/policies.md)
+research/policies_raw/*/*.html
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS
+.DS_Store

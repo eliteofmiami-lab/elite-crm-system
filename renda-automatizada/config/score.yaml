@@ -1,0 +1,64 @@
+# Pesos do score 0–100 por oportunidade (Fase 1D). Edite à vontade; o gerador do ranking lê daqui.
+# Regra: quem não passa no filtro zero (3 operações com receita comprovada) recebe NO-GO ANTES do score.
+# Cada critério recebe nota 0–100; score = soma(peso × nota) / soma(pesos). Pesos abaixo somam 100.
+
+version: 0.1   # rascunho da Fase 0; congelar em 1.0 antes do Gate 1
+meta_usd_mes: 50000
+
+filtro_zero:
+  min_casos_validados: 3
+  receita_alvo_usd_mes: 50000
+  # ordem de confiança das evidências (mais alto = melhor)
+  confianca_fonte:
+    marketplace_aquisicao_pnl_verificado: 3   # Empire Flippers, Flippa, Acquire.com, Motion Invest (inclui vendidas)
+    painel_do_dono: 2                         # print YouTube Studio / relatório KDP
+    relatorio_ou_entrevista_com_numero: 1
+    estimativa_terceiros: 0                   # Social Blade, calculadoras de BSR → NUNCA conta como prova
+
+pesos:
+  receita_potencial_medida: 25      # views ou vendas medidas × RPM/royalty em faixa min–max (fonte citada)
+  custo_por_unidade: 10             # TTS + imagem + vídeo/música + render + publicação, preços oficiais dos provedores
+  risco_plataforma: 25              # 0 = passa em tudo de policies.md; 100 = é o que a regra proíbe (nota invertida)
+  grau_de_automacao_real: 15        # horas/semana que ficam com humano (evidência: horas do dono nas listagens)
+  tempo_ate_primeira_receita: 10    # requisitos YPP, prazo de pagamento KDP/distribuidora
+  saturacao: 10                     # nº de canais/títulos novos por mês no nicho (medido)
+  ativo_proprio: 5                  # bônus se usa audiência/produto que já converte (Jornada Green Card / Portal de Vagas)
+
+# Como cada nota é calculada (0–100). "sem dado" em qualquer critério → nota 0 e o relatório marca o buraco.
+notas:
+  receita_potencial_medida:
+    metodo: "nota = clamp(100 × receita_min_estimada / meta_usd_mes, 0, 100); usa o MÍNIMO da faixa, nunca o máximo"
+  custo_por_unidade:
+    metodo: "nota = 100 − clamp(100 × custo_unitario / receita_unitaria_min, 0, 100)"
+  risco_plataforma:
+    metodo: "nota = 100 − risco; risco é atribuído por checklist de policies.md (cada regra violada ou 'na mira' soma pontos)"
+    pontos_por_regra:
+      viola_regra_explicita: 100
+      na_mira_de_regra_recente_ou_ambigua: 50   # ex.: canal sem rosto com voz sintética e estrutura repetida (Y-01)
+      restricao_estrutural: 25                  # ex.: made-for-kids (Y-04/05), tier Standard Redbubble (P-04)
+  grau_de_automacao_real:
+    metodo: "nota = 100 − clamp(100 × horas_humano_semana / 40, 0, 100); fonte: horas do dono nas listagens dos casos validados"
+  tempo_ate_primeira_receita:
+    metodo: "≤ 30 dias = 100; 90 dias = 70; 180 dias = 40; 365 dias = 10; > 365 = 0"
+  saturacao:
+    metodo: "nota inversa ao nº de novos canais/títulos por mês medidos no nicho, normalizado entre as candidatas"
+  ativo_proprio:
+    metodo: "100 se a candidata distribui pela audiência/produto que já existe; 0 caso contrário"
+
+vereditos:
+  GO: {score_min: 70, exige_filtro_zero: true, exige_risco_plataforma_max: 50}
+  PILOTO_PEQUENO: {score_min: 50, exige_filtro_zero: true}
+  NO_GO: "abaixo de 50, ou falhou no filtro zero, ou risco_plataforma > 75"
+
+# Regra de kill/scale dos pilotos (Fase 2). Rascunho: valores a calibrar no Gate 1 com dado real.
+kill_scale:
+  janela_semanas: 8
+  checkpoints:
+    - semana: 2
+      minimo: "pipeline publica sem intervenção humana ≥ 5 dias seguidos; 0 violações no checklist de política"
+    - semana: 4
+      minimo: "crescimento medido de views/vendas semana a semana (delta positivo em 3 de 4 semanas)"
+    - semana: 8
+      minimo: "trajetória medida compatível com os marcos do YPP/primeira venda em ≤ 6 meses"
+  acao_se_falhar: pausar_automaticamente_e_reportar
+  acao_se_bater: dobrar_volume_semanal
