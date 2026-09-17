@@ -1,22 +1,259 @@
 {
   "_comentario": "Fontes do filtro zero (prova de existência de operações com receita). O coletor baixa cada URL e salva o texto; se a página for renderizada por JavaScript ou exigir login, ele avisa e a coleta é manual (research/EVIDENCIAS_MANUAL.md).",
   "fontes": [
-    {"id": "ef_api_listings", "tipo": "api", "confianca": "verificado (P&L auditado pelo marketplace)",
-     "url": "https://api.empireflippers.com/api/v1/listings/list?limit=100&sort=-listing_number",
-     "nota": "API pública usada pelo site do Empire Flippers. Se responder JSON, salva tudo e filtramos por monetização (YouTube/Display Advertising, Amazon KDP, Amazon Merch, Etsy)."},
-    {"id": "ef_marketplace", "tipo": "html", "confianca": "verificado",
-     "url": "https://empireflippers.com/marketplace/", "nota": "Página é renderizada por JavaScript; provável coleta manual."},
-    {"id": "flippa_youtube", "tipo": "html", "confianca": "autodeclarado (Flippa verifica só parte)",
-     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=open&sort_alias=most_relevant"},
-    {"id": "flippa_youtube_sold", "tipo": "html", "confianca": "autodeclarado",
-     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=sold"},
-    {"id": "flippa_amazon_kdp", "tipo": "html", "confianca": "autodeclarado",
-     "url": "https://flippa.com/search?search_template=most_relevant&filter%5Bproperty_type%5D%5B%5D=content&query=KDP"},
-    {"id": "flippa_etsy", "tipo": "html", "confianca": "autodeclarado",
-     "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=ecommerce&query=etsy%20print%20on%20demand"},
-    {"id": "motioninvest", "tipo": "html", "confianca": "verificado (Motion Invest checa receita)",
-     "url": "https://motioninvest.com/websites-for-sale/"},
-    {"id": "acquire", "tipo": "html", "confianca": "autodeclarado",
-     "url": "https://acquire.com/marketplace/", "nota": "Exige login para ver números; coleta manual."}
+    {
+      "id": "ef_api_listings",
+      "tipo": "api",
+      "confianca": "verificado (P&L auditado pelo marketplace)",
+      "url": "https://api.empireflippers.com/api/v1/listings/list?limit=100&sort=-listing_number",
+      "nota": "API pública usada pelo site do Empire Flippers. Se responder JSON, salva tudo e filtramos por monetização (YouTube/Display Advertising, Amazon KDP, Amazon Merch, Etsy)."
+    },
+    {
+      "id": "ef_marketplace",
+      "tipo": "html",
+      "confianca": "verificado",
+      "url": "https://empireflippers.com/marketplace/",
+      "nota": "Página é renderizada por JavaScript; provável coleta manual."
+    },
+    {
+      "id": "flippa_youtube",
+      "tipo": "html",
+      "confianca": "autodeclarado (Flippa verifica só parte)",
+      "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=open&sort_alias=most_relevant"
+    },
+    {
+      "id": "flippa_youtube_sold",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=youtube&filter%5Bstatus%5D=sold"
+    },
+    {
+      "id": "flippa_amazon_kdp",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/search?search_template=most_relevant&filter%5Bproperty_type%5D%5B%5D=content&query=KDP"
+    },
+    {
+      "id": "flippa_etsy",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/search?filter%5Bproperty_type%5D%5B%5D=ecommerce&query=etsy%20print%20on%20demand"
+    },
+    {
+      "id": "motioninvest",
+      "tipo": "html",
+      "confianca": "verificado (Motion Invest checa receita)",
+      "url": "https://motioninvest.com/websites-for-sale/"
+    },
+    {
+      "id": "acquire",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://acquire.com/marketplace/",
+      "nota": "Exige login para ver números; coleta manual."
+    },
+    {
+      "id": "fortune_adavia_davis",
+      "tipo": "html",
+      "confianca": "autodeclarado + verificação jornalística",
+      "url": "https://www.fortune.com/2025/12/30/ai-slop-faceless-youtube-accounts-adavia-davis-user-generated-content",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12650859_celebrity_mystery",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12650859",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_blog_faceless_economics",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/blog/the-economics-of-selling-a-faceless-youtube-asset-on-flippa/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_blog_textify_300k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/blog/how-a-faceless-youtube-channel-sold-for-300k/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_blog_600k_portfolio",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/blog/case-study-sell-youtube-channel-600k/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11980224",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11980224",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11748039_geld_magnet",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11748039",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12003832_afrolofi",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12003832",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_13402746_lofi_65k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/13402746",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12046659_finance_brand",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12046659",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12306638",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12306638",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11899348_political_shorts",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11899348",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12166520_sciencenine",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12166520",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12017423_dogbrain",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12017423",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11860755_stoic",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11860755",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "ef_kdp_marketplace",
+      "tipo": "html",
+      "confianca": "verificado",
+      "url": "https://empireflippers.com/marketplace/amazon-kdp-businesses-for-sale/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "ef_youtube_marketplace",
+      "tipo": "html",
+      "confianca": "verificado",
+      "url": "https://empireflippers.com/marketplace/youtube-businesses-for-sale/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "ef_merch_marketplace",
+      "tipo": "html",
+      "confianca": "verificado",
+      "url": "https://empireflippers.com/marketplace/amazon-merch-businesses-for-sale/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_blog_kdp_255k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/blog/sell-amazon-kdp-business-case-study/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11843621_kdp_126k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11843621",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11908760_kdp",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11908760",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11748197_kdp_190k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11748197",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_12204949_kdp",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/12204949",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_11811919_kdp_7k",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/11811919",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "flippa_kdp_category",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://flippa.com/buy/monetization/amazon-kdp",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "musicradar_aoyama",
+      "tipo": "html",
+      "confianca": "autodeclarado",
+      "url": "https://www.musicradar.com/news/japanese-ambient-musician-michiru-aoyama-has-woken-at-5am-to-record-a-new-album-every-day-since-2021-hes-now-earning-dollar3000-a-month-from-his-music-on-spotify-and-bandcamp",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "dmn_sloptracker",
+      "tipo": "html",
+      "confianca": "estimado",
+      "url": "https://www.digitalmusicnews.com/2026/03/30/sloptracker-tracks-ai-artists-in-spotify-royalty-pool/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "musically_moonbug",
+      "tipo": "html",
+      "confianca": "relatório da empresa",
+      "url": "https://musically.com/2023/01/03/kids-moonbugs-revenues-grew-2021/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    },
+    {
+      "id": "acquire_multiples_jan2026",
+      "tipo": "html",
+      "confianca": "relatório do marketplace",
+      "url": "https://blog.acquire.com/acquire-com-biannual-acquisition-multiples-report-jan-2026/",
+      "origem": "encontrado por busca em 2026-09-17; ver research/evidencias_secundarias.md"
+    }
   ]
 }

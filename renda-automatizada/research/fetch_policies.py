@@ -85,6 +85,14 @@ SOURCES = {
              "https://help.redbubble.com/hc/en-us/articles/202270929-Community-and-Content-Guidelines"),
     "P-04": ("Redbubble - How does my Account Tier determine my platform fee?",
              "https://help.redbubble.com/hc/en-us/articles/50959863016724"),
+    # --- Preços oficiais dos provedores (custos de produção) ---
+    "C-01": ("ElevenLabs - Pricing", "https://elevenlabs.io/pricing"),
+    "C-02": ("OpenAI - API pricing (TTS, imagem, LLM)", "https://platform.openai.com/docs/pricing"),
+    "C-03": ("Suno - Pricing", "https://suno.com/pricing"),
+    "C-04": ("Google Gemini API - Pricing (Veo, Nano Banana, Gemini)", "https://ai.google.dev/gemini-api/docs/pricing"),
+    "C-05": ("Black Forest Labs (FLUX) - Pricing", "https://bfl.ai/pricing"),
+    "C-06": ("Runway - Pricing", "https://runwayml.com/pricing"),
+    "C-07": ("Kling AI - Pricing", "https://klingai.com/global/dev/pricing"),
 }
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 "

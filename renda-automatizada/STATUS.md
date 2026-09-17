@@ -1,6 +1,6 @@
 # STATUS — Fase 0 (Setup)
 
-Atualizado: 2026-09-17 (v2)
+Atualizado: 2026-09-17 (v3 — noite)
 
 | Item | Estado | Observação |
 |---|---|---|
@@ -20,6 +20,15 @@ Atualizado: 2026-09-17 (v2)
 | Envio automático dos dados para o repositório | ✅ | `research/sync.sh` |
 | Agendador diário do Mac (launchd 08:00) | ✅ | `research/install_launchd.sh`, `research/diario.sh` |
 | Passo a passo | ✅ | `research/COMO_RODAR.md`, `research/rodar.sh` |
+
+## Feito hoje sem depender de você (por busca na web; tudo rotulado como secundário até a leitura oficial no Mac)
+| Item | Arquivo |
+|---|---|
+| Filtro zero preliminar: ~35 operações com número, por categoria, com URL, classificação e status | `research/evidencias_secundarias.md` |
+| Faixas de RPM por categoria + views/mês necessárias para US$ 50 mil | `research/rpm_fontes.md` |
+| Custos de produção por unidade (TTS, música, imagem, vídeo) e custo por peça | `research/custos_producao.md` |
+| 29 URLs primárias de evidência e 7 páginas oficiais de preço adicionadas às listas que o Mac baixa | `config/evidencias_fontes.json`, `research/fetch_policies.py` |
+| Lista do que exige você amanhã | `research/AMANHA.md` |
 
 ## O que depende de você (em ordem)
 1. Seguir `research/COMO_RODAR.md`: chave da API → `bash research/rodar.sh` → `bash research/install_launchd.sh`.
